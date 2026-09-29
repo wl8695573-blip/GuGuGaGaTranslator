@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The installer that ships in GitHub Releases. It carries the published
+       application as an embedded zip, so a download is one file that installs
+       without a network connection and without administrator rights. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>GuGuGaGaTranslator.Installer</RootNamespace>
+    <AssemblyName>GuGuGaGaTranslator-Setup</AssemblyName>
+    <ApplicationIcon>..\..\src\GuGuGaGaTranslator.App\Assets\icon.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="..\..\src\GuGuGaGaTranslator.App\Assets\icon.png" Link="Assets\icon.png" />
+  </ItemGroup>
+
+  <!-- build.ps1 -Installer drops the published zip here; the folder is not in git. -->
+  <ItemGroup Condition="Exists('payload\app.zip')">
+    <EmbeddedResource Include="payload\app.zip" LogicalName="payload.app.zip" />
+  </ItemGroup>
+
+</Project>

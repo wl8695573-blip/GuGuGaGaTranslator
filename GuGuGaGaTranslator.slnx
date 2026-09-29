@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GuGuGaGaTranslator.App/GuGuGaGaTranslator.App.csproj" />
+    <Project Path="src/GuGuGaGaTranslator.Core/GuGuGaGaTranslator.Core.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Icon/Icon.csproj" />
+    <Project Path="tools/Probe/Probe.csproj" />
+    <Project Path="tools/SampleWindow/SampleWindow.csproj" />
+  </Folder>
+</Solution>

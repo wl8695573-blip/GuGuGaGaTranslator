@@ -1,0 +1,317 @@
+using System.Text.Json.Serialization;
+using System.Windows;
+using GuGuGaGaTranslator.Core.Translation;
+
+namespace GuGuGaGaTranslator.Core.Config;
+
+/// <summary>A rectangle as it appears in the configuration file. It exists instead of
+/// <see cref="Int32Rect"/> because the framework type also serializes its computed
+/// <c>isEmpty</c>/<c>hasArea</c> properties, which would litter a hand-edited file.</summary>
+public readonly record struct RegionRect(int X, int Y, int Width, int Height)
+{
+    /// <summary>True when the rectangle has a positive size. Computed, so it is never persisted.</summary>
+    [JsonIgnore]
+    public bool IsUsable => Width > 0 && Height > 0;
+
+    public Int32Rect ToInt32Rect() => new(X, Y, Width, Height);
+
+    public override string ToString() => $"{Width}×{Height} @ {X},{Y}";
+}
+
+/// <summary>Which window to read, and which part of it.</summary>
+public sealed class TargetConfig
+{
+    /// <summary>The restart-stable window identity (<c>process|class</c>), preferred over the title, which games rewrite.</summary>
+    public string? Identity { get; set; }
+
+    /// <summary>A title substring, used when no identity is recorded or it is gone.</summary>
+    public string? TitleHint { get; set; }
+
+    /// <summary>The translation region as an offset inside the target's client area, in physical pixels.</summary>
+    public RegionRect? Region { get; set; }
+
+    /// <summary><c>screen</c> copies what is visible; <c>printwindow</c> also works while covered.</summary>
+    public string CaptureBackend { get; set; } = "screen";
+}
+
+/// <summary>How images are prepared and read.</summary>
+public sealed class OcrConfig
+{
+    /// <summary>Which backend: <c>windows</c> for the in-box recognizer (needs the language's OCR feature), <c>rapidocr</c> for the bundled model.</summary>
+    public string Engine { get; set; } = "rapidocr";
+
+    /// <summary>The recognizer language tag, which must match the game's text language.</summary>
+    public string Language { get; set; } = "ja";
+
+    /// <summary>Upscale factor applied before recognition; small game text reads far better enlarged.</summary>
+    public double Scale { get; set; } = 2.0;
+
+    /// <summary>Contrast-stretch amount in 0–1, for low-contrast text over busy backgrounds.</summary>
+    public double Grayscale { get; set; }
+
+    /// <summary>Languages to fall back to when the requested one has no engine installed.</summary>
+    public string[] Fallbacks { get; set; } = ["en-US", "zh-Hans-CN"];
+
+    /// <summary>Where the RapidOCR model files live; empty searches beside the executable.</summary>
+    public string RapidModelDirectory { get; set; } = string.Empty;
+
+    /// <summary>RapidOCR detector resize target in pixels; lower is faster, 0 keeps the model preset's 736.
+    /// Measured on a large dialogue line: 736 → 1368 ms, 320 → 363 ms, with identical recognized text.</summary>
+    public int RapidLimitSideLen { get; set; } = 320;
+
+    /// <summary>Whether RapidOCR should try the CUDA provider before falling back to CPU.</summary>
+    public bool RapidUseGpu { get; set; }
+}
+
+/// <summary>The language pair and the engine that serves it.</summary>
+public sealed class TranslationConfig
+{
+    public string From { get; set; } = "ja";
+
+    public string To { get; set; } = "zh-Hans";
+
+    public TranslatorConfig Translator { get; set; } = new();
+
+    /// <summary>Fixed term translations, such as character and place names.</summary>
+    public List<GlossaryEntry> Glossary { get; set; } = [];
+
+    /// <summary>The game whose terms and voice are in force, by <see cref="GameProfile.Id"/>; empty means the plain translator.</summary>
+    public string ActiveProfile { get; set; } = string.Empty;
+
+    /// <summary>Pick the profile from the target window's title; choosing one by hand wins until the window changes.</summary>
+    public bool AutoDetectProfile { get; set; } = true;
+
+    /// <summary>Rewrite the profile's terms into the finished translation; a term table the model is free to ignore is not worth keeping.</summary>
+    public bool EnforceTerms { get; set; } = true;
+
+    // Fully qualified: this property's own name shadows the type in this scope.
+    public List<GameProfile> GameProfiles { get; set; } = GuGuGaGaTranslator.Core.Translation.GameProfiles.Default();
+
+    /// <summary>How many previous lines travel with each request as context; 0 disables context.</summary>
+    public int HistoryLines { get; set; } = 3;
+}
+
+/// <summary>Where the translation panel sits relative to the captured region, which for a visual novel is the dialogue box along the bottom.</summary>
+public sealed class OverlayPlacement
+{
+    public const string Over = "over";
+
+    public const string Below = "below";
+
+    public const string Above = "above";
+}
+
+/// <summary>How the translation overlay looks and behaves.</summary>
+public sealed class OverlayConfig
+{
+    /// <summary><c>over</c> covers the original dialogue box, <c>below</c> or <c>above</c> keeps the original visible next to it.</summary>
+    public string Placement { get; set; } = OverlayPlacement.Below;
+
+    public bool ShowPanel { get; set; } = true;
+
+    /// <summary>Text size in device-independent pixels.</summary>
+    public double FontSize { get; set; } = 24;
+
+    /// <summary>Panel opacity behind the text, in 0–1.</summary>
+    public double BackgroundOpacity { get; set; } = 0.82;
+
+    public bool TextOutline { get; set; } = true;
+
+    public int MaxLines { get; set; } = 4;
+
+    /// <summary>Panel width in pixels; 0 follows the captured region's width.</summary>
+    public int Width { get; set; }
+
+    /// <summary>Panel height in pixels; 0 grows with the text.</summary>
+    public int Height { get; set; }
+
+    public double CornerRadius { get; set; } = 8;
+
+    public double Padding { get; set; } = 14;
+
+    /// <summary>Font family for the translation; empty uses the system default.</summary>
+    public string FontFamily { get; set; } = string.Empty;
+
+    /// <summary>Text alignment inside the panel: <c>left</c>, <c>center</c>, or <c>right</c>.</summary>
+    public string TextAlign { get; set; } = "left";
+
+    public int OffsetX { get; set; }
+
+    public int OffsetY { get; set; } = 8;
+
+    /// <summary>Let mouse input pass through to the game underneath.</summary>
+    public bool ClickThrough { get; set; } = true;
+
+    public bool ShowSource { get; set; }
+
+    /// <summary>Show the language switcher above the overlay; it is a separate window because the click-through panel can never receive a click.</summary>
+    public bool ShowLanguageBar { get; set; } = true;
+
+    /// <summary>
+    /// Hide the overlay from screen capture. On by default so the tool never reads
+    /// its own translation as if it were game text; turn it off when recording or
+    /// streaming, where the translation should end up in the video.
+    /// </summary>
+    public bool ExcludeFromCapture { get; set; } = true;
+
+    public List<LanguagePreset> LanguagePresets { get; set; } = DefaultLanguagePresets.Create();
+
+    /// <summary>The named looks offered by the UI; applying one copies its values into the fields above.</summary>
+    public List<OverlayPreset> Presets { get; set; } = DefaultOverlayPresets.Create();
+}
+
+/// <summary>A named look, applied by copying its values into the flat overlay settings.</summary>
+public sealed class OverlayPreset
+{
+    public string Name { get; set; } = string.Empty;
+
+    public string Note { get; set; } = string.Empty;
+
+    public string Placement { get; set; } = OverlayPlacement.Below;
+
+    public bool ShowSource { get; set; }
+
+    public bool ShowPanel { get; set; } = true;
+
+    public double BackgroundOpacity { get; set; } = 0.82;
+
+    public double FontSize { get; set; } = 24;
+
+    public int Width { get; set; }
+
+    public int Height { get; set; }
+
+    public double CornerRadius { get; set; } = 8;
+
+    public double Padding { get; set; } = 14;
+
+    public string TextAlign { get; set; } = "left";
+
+    public int OffsetY { get; set; }
+}
+
+/// <summary>The looks a fresh install offers.</summary>
+public static class DefaultOverlayPresets
+{
+    public static List<OverlayPreset> Create() =>
+    [
+        new()
+        {
+            Name = "遮盖原文(推荐)",
+            Note = "翻译框直接盖住原对话框,原文隐藏 —— galgame 最常见用法",
+            Placement = OverlayPlacement.Over, ShowSource = false, ShowPanel = true,
+            BackgroundOpacity = 0.92, FontSize = 26, CornerRadius = 8, Padding = 14,
+            TextAlign = "left", OffsetY = 0,
+        },
+        new()
+        {
+            Name = "下方字幕",
+            Note = "原文保留,译文贴在对话框下沿 —— 想对照着看时用",
+            Placement = OverlayPlacement.Below, ShowSource = false, ShowPanel = true,
+            BackgroundOpacity = 0.82, FontSize = 24, CornerRadius = 8, Padding = 14,
+            TextAlign = "left", OffsetY = 8,
+        },
+        new()
+        {
+            Name = "极简描边",
+            Note = "没有底框,只有带黑边的文字 —— 画面最干净,适合亮色背景",
+            Placement = OverlayPlacement.Below, ShowSource = false, ShowPanel = false,
+            BackgroundOpacity = 0, FontSize = 28, CornerRadius = 0, Padding = 8,
+            TextAlign = "left", OffsetY = 6,
+        },
+        new()
+        {
+            Name = "原文+译文对照",
+            Note = "上面一行原文、下面一行译文,放在对话框下方 —— 学日语或核对时用",
+            Placement = OverlayPlacement.Below, ShowSource = true, ShowPanel = true,
+            BackgroundOpacity = 0.86, FontSize = 24, CornerRadius = 8, Padding = 16,
+            TextAlign = "left", OffsetY = 8,
+        },
+    ];
+}
+
+/// <summary>One entry of the overlay's language switcher: a direction a person can pick with one click while the game keeps focus.</summary>
+public sealed class LanguagePreset
+{
+    public string Label { get; set; } = string.Empty;
+
+    public string From { get; set; } = "auto";
+
+    public string To { get; set; } = "zh-Hans";
+
+    /// <summary>Recognition language for this direction, or <c>auto</c>; picking a direction also chooses the script to expect.</summary>
+    public string Ocr { get; set; } = "auto";
+
+    public override string ToString() => Label;
+}
+
+/// <summary>The switcher's out-of-the-box directions.</summary>
+public static class DefaultLanguagePresets
+{
+    public static List<LanguagePreset> Create() =>
+    [
+        new() { Label = "日 → 中", From = "ja", To = "zh-Hans", Ocr = "ja" },
+        new() { Label = "自动识别 → 中文", From = "auto", To = "zh-Hans", Ocr = "auto" },
+        new() { Label = "英 → 中", From = "en", To = "zh-Hans", Ocr = "en-US" },
+        new() { Label = "韩 → 中", From = "ko", To = "zh-Hans", Ocr = "ko" },
+        new() { Label = "中 → 日", From = "zh-Hans", To = "ja", Ocr = "zh-Hans-CN" },
+        new() { Label = "中 → 英", From = "zh-Hans", To = "en", Ocr = "zh-Hans-CN" },
+        new() { Label = "中 → 韩", From = "zh-Hans", To = "ko", Ocr = "zh-Hans-CN" },
+        new() { Label = "日 → 英", From = "ja", To = "en", Ocr = "ja" },
+        new() { Label = "英 → 日", From = "en", To = "ja", Ocr = "en-US" },
+    ];
+}
+
+/// <summary>How often to look, and when a look is worth recognizing.</summary>
+public sealed class PipelineConfig
+{
+    public int PollIntervalMs { get; set; } = 400;
+
+    /// <summary>How many of the 256 signature blocks must change before a frame is recognized.</summary>
+    public int ChangeThresholdBits { get; set; } = 6;
+
+    public double RepeatSimilarity { get; set; } = 0.92;
+
+    public int ForceRefreshMs { get; set; } = 5000;
+
+    public bool TranslateOnlyOnChange { get; set; } = true;
+
+    /// <summary>Recognized text shorter than this is treated as noise and not translated. Default 4 rather than 2:
+    /// a two-character fragment is usually a UI label or an OCR artifact, not a line of dialogue.</summary>
+    public int MinTextLength { get; set; } = 4;
+
+    /// <summary>Ignore recognition results that do not contain the expected script, so the game's own SAVE / LOAD / CONFIG labels are not translated as dialogue.</summary>
+    public bool ScriptGuard { get; set; } = true;
+
+    /// <summary>Pause after a capture or recognition error, so a failure cannot spin.</summary>
+    public int ErrorBackoffMs { get; set; } = 1500;
+}
+
+/// <summary>Evidence capture, so a run can be checked without watching the screen.</summary>
+public sealed class DebugConfig
+{
+    public bool DumpFrames { get; set; }
+
+    public string DumpDirectory { get; set; } = string.Empty;
+
+    public int KeepDumps { get; set; } = 200;
+}
+
+/// <summary>The whole persisted configuration, one JSON file.</summary>
+public sealed class AppConfig
+{
+    /// <summary>Whether the first-run setup card has been shown, so a person who skipped it is not asked again on every launch.</summary>
+    public bool SetupCompleted { get; set; }
+
+    public TargetConfig Target { get; set; } = new();
+
+    public OcrConfig Ocr { get; set; } = new();
+
+    public TranslationConfig Translation { get; set; } = new();
+
+    public OverlayConfig Overlay { get; set; } = new();
+
+    public PipelineConfig Pipeline { get; set; } = new();
+
+    public DebugConfig Debug { get; set; } = new();
+}

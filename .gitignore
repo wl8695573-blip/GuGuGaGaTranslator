@@ -1,0 +1,16 @@
+# build output
+bin/
+obj/
+dist/
+*.user
+*.suo
+.vs/
+
+# the installer's payload, copied in from dist by build.ps1
+tools/Installer/payload/
+
+# local evidence and scratch
+artifacts/
+.artifacts/
+*.log
+*.bak

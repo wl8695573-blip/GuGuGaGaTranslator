@@ -1,0 +1,87 @@
+<Window x:Class="GuGuGaGaTranslator.App.SetupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Icon="Assets/icon.png"
+        Title="GuGuGaGaTranslator · 开始使用"
+        Width="440" SizeToContent="Height"
+        WindowStyle="None" ResizeMode="NoResize"
+        AllowsTransparency="True" Background="Transparent"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True"
+        FontFamily="{StaticResource UiFont}"
+        Foreground="{StaticResource TextBrush}">
+  <Border CornerRadius="14" Background="{StaticResource WindowBackgroundBrush}"
+          BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+          MouseLeftButtonDown="OnDragArea">
+    <StackPanel Margin="26,20,26,22">
+
+      <Grid>
+        <StackPanel Orientation="Horizontal">
+          <Image Source="Assets/icon.png" Width="36" Height="36" VerticalAlignment="Center"
+                 RenderOptions.BitmapScalingMode="HighQuality" />
+          <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+            <TextBlock Text="GuGuGaGaTranslator" FontSize="17" FontFamily="{StaticResource DisplayFont}" />
+            <TextBlock x:Name="VersionText" FontSize="11" Foreground="{StaticResource HintTextBrush}" />
+          </StackPanel>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+          <Button x:Name="MinimizeButton" Content="—" Width="26" MinWidth="26" Padding="0"
+                  Background="Transparent" BorderThickness="0" Click="OnMinimize" ToolTip="最小化" />
+          <Button x:Name="CloseButton" Content="✕" Width="26" MinWidth="26" Padding="0" Margin="0"
+                  Background="Transparent" BorderThickness="0" Click="OnClose" ToolTip="关闭" />
+        </StackPanel>
+      </Grid>
+
+      <TextBlock Text="输入 API 即可开始翻译" FontSize="19" FontWeight="SemiBold" Margin="0,22,0,4" />
+      <TextBlock Text="识别不用任何下载 —— 离线识别模型已经随压缩包一起给你了,解压就能认字。只有翻译这一步需要联网,需要一个 API Key(下面那个链接就是领取入口)。"
+                 TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,16" />
+
+      <TextBlock Text="服务商" Style="{StaticResource FieldLabel}" />
+      <ComboBox x:Name="ProviderCombo" SelectionChanged="OnProviderChanged" />
+
+      <TextBlock Text="API Key" Style="{StaticResource FieldLabel}" />
+      <Grid>
+        <PasswordBox x:Name="ApiKeyBox" Padding="6,5" />
+        <TextBox x:Name="ApiKeyPlainBox" Padding="6,5" Visibility="Collapsed" />
+      </Grid>
+      <CheckBox x:Name="ShowKeyCheck" Content="显示密钥" FontSize="12" Click="OnToggleShowKey" />
+      <TextBlock x:Name="KeyHint" FontSize="11" Foreground="{StaticResource HintTextBrush}"
+                 TextWrapping="Wrap" Margin="0,0,0,6" />
+      <TextBlock x:Name="KeyLinkRow" Margin="0,0,0,10" TextWrapping="Wrap">
+        <Hyperlink x:Name="KeyLink" RequestNavigate="OnOpenLink" FontSize="12"
+                   Foreground="{StaticResource AccentSoftBrush}">
+          <Run x:Name="KeyLinkRun" Text="去领 API Key ↗" />
+        </Hyperlink>
+      </TextBlock>
+      <TextBlock x:Name="StepsText" FontSize="11" Foreground="{StaticResource HintTextBrush}"
+                 TextWrapping="Wrap" Margin="0,0,0,10" />
+
+      <Expander x:Name="AdvancedExpander" Header="高级(接口地址 / 模型 / 翻译方向)"
+                Foreground="{StaticResource MutedTextBrush}" FontSize="12">
+        <StackPanel Margin="0,6,0,0">
+          <TextBlock Text="接口地址" Style="{StaticResource FieldLabel}" />
+          <TextBox x:Name="BaseUrlBox" />
+          <TextBlock Text="模型名" Style="{StaticResource FieldLabel}" />
+          <TextBox x:Name="ModelBox" />
+          <TextBlock Text="默认翻译方向" Style="{StaticResource FieldLabel}" />
+          <ComboBox x:Name="DirectionCombo" />
+        </StackPanel>
+      </Expander>
+
+      <Button x:Name="TestButton" Content="测试连接" Click="OnTestConnection" Margin="0,14,0,6"
+              Padding="10,7" />
+      <TextBlock x:Name="TestResult" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,12"
+                 Foreground="{StaticResource MutedTextBrush}" />
+
+      <Button x:Name="StartButton" Content="开始使用" Click="OnStart" Style="{StaticResource PrimaryButton}" Padding="10,10"
+              FontSize="14" FontWeight="SemiBold" Background="{StaticResource AccentBrush}"
+              Foreground="White" BorderThickness="0" />
+      <Button x:Name="SkipButton" Content="先跳过,用界面预览模式" Click="OnSkip" Margin="0,8,0,0"
+              Padding="10,6" Background="Transparent" BorderThickness="0"
+              Foreground="{StaticResource MutedTextBrush}" FontSize="12" />
+
+      <TextBlock x:Name="StorageHint" FontSize="11" TextWrapping="Wrap" Margin="0,14,0,0"
+                 Foreground="{StaticResource HintTextBrush}" />
+    </StackPanel>
+  </Border>
+</Window>
