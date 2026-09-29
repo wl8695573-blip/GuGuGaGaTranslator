@@ -1,0 +1,350 @@
+<Window x:Class="GuGuGaGaTranslator.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Icon="Assets/icon.png"
+        Title="GuGuGaGaTranslator · 屏幕实时翻译"
+        Height="780" Width="1140"
+        MinHeight="560" MinWidth="900"
+        Background="{StaticResource WindowBackgroundBrush}"
+        Foreground="{StaticResource TextBrush}"
+        FontFamily="{StaticResource UiFont}"
+        WindowStartupLocation="CenterScreen">
+  <Grid Margin="14">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="380" MinWidth="300" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+
+    <!-- 目标窗口 -->
+    <DockPanel Grid.Column="0" Margin="0,0,14,0">
+      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
+        <Image Source="Assets/icon.png" Width="30" Height="30" VerticalAlignment="Center"
+               RenderOptions.BitmapScalingMode="HighQuality" />
+        <TextBlock Text="1 · 选择要翻译的窗口" Style="{StaticResource TitleText}" VerticalAlignment="Center"
+                   Margin="8,0,0,0" />
+      </StackPanel>
+      <TextBlock DockPanel.Dock="Top" x:Name="TargetSummary" Style="{StaticResource FieldLabel}"
+                 TextWrapping="Wrap" Text="尚未选择窗口" />
+      <UniformGrid DockPanel.Dock="Top" Columns="2" Margin="0,6,0,4">
+        <Button x:Name="RefreshButton" Content="刷新列表" Click="OnRefreshWindows" />
+        <Button x:Name="RegionButton" Content="框选区域" Click="OnPickRegion" />
+      </UniformGrid>
+      <UniformGrid DockPanel.Dock="Top" Columns="2" Margin="0,0,0,8">
+        <Button x:Name="BottomStripButton" Content="底部对话框(一键)" Click="OnPickBottomStrip"
+                ToolTip="按 galgame 的常见布局,自动把区域设在窗口底部约 30% 的横条上,之后可再用「框选区域」微调" />
+        <Button x:Name="ClearRegionButton" Content="清除区域" Click="OnClearRegion" />
+      </UniformGrid>
+      <ListView x:Name="WindowList" DisplayMemberPath="Display"
+                SelectionChanged="OnWindowSelected" />
+    </DockPanel>
+
+    <TabControl Grid.Column="1">
+
+      <TabItem Header="运行">
+        <Grid Margin="12">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+
+          <StackPanel Orientation="Horizontal">
+            <Button x:Name="StartButton" Content="开始翻译" Click="OnStart" Style="{StaticResource PrimaryButton}" />
+            <Button x:Name="PauseButton" Content="暂停" Click="OnPause" />
+            <Button x:Name="StopButton" Content="停止" Click="OnStop" />
+            <Button x:Name="SaveButton" Content="保存配置" Click="OnSave" />
+          </StackPanel>
+
+          <TextBlock Grid.Row="1" x:Name="StatusText" Text="就绪" Margin="0,10,0,0"
+                     TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" />
+
+          <TextBlock Grid.Row="2" Text="识别到的原文" Style="{StaticResource FieldLabel}" Margin="0,12,0,2" />
+
+          <TextBox Grid.Row="3" x:Name="SourceBox" IsReadOnly="True" AcceptsReturn="True"
+                   TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                   Foreground="{StaticResource SourceTextBrush}"
+                   FontFamily="Consolas, Microsoft YaHei UI" />
+
+          <StackPanel Grid.Row="4" Margin="0,10,0,0">
+            <TextBlock Text="译文(悬浮层显示的内容)" Style="{StaticResource FieldLabel}" />
+            <TextBox x:Name="TranslationBox" IsReadOnly="True" AcceptsReturn="True" Height="150"
+                     TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" FontSize="18"
+                     Foreground="{StaticResource TextBrush}"
+                     FontFamily="Microsoft YaHei UI, Meiryo, Yu Gothic" />
+            <TextBlock x:Name="StatsText" Margin="0,8,0,0" Foreground="{StaticResource HintTextBrush}"
+                       TextWrapping="Wrap" Text="帧 0 · 识别 0 · 翻译 0 · 缓存 0 · 去重 0 · 错误 0" />
+          </StackPanel>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="识别与翻译">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="12">
+
+            <TextBlock Text="① 识别:把画面上的字读成文本" Style="{StaticResource SectionText}" />
+            <TextBlock Text="识别引擎 —— 用哪个程序认字" Style="{StaticResource FieldLabel}" />
+            <ComboBox x:Name="OcrEngineCombo" SelectionChanged="OnOcrEngineChanged" />
+            <TextBlock x:Name="OcrEngineSummary" Style="{StaticResource HintText}" />
+            <TextBlock Text="识别语言 —— 用哪套字形去认字,必须和画面上的文字语言一致" Style="{StaticResource FieldLabel}" />
+            <ComboBox x:Name="OcrLanguageCombo" />
+            <TextBlock Style="{StaticResource HintText}"
+                       Text="选错会读成乱码:实测用中文引擎读日文,得到的是「元、二時間仁巴二仁行〈.？」。标着「未安装语言包」的选项,要先去 Windows 设置里给该语言装「光学字符识别」功能。RapidOCR 自带多语言模型,不需要这一步,这一栏对它也不生效。" />
+            <UniformGrid Columns="2">
+              <StackPanel Margin="0,0,6,0">
+                <TextBlock Style="{StaticResource FieldLabel}"
+                           Text="识别前放大倍数 —— 放大后再认字;小字建议 2–3,字很大设 1 更快" />
+                <TextBox x:Name="OcrScaleBox" />
+              </StackPanel>
+              <StackPanel Margin="6,0,0,0">
+                <TextBlock Style="{StaticResource FieldLabel}"
+                           Text="对比度增强 —— 文字和背景颜色太接近时调大 0.2–0.4,正常画面保持 0" />
+                <TextBox x:Name="OcrGrayBox" />
+              </StackPanel>
+            </UniformGrid>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+              <Button x:Name="OpenLanguageSettingsButton" Content="打开 Windows 语言设置"
+                      Click="OnOpenLanguageSettings" />
+              <TextBlock Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="6,0,0,0"
+                         Text="装完「光学字符识别」功能要重启本程序" />
+            </StackPanel>
+            <TextBlock Text="下面两项只有 RapidOCR 用得上" Style="{StaticResource FieldLabel}" />
+            <UniformGrid Columns="2">
+              <StackPanel Margin="0,0,6,0">
+                <TextBlock Style="{StaticResource FieldLabel}"
+                           Text="短边目标 —— 检测时把画面缩到多小,越小越快。320 = 大字游戏(实测快 3.8 倍、识别结果一致);736 = 小字" />
+                <TextBox x:Name="RapidLimitSideBox" />
+              </StackPanel>
+              <StackPanel Margin="6,0,0,0">
+                <TextBlock Style="{StaticResource FieldLabel}"
+                           Text="模型目录 —— 留空则自动查找 exe 旁边的 models\v6" />
+                <TextBox x:Name="RapidModelsBox" />
+              </StackPanel>
+            </UniformGrid>
+
+            <Separator Margin="0,10,0,10" />
+
+            <TextBlock Text="② 翻译:语言方向" Style="{StaticResource SectionText}" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="注意:这两个不是识别用的选项,只是告诉翻译引擎「原文是什么语言、要译成什么语言」。源语言选 auto 就让引擎自己判断。" />
+            <UniformGrid Columns="2">
+              <StackPanel Margin="0,0,6,0">
+                <TextBlock Text="源语言(原文)" Style="{StaticResource FieldLabel}" />
+                <ComboBox x:Name="FromCombo" />
+              </StackPanel>
+              <StackPanel Margin="6,0,0,0">
+                <TextBlock Text="目标语言(译文)" Style="{StaticResource FieldLabel}" />
+                <ComboBox x:Name="ToCombo" />
+              </StackPanel>
+            </UniformGrid>
+
+            <Separator Margin="0,10,0,10" />
+
+            <TextBlock Text="③ 引擎:真正执行翻译的服务" Style="{StaticResource SectionText}" />
+            <TextBlock Text="翻译引擎" Style="{StaticResource FieldLabel}" />
+            <ComboBox x:Name="ProviderCombo" SelectionChanged="OnProviderChanged" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="常用引擎预设 —— 点一下自动填好下面的地址与模型(免费额度与价格以各家官网为准)" />
+            <ComboBox x:Name="PresetCombo" SelectionChanged="OnPresetChanged" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="指令格式 —— 通用模型选 galgame;专门的 galgame 翻译模型(如 Sakura-GalTransl)必须选 sakura,它按自己训练时的格式工作,写错格式质量会明显下降" />
+            <ComboBox x:Name="PromptStyleCombo" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="上下文句数 —— 每句翻译时附带前几句的原文与译文,让代词、语气、称呼前后一致(0 = 关闭)。这是「不逐字硬译」的关键:模型能看到整段对话,而不是孤立的半句话。" />
+            <TextBox x:Name="HistoryLinesBox" />
+            <Button x:Name="SetupButton" Content="✨ API 设置…(填 Key / 测试连接)" Click="OnOpenSetup" Margin="0,6,0,6" Style="{StaticResource PrimaryButton}" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+              <Button x:Name="GetKeyButton" Content="🔑 获取 API Key" Click="OnGetApiKey" />
+              <TextBlock Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="6,0,0,0"
+                         Text="没有 Key 就用不了翻译(识别仍然正常)。DeepSeek 新账号通常有赠送额度。" />
+            </StackPanel>
+            <TextBlock x:Name="EngineSummary" Foreground="{StaticResource HintTextBrush}"
+                       TextWrapping="Wrap" Margin="0,0,0,10" />
+
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="接口地址 —— 本地和在线用的是同一套协议,所以只靠地址区分:本地 Ollama 填 http://localhost:11434/v1;在线 DeepSeek 填 https://api.deepseek.com/v1。程序会自动在后面接 /chat/completions。" />
+            <TextBox x:Name="BaseUrlBox" LostFocus="OnEngineFieldChanged" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="模型名 —— 服务端要加载哪个模型:本地如 qwen2.5:7b-instruct;在线如 deepseek-chat。" />
+            <TextBox x:Name="ModelBox" LostFocus="OnEngineFieldChanged" />
+            <TextBlock Text="API Key —— 只给在线服务用;本地引擎留空" Style="{StaticResource FieldLabel}" />
+            <PasswordBox x:Name="ApiKeyBox" />
+            <UniformGrid Columns="2">
+              <StackPanel Margin="0,0,6,0">
+                <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                           Text="超时(秒) —— 单次翻译最多等多久。本地小模型首次加载会慢,可以调大到 120。" />
+                <TextBox x:Name="TimeoutBox" />
+              </StackPanel>
+              <StackPanel Margin="6,0,0,0">
+                <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                           Text="温度 —— 措辞的随机程度,0 最稳定(同一句每次译得一样),0.2–0.3 更自然。" />
+                <TextBox x:Name="TemperatureBox" />
+              </StackPanel>
+            </UniformGrid>
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="游戏模式">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="12">
+
+            <TextBlock Text="④ 游戏专属模式:让 AI 按这款作品的官方译名翻译" Style="{StaticResource SectionText}" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="通用翻译会把专有名词译成「说得通但不正确」的样子 —— 例如《边狱巴士》的「新九人会」被译成「新九人联盟」。选定一款游戏之后,它的术语表会作为硬性要求随每句发给 AI;模型仍旧写错时,程序会把错误写法直接改回官方译名,所以误译不会漏到屏幕上。窗口标题里出现关键字时还会自动切换。" />
+
+            <TextBlock Text="当前生效的游戏档案" Style="{StaticResource FieldLabel}" />
+            <ComboBox x:Name="GameProfileCombo" SelectionChanged="OnGameProfileChanged" />
+            <UniformGrid Columns="3" Margin="0,6,0,6">
+              <Button x:Name="EditProfileButton" Content="编辑术语表…" Click="OnEditGameProfile" />
+              <Button x:Name="NewProfileButton" Content="新建档案…" Click="OnNewGameProfile" />
+              <Button x:Name="GenerateSheetButton" Content="✨ AI 生成术语表…" Click="OnGenerateTermSheet" Style="{StaticResource PrimaryButton}" />
+            </UniformGrid>
+            <TextBlock x:Name="GameProfileSummary" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
+            <Button x:Name="PreviewPromptButton" Content="查看实际发送给 AI 的提示词…" Click="OnPreviewPrompt" Margin="0,6,0,0" />
+
+            <Separator Margin="0,10,0,10" />
+
+            <CheckBox x:Name="AutoProfileCheck" Content="按游戏窗口标题自动切换档案" Click="OnProfileOptionChanged" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="在下面「目标窗口」里选中游戏之后,只要窗口标题里含某个档案的关键字,就自动切到那份档案。" />
+            <CheckBox x:Name="EnforceTermsCheck" Content="术语强制校正(推荐开着)" Click="OnProfileOptionChanged" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="把译文里出现的「禁止译法」改回既定译名,并把没翻译、原样留下的术语补译。关掉它就只是一份提示词,AI 有权不照做。" />
+
+            <Separator Margin="0,10,0,10" />
+
+            <TextBlock Text="术语表的写法" Style="{StaticResource SectionText}" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="每行一条:原文 = 译名 | 禁止: 错误译法1、错误译法2     (# 开头是注释)" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="新九人会 = 新九人会 | 禁止: 新九人联盟、新九人协会" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="「=」两边写一样,意思是「这个词必须原样保留,不许意译」。「禁止」里的写法一旦出现在译文里,会被立刻改回左边的译名。想手改的话,直接编辑配置文件里的 translation.gameProfiles 也可以。" />
+
+            <Separator Margin="0,10,0,10" />
+
+            <TextBlock Text="自己写一款新游戏" Style="{StaticResource SectionText}" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="1. 点「新建档案…」,填名称(例如 边狱巴士 / Limbus Company)。" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="2. 点「✨ 生成 / 补全术语表」,AI 会按官方简中译名起草一份;游戏名留空就让它在游戏运行时从台词里猜。" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="3. 自己看一遍,把译错的改掉、把常见误译填进「禁止」。之后每次玩这款游戏,它都会自动按这套译名翻译。" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="提示:填「世界观」那一段往往比长术语表更有效 —— 模型一旦认出这是哪部作品,连你没列出来的词都会沿用官方译名。" />
+
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="悬浮层">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="12">
+
+            <TextBlock Text="外观预设 —— 点一下套用整套外观" Style="{StaticResource FieldLabel}" />
+            <ComboBox x:Name="OverlayPresetCombo" SelectionChanged="OnOverlayPresetChanged" />
+            <TextBlock x:Name="OverlayPresetSummary" Foreground="{StaticResource HintTextBrush}"
+                       TextWrapping="Wrap" Margin="0,0,0,10" />
+
+            <TextBlock Text="翻译框位置" Style="{StaticResource FieldLabel}" />
+            <ComboBox x:Name="PlacementCombo" SelectionChanged="OnOverlayFieldChanged" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="遮盖原文 = 翻译框盖在原对话框上(galgame 最常见);下方 / 上方 = 保留原文,译文贴在对话框下沿或上沿。" />
+
+            <UniformGrid Columns="2">
+              <StackPanel Margin="0,0,6,0">
+                <TextBlock Text="字号" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="OverlayFontBox" />
+              </StackPanel>
+              <StackPanel Margin="6,0,0,0">
+                <TextBlock Text="背景不透明度(0–1)" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="OverlayOpacityBox" />
+              </StackPanel>
+            </UniformGrid>
+            <UniformGrid Columns="2">
+              <StackPanel Margin="0,0,6,0">
+                <TextBlock Text="水平偏移" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="OverlayOffsetXBox" />
+              </StackPanel>
+              <StackPanel Margin="6,0,0,0">
+                <TextBlock Text="垂直偏移(负值上移)" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="OverlayOffsetYBox" />
+              </StackPanel>
+            </UniformGrid>
+            <CheckBox x:Name="ShowPanelCheck" Content="显示翻译框底框(关掉只剩带描边的文字)" />
+            <CheckBox x:Name="ShowSourceCheck" Content="同时显示识别到的原文" />
+            <CheckBox x:Name="TextOutlineCheck" Content="文字描边(底框关掉后靠它保证可读)" />
+            <CheckBox x:Name="ClickThroughCheck" Content="鼠标穿透(关闭后才能拖动悬浮层)" />
+            <CheckBox x:Name="LanguageBarCheck" Content="在悬浮层上方显示语言切换条" />
+            <CheckBox x:Name="ExcludeFromCaptureCheck" Content="翻译框不被录屏/截图拍到(想录下翻译过程就取消勾选)" />
+            <Separator Margin="0,8,0,8" />
+            <TextBlock Text="翻译框宽 / 高(像素;0 = 宽跟随所选区域、高随文字)" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
+            <UniformGrid Columns="2">
+              <StackPanel Margin="0,0,6,0">
+                <TextBox x:Name="OverlayWidthBox" />
+              </StackPanel>
+              <StackPanel Margin="6,0,0,0">
+                <TextBox x:Name="OverlayHeightBox" />
+              </StackPanel>
+            </UniformGrid>
+            <TextBlock Text="最大行数 / 圆角 / 内边距" Style="{StaticResource FieldLabel}" />
+            <UniformGrid Columns="3">
+              <StackPanel Margin="0,0,6,0">
+                <TextBox x:Name="OverlayMaxLinesBox" />
+              </StackPanel>
+              <StackPanel Margin="3,0,3,0">
+                <TextBox x:Name="OverlayCornerBox" />
+              </StackPanel>
+              <StackPanel Margin="6,0,0,0">
+                <TextBox x:Name="OverlayPaddingBox" />
+              </StackPanel>
+            </UniformGrid>
+            <TextBlock Text="字体(留空 = 系统默认)" Style="{StaticResource FieldLabel}" />
+            <TextBox x:Name="OverlayFontFamilyBox" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="全部外观都能在 config.json 的 overlay 段里改;想加一套新外观,往 overlay.presets 里加一条即可,不用改代码。" />
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="调试">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="12">
+            <CheckBox x:Name="DumpFramesCheck" Content="把每一帧识别证据写到磁盘(PNG + JSON)" />
+            <TextBlock Text="证据目录" Style="{StaticResource FieldLabel}" />
+            <TextBox x:Name="DumpDirBox" />
+            <UniformGrid Columns="2">
+              <StackPanel Margin="0,0,6,0">
+                <TextBlock Text="保留最近多少对" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="DumpKeepBox" />
+              </StackPanel>
+              <StackPanel Margin="6,0,0,0">
+                <TextBlock Text="轮询间隔(毫秒)" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="PollIntervalBox" />
+              </StackPanel>
+            </UniformGrid>
+            <UniformGrid Columns="2">
+              <StackPanel Margin="0,0,6,0">
+                <TextBlock Text="变化阈值(256 格中变了多少格才重新识别)" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
+                <TextBox x:Name="ChangeThresholdBox" />
+              </StackPanel>
+              <StackPanel Margin="6,0,0,0">
+                <TextBlock Text="强制刷新间隔(毫秒)" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="ForceRefreshBox" />
+              </StackPanel>
+            </UniformGrid>
+            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+              <Button x:Name="OpenDumpButton" Content="打开证据目录" Click="OnOpenDumpDirectory" />
+              <Button x:Name="OpenConfigButton" Content="打开配置目录" Click="OnOpenConfigDirectory" />
+              <Button x:Name="ClearCacheButton" Content="清空翻译缓存" Click="OnClearCache" />
+            </StackPanel>
+            <TextBlock x:Name="HotkeyText" Style="{StaticResource FieldLabel}" Margin="0,14,0,0" TextWrapping="Wrap"
+                       Text="全局热键(游戏里直接按,不用切出来):Ctrl+Alt+T 开始/停止 · Ctrl+Alt+P 暂停/继续 · Ctrl+Alt+R 重新框选 · Ctrl+Alt+O 切换原文显示 · Ctrl+Alt+H 显示/隐藏翻译框 · Ctrl+Alt+U 解锁翻译框(解锁后可拖动、拖四角缩放)" />
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+    </TabControl>
+  </Grid>
+</Window>

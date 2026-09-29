@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The desktop shell: window picker, region selector, overlay, settings.
+       All translation logic lives in GuGuGaGaTranslator.Core so the console harness can
+       drive the same code this app runs. -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>GuGuGaGaTranslator.App</RootNamespace>
+    <AssemblyName>GuGuGaGaTranslator</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+
+    <!-- The icon: the community whale-girl .ico — CC BY-NC-SA 4.0, attribution in
+         THIRD_PARTY_NOTICES.md. Embedded in the executable so a copied dist folder
+         carries it, and packed as a 256px PNG for the windows. tools/Icon
+         draws a license-free alternative named drawn-mascot. -->
+    <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\icon.ico" />
+    <Resource Include="Assets\icon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GuGuGaGaTranslator.Core\GuGuGaGaTranslator.Core.csproj" />
+    <ProjectReference Include="..\GuGuGaGaTranslator.Ocr.Rapid\GuGuGaGaTranslator.Ocr.Rapid.csproj" />
+  </ItemGroup>
+
+</Project>

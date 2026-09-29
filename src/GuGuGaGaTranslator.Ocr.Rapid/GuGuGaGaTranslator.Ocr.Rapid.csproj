@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A second recognition backend, kept out of GuGuGaGaTranslator.Core so the engine
+       project stays dependency-free: this one pulls ONNX Runtime, SkiaSharp,
+       and the RapidOcrNet pipeline, which the core has no business carrying.
+       Only the app (and the probe) reference it. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <RootNamespace>GuGuGaGaTranslator.Ocr.Rapid</RootNamespace>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RapidOcrNet" Version="4.2.0" />
+    <!-- The package declares the Linux natives only; Windows needs its own. -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GuGuGaGaTranslator.Core\GuGuGaGaTranslator.Core.csproj" />
+  </ItemGroup>
+
+</Project>

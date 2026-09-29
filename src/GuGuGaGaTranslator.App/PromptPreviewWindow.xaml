@@ -1,0 +1,44 @@
+<Window x:Class="GuGuGaGaTranslator.App.PromptPreviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Icon="Assets/icon.png"
+        Title="实际发送给 AI 的提示词"
+        Height="720" Width="980"
+        MinHeight="420" MinWidth="640"
+        Background="{StaticResource WindowBackgroundBrush}"
+        Foreground="{StaticResource TextBrush}"
+        FontFamily="{StaticResource UiFont}"
+        WindowStartupLocation="CenterOwner">
+  <Grid Margin="14">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="2*" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
+    <TextBlock Grid.Row="0" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}"
+               Text="这就是程序每次翻译时发给 AI 的完整内容。术语表、世界观、语气要求都在里面 —— 译名不符合预期时先看这里:多数情况是术语表里缺了这条,或者世界观没写清这是哪部作品。" />
+
+    <TextBlock Grid.Row="1" x:Name="ProfileText" Margin="0,8,0,8"
+               Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap" />
+
+    <TextBlock Grid.Row="2" Text="System —— 角色与规则、术语表、世界观" Style="{StaticResource FieldLabel}" />
+    <TextBox Grid.Row="3" x:Name="SystemBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
+             VerticalScrollBarVisibility="Auto" Margin="0,2,0,10"
+             FontFamily="Consolas, Microsoft YaHei UI" />
+
+    <TextBlock Grid.Row="4" Text="User —— 前几句上下文 + 这一句原文" Style="{StaticResource FieldLabel}" />
+    <TextBox Grid.Row="5" x:Name="UserBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
+             VerticalScrollBarVisibility="Auto" Margin="0,2,0,10"
+             FontFamily="Consolas, Microsoft YaHei UI" />
+
+    <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
+      <Button x:Name="CopyButton" Content="复制全部" Click="OnCopy" />
+      <Button x:Name="CloseButton" Content="关闭" Click="OnClose" />
+    </StackPanel>
+  </Grid>
+</Window>

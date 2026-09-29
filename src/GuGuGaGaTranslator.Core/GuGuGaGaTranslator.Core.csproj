@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The engine with no UI: window enumeration, capture, OCR, translation, the
+       polling pipeline, config, and the debug dumper. WPF is referenced only
+       for in-box imaging (BitmapSource / PngBitmapEncoder), which keeps the
+       NuGet dependency list empty. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+</Project>

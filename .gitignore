@@ -1,0 +1,27 @@
+# build output
+bin/
+obj/
+dist/
+*.user
+*.suo
+.vs/
+
+# the installer's payload, copied in from dist by build.ps1
+tools/Installer/payload/
+
+# local evidence and scratch
+artifacts/
+.artifacts/
+*.log
+*.bak
+
+# keys and per-user settings never belong in a public repo
+config.json
+config.*.json
+.env
+.env.*
+.credentials*
+*credentials*.yaml
+*secret*.json
+*gh-token*
+gh-release-id.tmp
