@@ -48,24 +48,21 @@ public partial class MainWindow : Window
 
     private static readonly Choice AutoLanguage = new("auto", LanguageNames.Label("auto", "让引擎自己判断原文语言"));
 
+    /// <summary>The three languages this tool translates between; nothing else is offered.</summary>
     private static readonly Choice[] TranslationLanguages =
     [
+        new("zh-Hans", LanguageNames.Label("zh-Hans")),
         new("ja", LanguageNames.Label("ja")),
         new("en", LanguageNames.Label("en")),
-        new("zh-Hans", LanguageNames.Label("zh-Hans")),
-        new("zh-Hant", LanguageNames.Label("zh-Hant")),
-        new("ko", LanguageNames.Label("ko")),
     ];
 
     /// <summary>The recognition languages worth offering; availability is annotated when the list is populated.</summary>
     private static readonly Choice[] OcrLanguages =
     [
         new("auto", LanguageNames.Label("auto", "逐个已装的语言试一遍,取最像文字的结果")),
-        new("zh-Hans-CN", LanguageNames.Label("zh-Hans-CN")),
-        new("zh-Hant-TW", LanguageNames.Label("zh-Hant-TW")),
         new("ja", LanguageNames.Label("ja")),
         new("en-US", LanguageNames.Label("en-US")),
-        new("ko", LanguageNames.Label("ko")),
+        new("zh-Hans-CN", LanguageNames.Label("zh-Hans-CN")),
     ];
 
     private static readonly Choice[] EngineProviders =
@@ -241,10 +238,10 @@ public partial class MainWindow : Window
             .Where(pair => !string.IsNullOrWhiteSpace(pair.Text))
             .Select(pair => $"{pair.Text}  {pair.Action.Label}");
 
-        HotkeyText.Text = "全局热键(在游戏里直接按,不用切出来):" + Environment.NewLine
+        HotkeyText.Text = "全局快捷键：" + Environment.NewLine
             + string.Join(" · ", lines)
             + (_hotkeyFailures.Count > 0
-                ? Environment.NewLine + "⚠ 没注册成功:" + string.Join(";", _hotkeyFailures)
+                ? Environment.NewLine + "未注册成功：" + string.Join("；", _hotkeyFailures)
                 : string.Empty);
 
         if (HotkeyStatus is not null) HotkeyStatus.Text = HotkeyText.Text;
@@ -375,7 +372,7 @@ public partial class MainWindow : Window
         return 0;
     }
 
-    /// <summary>一键框选并翻译:没有选过窗口就顺手把当前前台窗口认下来,这样游戏里一个键就能开工。</summary>
+    /// <summary>Select a region and start translation.</summary>
     private void OnRegionAndStart()
     {
         if (WindowList.SelectedItem is not WindowInfo)
@@ -632,7 +629,7 @@ public partial class MainWindow : Window
         config.Overlay.ShowPanel = ShowPanelCheck.IsChecked == true;
         config.Overlay.FontSize = Number(OverlayFontBox.Text, config.Overlay.FontSize);
         config.Overlay.BackgroundOpacity = Math.Clamp(Number(OverlayOpacityBox.Text, config.Overlay.BackgroundOpacity), 0, 1);
-        config.Overlay.MaxLines = Math.Max(1, (int)Number(OverlayMaxLinesBox.Text, config.Overlay.MaxLines));
+        config.Overlay.MaxLines = Math.Max(0, (int)Number(OverlayMaxLinesBox.Text, config.Overlay.MaxLines));
         config.Overlay.Width = Math.Max(0, (int)Number(OverlayWidthBox.Text, config.Overlay.Width));
         config.Overlay.Height = Math.Max(0, (int)Number(OverlayHeightBox.Text, config.Overlay.Height));
         config.Overlay.CornerRadius = Math.Max(0, Number(OverlayCornerBox.Text, config.Overlay.CornerRadius));
@@ -748,8 +745,7 @@ public partial class MainWindow : Window
         _session.SaveConfig();
         UpdateTargetSummary();
 
-        // 框完区域就是要翻译:让人再按一次开始按钮,只是代码写成这样的产物。
-        // 已经在翻译的(例如换了块区域)不重启循环,新区域下一次迭代就会生效。
+        // Keep the current pipeline running when only the selected region changes.
         if (!_session.IsRunning) OnStart(this, new RoutedEventArgs());
         OnNotice(_session.IsRunning
             ? $"已开始持续翻译,区域相对客户区 {_session.Config.Target.Region};窗口移动会自动跟随,"
@@ -841,10 +837,15 @@ public partial class MainWindow : Window
         StatusText.Text = "已停止";
     }
 
-    private void OnSave(object sender, RoutedEventArgs e)
+    private async void OnSave(object sender, RoutedEventArgs e)
     {
         ReadUiIntoConfig();
         _session.SaveConfig();
+        if (_session.IsRunning)
+        {
+            await _session.StopAsync();
+            _session.Start();
+        }
         _overlay?.Configure(_session.Config.Overlay, _session.Languages);
         OnNotice($"配置已保存到 {_session.Store.FilePath}");
     }
@@ -941,8 +942,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        // 边距按窗口比例算,任何分辨率下同一次点击都成立;下沿特意留空 —— 那里是
-        // SAVE / LOAD / CONFIG / AUTO,把按钮文字翻出来是手框区域最常见的抱怨。
+        // Keep the bottom control row outside the default dialogue area.
         var width = (int)(client.Width * 0.92);
         var y = (int)(client.Height * 0.66);
         var height = Math.Max(60, (int)(client.Height * 0.27));
@@ -1099,11 +1099,12 @@ public partial class MainWindow : Window
         SyncProfileControls();
     }
 
-    private void OnProfileOptionChanged(object sender, RoutedEventArgs e)
+    private async void OnProfileOptionChanged(object sender, RoutedEventArgs e)
     {
         if (_loadingUi) return;
         ReadUiIntoConfig();
         _session.SaveConfig();
+        if (_session.IsRunning) { await _session.StopAsync(); _session.Start(); }
         UpdateProfileSummary();
     }
 
@@ -1122,7 +1123,7 @@ public partial class MainWindow : Window
 
     private void OnNewGameProfile(object sender, RoutedEventArgs e) => OpenProfileEditor(null);
 
-    /// <summary>「✨ AI 生成术语表」: a new profile whose editor starts drafting at once.</summary>
+    /// <summary>Open a new profile and start term-sheet generation.</summary>
     private void OnGenerateTermSheet(object sender, RoutedEventArgs e) => OpenProfileEditor(null, generate: true);
 
     private void OpenProfileEditor(GameProfile? profile, bool generate = false)
@@ -1141,7 +1142,7 @@ public partial class MainWindow : Window
         var result = window.Result;
         _session.ForgetContext();
 
-        // 新建的档案就是用户想用的那一份;编辑过的只在它本来就生效时才套用。
+        // New profiles become active immediately; edited profiles remain active only when already selected.
         if (window.Created || _session.Config.Translation.ActiveProfile.Equals(result.Id, StringComparison.OrdinalIgnoreCase))
         {
             _ = ApplyProfileAndSyncAsync(result);
@@ -1166,7 +1167,7 @@ public partial class MainWindow : Window
         var profile = _session.CurrentProfile;
         var languages = _session.Languages;
 
-        // 有最近识别到的句子就用它,这样预览的是真实请求,不是示例。
+        // Prefer the most recently recognized text for the preview.
         var sample = _session.RecentSources.LastOrDefault() ?? "（示例原文:这里会放当前这句台词）";
         var request = new TranslationRequest
         {
@@ -1199,10 +1200,10 @@ public partial class MainWindow : Window
         var profiles = _session.Config.Translation.GameProfiles;
         var items = new List<ListChooserWindow.Item>
         {
-            new("🌐 通用翻译", "不用术语表,也不做术语校正"),
+            new("通用翻译", "不使用术语表或术语校正"),
         };
         items.AddRange(profiles.Select(profile => new ListChooserWindow.Item(
-            $"🎮 {profile.Name}",
+            profile.Name,
             $"{profile.Terms.Count} 条术语、{profile.Terms.Sum(term => term.Forbidden.Count)} 条禁用译法"
                 + (profile.WindowHints.Count == 0 ? string.Empty : $" · 窗口关键字 {string.Join("/", profile.WindowHints)}"))));
 
@@ -1276,6 +1277,14 @@ public partial class MainWindow : Window
     /// <summary>Open the current provider's own console so the reader can create a key; the
     /// URL follows whatever the endpoint field already points at, so a proxy or a local server
     /// does not send them to a vendor they are not using.</summary>
+    private void OnClearApiKey(object sender, RoutedEventArgs e)
+    {
+        ApiKeyBox.Password = "";
+        _session.Config.Translation.Translator = _session.Config.Translation.Translator with { ApiKey = "", AppSecret = "" };
+        _session.SaveConfig();
+        OnNotice("已删除保存的密钥。停止并重新开始翻译后生效。");
+    }
+
     private void OnGetApiKey(object sender, RoutedEventArgs e)
     {
         var baseUrl = BaseUrlBox.Text.Trim();
@@ -1318,8 +1327,7 @@ public partial class MainWindow : Window
     {
         if (_loadingUi) return;
 
-        // mock 与真实端点之间是「演示」和「能用」的区别,所以顺手填一个像样的地址;
-        // 经典 API 有自己的固定端点,地址和模型栏就不动,免得看起来像个其实无用的设置。
+        // Traditional APIs use fixed endpoints and do not use these fields.
         var provider = ValueOf(ProviderCombo, "mock");
         if (ClassicEngines.ContainsKey(provider))
         {
@@ -1366,9 +1374,10 @@ public partial class MainWindow : Window
 
     private void OnPipelineUpdate(PipelineUpdate update)
     {
-        // 循环在自己的线程上发布,这里碰到的每个控件都属于 dispatcher。
-        Dispatcher.Invoke(() =>
+        var pipeline = _session.Pipeline;
+        Dispatcher.BeginInvoke(new Action(() =>
         {
+            if (pipeline is null || !ReferenceEquals(pipeline, _session.Pipeline) || !pipeline.IsCurrent(update)) return;
             StatusText.Text = Describe(update);
 
             if (update.Ocr is not null) SourceBox.Text = update.SourceText;
@@ -1379,7 +1388,11 @@ public partial class MainWindow : Window
                 return;
             }
 
-            if (update.Translation is null) return;
+            if (update.Translation is null)
+            {
+                if (update.Status == PipelineStatus.Translating) _overlay?.ClearText();
+                return;
+            }
 
             TranslationBox.Text = update.Translation;
 
@@ -1395,7 +1408,7 @@ public partial class MainWindow : Window
                     + $" / 识别 {update.OcrDuration.TotalMilliseconds:F0}ms"
                     + $" / 翻译 {update.TranslateDuration.TotalMilliseconds:F0}ms";
             }
-        });
+        }));
     }
 
     private static string Describe(PipelineUpdate update) => update.Status switch

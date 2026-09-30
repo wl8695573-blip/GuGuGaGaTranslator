@@ -1,4 +1,5 @@
 using System.Runtime.Versioning;
+using System.Diagnostics;
 using GuGuGaGaTranslator.Core.Capture;
 
 namespace GuGuGaGaTranslator.Core.Ocr;
@@ -59,6 +60,7 @@ public sealed class MultiLanguageRecognizer : ITextRecognizer
     [SupportedOSPlatform("windows10.0.19041.0")]
     public async Task<OcrResult> RecognizeAsync(Frame frame, CancellationToken cancellationToken = default)
     {
+        var watch = Stopwatch.StartNew();
         OcrResult? best = null;
         var bestScore = int.MinValue;
 
@@ -85,7 +87,7 @@ public sealed class MultiLanguageRecognizer : ITextRecognizer
             LanguageTag = best.LanguageTag,
             SourceWidth = best.SourceWidth,
             SourceHeight = best.SourceHeight,
-            Duration = best.Duration,
+            Duration = watch.Elapsed,
         };
     }
 

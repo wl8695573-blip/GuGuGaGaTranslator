@@ -68,7 +68,7 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
     }
 
     /// <inheritdoc />
-    public string Id => $"openai-compatible:{_options.Model}";
+    public string Id => $"openai-compatible:{Endpoint}:{_options.Model}:{_options.PromptStyle}:{_options.Temperature.ToString(System.Globalization.CultureInfo.InvariantCulture)}:{_options.DisableThinking}";
 
     /// <inheritdoc />
     public bool RequiresNetwork => true;
@@ -197,6 +197,9 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
     {
         if (string.IsNullOrWhiteSpace(request.Text)) return string.Empty;
 
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, _options.TimeoutSeconds)));
+        cancellationToken = deadline.Token;
         var payload = JsonSerializer.Serialize(BuildBody(request, stream: true));
 
         using var content = new StringContent(payload, Encoding.UTF8, "application/json");
@@ -248,6 +251,7 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
             }
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         var translation = CleanUp(builder.ToString());
         if (translation.Length == 0)
             throw new InvalidOperationException("translation stream returned no content");

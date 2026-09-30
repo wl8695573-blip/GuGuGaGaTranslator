@@ -1,4 +1,6 @@
-using GuGuGaGaTranslator.Core.Text;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace GuGuGaGaTranslator.Core.Translation;
 
@@ -87,5 +89,6 @@ public sealed class TranslationCache
     /// glossary belongs in it because the same line translated under a different game profile is a different translation.
     /// </summary>
     public static string KeyFor(string translatorId, TranslationRequest request) =>
-        $"{translatorId}|{request.From}|{request.To}|{TermEnforcer.Fingerprint(request.Glossary)}|{TextNormalizer.ForComparison(request.Text)}";
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            JsonSerializer.Serialize(new { translatorId, request }))));
 }

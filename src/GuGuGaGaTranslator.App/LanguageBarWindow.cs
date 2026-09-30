@@ -9,8 +9,7 @@ using GuGuGaGaTranslator.Core.Pipeline;
 
 namespace GuGuGaGaTranslator.App;
 
-/// <summary>The control bar that rides above the translation overlay: the language
-/// side plus the toggles a player reaches for mid-scene.</summary>
+/// <summary>Control bar shown above the translation overlay.</summary>
 public sealed class LanguageBarWindow : Window
 {
     /// <summary>The physical-pixel gap kept between the bar and the panel below it.</summary>
@@ -59,12 +58,10 @@ public sealed class LanguageBarWindow : Window
             Child = _buttons,
         };
 
-        // 主按钮只建一次、之后只改文字,所以强调色不必从悬停状态去推断。
         _primary = MakeButton("…", onClick: () => { if (_primaryPreset is not null) PresetSelected?.Invoke(_primaryPreset); });
         _primary.Background = Theme.Brush("AccentBrush", Color.FromRgb(0x6E, 0x8B, 0xD6));
 
-        // 游戏档案放在语言这一侧:它同样属于「我在翻什么」,而且译名出错时玩家会当场去点它。
-        _profile = MakeButton("🎮 通用", onClick: () => ProfileRequested?.Invoke());
+        _profile = MakeButton("通用", onClick: () => ProfileRequested?.Invoke());
 
         Content = _panel;
     }
@@ -112,7 +109,7 @@ public sealed class LanguageBarWindow : Window
 
         _buttons.Children.Add(MakeSeparator());
 
-        _buttons.Children.Add(MakeToggle("edit", editing ? "🔓 编辑中" : "🔒 编辑", editing));
+        _buttons.Children.Add(MakeToggle("edit", editing ? "编辑中" : "编辑", editing));
         _buttons.Children.Add(MakeToggle("source", "原文", showSource));
         _buttons.Children.Add(MakeToggle("panel", "翻译框", showPanel));
 
@@ -135,7 +132,7 @@ public sealed class LanguageBarWindow : Window
         var named = !string.IsNullOrWhiteSpace(profile);
         var label = named ? profile!.Trim() : "通用翻译";
         if (label.Length > 10) label = label[..10] + "…";
-        ((TextBlock)_profile.Child).Text = named ? $"🎮 {label}" : "🌐 通用";
+        ((TextBlock)_profile.Child).Text = named ? label : "通用";
     }
 
     private void RefreshToggles()
@@ -151,7 +148,7 @@ public sealed class LanguageBarWindow : Window
             chrome.Background = active ? Theme.Brush("AccentBrush", Color.FromRgb(0x6E, 0x8B, 0xD6)) : Brushes.Transparent;
             label.Text = key switch
             {
-                "edit" => _editing ? "🔓 编辑中" : "🔒 编辑",
+                "edit" => _editing ? "编辑中" : "编辑",
                 "source" => "原文",
                 _ => "翻译框",
             };
@@ -270,7 +267,7 @@ public sealed class LanguageBarWindow : Window
         base.OnSourceInitialized(e);
         _handle = new WindowInteropHelper(this).Handle;
 
-        // 语言条不参与抓屏,也绝不穿透;它带 WS_EX_NOACTIVATE,按按钮不会把游戏切出前台。
+        // The bar does not participate in capture and does not use click-through.
         OverlayWindowInterop.ApplyDisplayAffinity(_handle, CaptureExcluded);
         OverlayWindowInterop.ApplyClickThrough(_handle, enabled: false);
         if (_anchor.Width > 0) PlaceAbove(_anchor, _anchor.Y + _anchor.Height);

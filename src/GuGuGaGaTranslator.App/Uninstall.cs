@@ -1,90 +1,94 @@
 using System.Diagnostics;
 using System.IO;
+using System.Text;
+using System.Text.Json;
 using Microsoft.Win32;
+using GuGuGaGaTranslator.Installation;
 
 namespace GuGuGaGaTranslator.App;
 
-/// <summary>
-/// Removes an installed copy: shortcuts, the Programs-and-features entry, and
-/// then the folder itself once this process has exited.
-/// </summary>
-/// <remarks>
-/// The application uninstalls itself rather than shipping a second binary, so an
-/// installation costs one executable and nothing else.
-/// </remarks>
 internal static class Uninstall
 {
     internal const string ProductName = "GuGuGaGaTranslator";
     internal const string RegistryKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\" + ProductName;
-
     internal static string InstallDirectory => AppContext.BaseDirectory.TrimEnd('\\');
+    private static InstallationManifest? _manifest;
 
-    internal static string ShortcutPath(Environment.SpecialFolder folder) => Path.Combine(
-        Environment.GetFolderPath(folder),
-        "Programs",
-        ProductName + ".lnk");
-
-    /// <summary>Delete the shortcuts and the Programs-and-features entry.</summary>
-    /// <param name="onMessage">Receives one line per step, or null for silence.</param>
-    /// <returns>True when everything was removed.</returns>
     internal static bool Run(Action<string>? onMessage = null)
     {
         try
         {
-            foreach (var shortcut in new[]
-            {
-                ShortcutPath(Environment.SpecialFolder.StartMenu),
-                Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) is { Length: > 0 } desktop
-                    ? Path.Combine(desktop, ProductName + ".lnk")
-                    : string.Empty,
-            })
-            {
-                if (shortcut.Length > 0 && File.Exists(shortcut))
-                {
-                    File.Delete(shortcut);
-                    onMessage?.Invoke($"已删除快捷方式 {shortcut}");
-                }
-            }
-
-            using var key = Registry.CurrentUser.OpenSubKey(RegistryKey, writable: true);
-            if (key is not null)
-            {
-                key.Close();
-                Registry.CurrentUser.DeleteSubKeyTree(RegistryKey, throwOnMissingSubKey: false);
-                onMessage?.Invoke("已从「应用和功能」里移除");
-            }
-
+            var directory = InstallationManifest.ValidateDirectory(InstallDirectory);
+            using var key = Registry.CurrentUser.OpenSubKey(RegistryKey);
+            if (key?.GetValue("InstallLocation") is not string registered
+                || !Path.GetFullPath(registered).TrimEnd('\\').Equals(directory, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("此目录没有登记为安装目录。免安装版请自行删除应用文件夹。");
+            var manifest = InstallationManifest.Read(directory);
+            if (key.GetValue("InstallationId") as string != manifest.Id)
+                throw new InvalidOperationException("安装标记与卸载登记不匹配。");
+            _manifest = manifest;
+            ScheduleDirectoryRemoval(onMessage);
+            foreach (var shortcut in new[] {
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", ProductName + ".lnk"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), ProductName + ".lnk") })
+                if (File.Exists(shortcut)) File.Delete(shortcut);
+            Registry.CurrentUser.DeleteSubKeyTree(RegistryKey, false);
+            onMessage?.Invoke("卸载已安排，将在程序退出后删除安装清单中的文件。用户添加的文件会保留。");
             return true;
         }
         catch (Exception exception)
         {
-            onMessage?.Invoke($"清理时出错(可以手动删除安装目录):{exception.Message}");
+            onMessage?.Invoke($"卸载失败：{exception.Message}");
             return false;
         }
     }
 
-    /// <summary>
-    /// Delete the folder once this process has exited, which is the only moment
-    /// a running executable's own files can be removed.
-    /// </summary>
-    /// <param name="onMessage">Receives the outcome line.</param>
-    internal static void ScheduleDirectoryRemoval(Action<string>? onMessage = null)
+    private static void ScheduleDirectoryRemoval(Action<string>? onMessage)
     {
-        var script = $"ping -n 4 127.0.0.1 >nul & rmdir /s /q \"{InstallDirectory}\"";
-        try
+        if (_manifest is null) throw new InvalidOperationException("缺少安装清单。");
+        var files = _manifest.Files.Append(InstallationManifest.FileName)
+            .Select(file => InstallationManifest.ResolveFile(InstallDirectory, file)).ToArray();
+        var payload = Convert.ToBase64String(Encoding.UTF8.GetBytes(
+            JsonSerializer.Serialize(new { root = InstallDirectory, files, process = Environment.ProcessId })));
+        // Data is base64 JSON, never interpolated as PowerShell source.
+        var script = """
+            $ErrorActionPreference = 'Stop'
+            $data = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('PAYLOAD')) | ConvertFrom-Json
+            Wait-Process -Id $data.process -ErrorAction SilentlyContinue
+            $root = [IO.Path]::GetFullPath($data.root).TrimEnd('\')
+            if ($root -eq [IO.Path]::GetPathRoot($root).TrimEnd('\')) { exit 1 }
+            $dirs = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+            foreach ($file in $data.files) {
+                $full = [IO.Path]::GetFullPath($file)
+                if (-not $full.StartsWith($root + '\', [StringComparison]::OrdinalIgnoreCase)) { exit 1 }
+                $current = $full
+                while ($current) {
+                    if (Test-Path -LiteralPath $current) {
+                        if (((Get-Item -LiteralPath $current -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { exit 1 }
+                    }
+                    $current = [IO.Path]::GetDirectoryName($current)
+                }
+            }
+            foreach ($file in $data.files) {
+                if (Test-Path -LiteralPath $file -PathType Leaf) { Remove-Item -LiteralPath $file -Force }
+                $dir = [IO.Path]::GetDirectoryName($file)
+                while ($dir -and ($dir -eq $root -or $dir.StartsWith($root + '\', [StringComparison]::OrdinalIgnoreCase))) {
+                    [void]$dirs.Add($dir)
+                    $dir = [IO.Path]::GetDirectoryName($dir)
+                }
+            }
+            foreach ($dir in ($dirs | Sort-Object Length -Descending)) {
+                if ((Test-Path -LiteralPath $dir) -and -not [IO.Directory]::EnumerateFileSystemEntries($dir).GetEnumerator().MoveNext()) {
+                    [IO.Directory]::Delete($dir, $false)
+                }
+            }
+            """.Replace("PAYLOAD", payload);
+        var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
+        var powershell = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"WindowsPowerShell\v1.0\powershell.exe");
+        _ = Process.Start(new ProcessStartInfo(powershell, "-NoProfile -NonInteractive -EncodedCommand " + encoded)
         {
-            Process.Start(new ProcessStartInfo("cmd.exe", "/c " + script)
-            {
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                WindowStyle = ProcessWindowStyle.Hidden,
-            });
-
-            onMessage?.Invoke($"安装目录将在几秒后删除:{InstallDirectory}");
-        }
-        catch (Exception exception)
-        {
-            onMessage?.Invoke($"无法自动删除安装目录,请手动删除 {InstallDirectory}:{exception.Message}");
-        }
+            WorkingDirectory = Path.GetTempPath(), CreateNoWindow = true,
+            UseShellExecute = false, WindowStyle = ProcessWindowStyle.Hidden,
+        }) ?? throw new InvalidOperationException("无法启动卸载清理进程。");
     }
 }

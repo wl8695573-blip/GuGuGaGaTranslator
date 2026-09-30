@@ -40,6 +40,19 @@ Copy-Item src\GuGuGaGaTranslator.App\Assets\drawn-mascot.png src\GuGuGaGaTransla
 
 本程序可以调用 DeepSeek 的 API,但**与 DeepSeek 官方没有任何关系,也未获其背书**。"DeepSeek" 名称与标识归其权利人所有 —— DeepSeek 的模型与代码许可是开源的,**其中明确不包含商标许可**,形象与商标不在开源范围内。
 
+## 运行库
+
+发行包中的 `licenses/` 目录包含 NuGet 包及 .NET 运行时自带的许可证和第三方声明。
+
+| 组件 | 版本 | 许可及来源 |
+|---|---|---|
+| RapidOcrNet | 4.2.0 | Apache-2.0；BobLd/RapidOcrNet |
+| Microsoft.ML.OnnxRuntime / Managed | 1.29.0 | MIT；Microsoft/onnxruntime |
+| SkiaSharp / NativeAssets.Win32 | 3.119.1 | MIT；mono/SkiaSharp，原生依赖见包内 THIRD-PARTY-NOTICES |
+| Clipper2 | 2.0.0 | 见随包 NuGet 元数据及上游许可证 |
+| System.Numerics.Tensors | 9.0.0 | MIT；dotnet/runtime |
+| .NET / Windows Desktop Runtime | 发布时的 .NET 10 运行时 | 见随包 LICENSE 与 THIRD-PARTY-NOTICES |
+
 ## 其他第三方内容
 
 | 内容 | 来源 | 许可 |

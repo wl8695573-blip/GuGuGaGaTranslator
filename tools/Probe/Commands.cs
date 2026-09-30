@@ -378,9 +378,11 @@ internal static class Commands
             ? TermSheet.Parse(sheet, out problems)
             : profile!.Terms;
 
-        var glossary = sheet is not null
-            ? terms.Select(term => new GlossaryEntry(term.Source, term.Target, term.Forbidden.Count > 0 ? term.Forbidden.ToArray() : null)).ToList()
-            : GameProfiles.ToGlossary(profile);
+        // A sheet may carry several languages; --from/--to decide which rows apply, and whether they are
+        // used as written, flipped, or paired through the Chinese column.
+        var from = options.Get("from", "ja");
+        var to = options.Get("to", "zh-Hans");
+        var glossary = GameProfiles.ForDirection(terms, from, to);
 
         var samples = options.Get("sample")?.Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
             ?? [];
@@ -397,6 +399,23 @@ internal static class Commands
             };
         }).ToArray();
 
+        var directions = options.Get("all-directions") is null
+            ? null
+            : new[] { "zh-Hans", "ja", "en" }
+                .SelectMany(source => new[] { "zh-Hans", "ja", "en" }
+                    .Where(target => !target.Equals(source, StringComparison.OrdinalIgnoreCase))
+                    .Select(target =>
+                    {
+                        var built = GameProfiles.ForDirection(terms, source, target);
+                        return new
+                        {
+                            direction = $"{source} → {target}",
+                            count = built.Count,
+                            sample = built.Take(4).Select(entry => $"{entry.Source} = {entry.Target}").ToArray(),
+                        };
+                    }))
+                .ToArray();
+
         Console.WriteLine(Serialize(new
         {
             source = sheetPath ?? (profile is not null ? $"profile:{profile.Id}" : "text"),
@@ -406,9 +425,13 @@ internal static class Commands
             parsedTerms = terms.Count,
             parsedForbidden = terms.Sum(term => term.Forbidden.Count),
             problems,
+            direction = $"{from} → {to}",
+            glossary = glossary.Count,
             fingerprint = TermEnforcer.Fingerprint(glossary),
             terms = terms.Select(term => $"{term.Source} = {term.Target}"
                 + (term.Forbidden.Count > 0 ? $"  (禁止: {string.Join("、", term.Forbidden)})" : string.Empty)),
+            applied = glossary.Select(entry => $"{entry.Source} = {entry.Target}"),
+            directions,
             samples = results,
         }));
 
@@ -471,9 +494,18 @@ internal static class Commands
     }
 
     /// <summary>Read a game profile out of the live configuration, so the probe measures the
-    /// same table the application would send.</summary>
+    /// same table the application would send. The id <c>builtin:&lt;id&gt;</c> reads the profile a fresh
+    /// install ships instead, which is how the shipped tables are checked before a release.</summary>
     private static GameProfile LoadProfile(string? id)
     {
+        if (id is not null && id.StartsWith("builtin:", StringComparison.OrdinalIgnoreCase))
+        {
+            var wantedBuiltin = id["builtin:".Length..];
+            var builtin = GameProfiles.FindById(wantedBuiltin, GameProfiles.Default())
+                ?? GameProfiles.Default().FirstOrDefault();
+            return builtin ?? throw new ArgumentException($"no built-in profile '{wantedBuiltin}'");
+        }
+
         var config = new ConfigStore().Load();
         var profiles = config.Translation.GameProfiles;
         var wanted = string.IsNullOrWhiteSpace(id) ? config.Translation.ActiveProfile : id!;

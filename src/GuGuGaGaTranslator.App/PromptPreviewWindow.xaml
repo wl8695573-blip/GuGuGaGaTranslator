@@ -21,17 +21,17 @@
     </Grid.RowDefinitions>
 
     <TextBlock Grid.Row="0" TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}"
-               Text="这就是程序每次翻译时发给 AI 的完整内容。术语表、世界观、语气要求都在里面 —— 译名不符合预期时先看这里:多数情况是术语表里缺了这条,或者世界观没写清这是哪部作品。" />
+               Text="此窗口显示每次翻译发送的完整请求，包括规则、术语表、世界观和上下文。" />
 
     <TextBlock Grid.Row="1" x:Name="ProfileText" Margin="0,8,0,8"
                Foreground="{StaticResource AccentBrush}" TextWrapping="Wrap" />
 
-    <TextBlock Grid.Row="2" Text="System —— 角色与规则、术语表、世界观" Style="{StaticResource FieldLabel}" />
+    <TextBlock Grid.Row="2" Text="System：规则、术语表、世界观" Style="{StaticResource FieldLabel}" />
     <TextBox Grid.Row="3" x:Name="SystemBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
              VerticalScrollBarVisibility="Auto" Margin="0,2,0,10"
              FontFamily="Consolas, Microsoft YaHei UI" />
 
-    <TextBlock Grid.Row="4" Text="User —— 前几句上下文 + 这一句原文" Style="{StaticResource FieldLabel}" />
+    <TextBlock Grid.Row="4" Text="User：上下文和当前原文" Style="{StaticResource FieldLabel}" />
     <TextBox Grid.Row="5" x:Name="UserBox" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap"
              VerticalScrollBarVisibility="Auto" Margin="0,2,0,10"
              FontFamily="Consolas, Microsoft YaHei UI" />

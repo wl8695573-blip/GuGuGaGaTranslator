@@ -1,0 +1,13 @@
+name: Build and regression checks
+on: [push, pull_request]
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet build GuGuGaGaTranslator.slnx -c Release
+      - run: dotnet run --project tools/Regression -c Release
+      - run: dotnet build tools/Installer/Installer.csproj -c Release

@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Channels;
 using System.Windows;
 using GuGuGaGaTranslator.Core.Capture;
 using GuGuGaGaTranslator.Core.Imaging;
@@ -70,6 +71,8 @@ public sealed record PipelineUpdate
     public bool FromCache { get; init; }
 
     public string? Error { get; init; }
+
+    public long Revision { get; init; }
 
     public PipelineSkipReason Skipped { get; init; }
 
@@ -156,6 +159,12 @@ public sealed record PipelineSettings
 
     public required ITextRecognizer Recognizer { get; init; }
 
+    public Func<Int32Rect, Frame>? Capture { get; init; }
+
+    public Func<nint>? TargetHandle { get; init; }
+
+    public bool IsScreenCapture { get; init; } = true;
+
     public required ITranslator Translator { get; init; }
 
     /// <summary>Read on every translation, so the overlay's language switcher can change direction without tearing down the loop.</summary>
@@ -182,6 +191,18 @@ public sealed class TranslationPipeline : IAsyncDisposable
 
     private CancellationTokenSource? _cancellation;
     private Task? _loop;
+    private readonly object _state = new();
+    private Channel<TranslationWork> _pending = CreateQueue();
+    private CancellationTokenSource? _activeTranslation;
+    private long _revision;
+    private volatile string? _pendingSource;
+    private Int32Rect? _lastRegion;
+
+    private sealed record TranslationWork(long Revision, TranslationRequest Request, PipelineUpdate Update);
+    private static Channel<TranslationWork> CreateQueue() => Channel.CreateBounded<TranslationWork>(
+        new BoundedChannelOptions(1) { FullMode = BoundedChannelFullMode.DropOldest, SingleReader = true, SingleWriter = true });
+
+    public bool IsCurrent(PipelineUpdate update) => update.Revision == Interlocked.Read(ref _revision);
 
     private FrameSignature? _lastSignature;
     private double[]? _lastCells;
@@ -232,7 +253,9 @@ public sealed class TranslationPipeline : IAsyncDisposable
         if (IsRunning) return;
         _cancellation = new CancellationTokenSource();
         _forceNext = true;
-        _loop = Task.Run(() => LoopAsync(_cancellation.Token));
+        _pending = CreateQueue();
+        var token = _cancellation.Token;
+        _loop = Task.WhenAll(Task.Run(() => LoopAsync(token)), Task.Run(() => TranslateLoopAsync(token)));
     }
 
     /// <summary>Ask the next iteration to recognize regardless of change detection.</summary>
@@ -242,17 +265,23 @@ public sealed class TranslationPipeline : IAsyncDisposable
     /// translated again: after a language, engine, or glossary change the old lines would mislead it.</summary>
     public void InvalidateTranslation()
     {
-        _lastSourceText = null;
-        _lastTranslation = null;
-        _lastSignature = null;
-        _recent.Clear();
-        _forceNext = true;
+        lock (_state)
+        {
+            _revision++;
+            _activeTranslation?.Cancel();
+            _pendingSource = null;
+            _lastSourceText = null;
+            _lastTranslation = null;
+            _lastSignature = null;
+            _recent.Clear();
+            _forceNext = true;
+        }
     }
 
     public void SetPaused(bool paused)
     {
         _paused = paused;
-        if (!paused) _forceNext = true;
+        InvalidateTranslation();
     }
 
     public async Task StopAsync()
@@ -289,7 +318,7 @@ public sealed class TranslationPipeline : IAsyncDisposable
             {
                 if (!_paused) await IterateAsync(cancellationToken).ConfigureAwait(false);
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
                 break;
             }
@@ -317,6 +346,7 @@ public sealed class TranslationPipeline : IAsyncDisposable
         var region = _settings.RegionProvider();
         if (region is not { Width: > 0, Height: > 0 })
         {
+            InvalidateTranslation();
             Publish(new PipelineUpdate
             {
                 Status = PipelineStatus.NoRegion,
@@ -328,10 +358,17 @@ public sealed class TranslationPipeline : IAsyncDisposable
         }
 
         var captureWatch = Stopwatch.StartNew();
-        var frame = ScreenCapture.CaptureScreenRegion(region.Value);
+        if (_lastRegion != region)
+        {
+            InvalidateTranslation();
+            _lastRegion = region;
+        }
+        var revision = Interlocked.Read(ref _revision);
+        var frame = _settings.Capture?.Invoke(region.Value) ?? ScreenCapture.CaptureScreenRegion(region.Value);
         // 先抹掉自己的窗口再判断画面有没有变:否则语言条上的按钮高亮、翻译框里换了一句话,
         // 都会被当成「游戏画面变了」而触发一次多余的识别。
-        if (_options.MaskOwnWindows) SelfWindowMask.Apply(frame);
+        if (_options.MaskOwnWindows && _settings.IsScreenCapture)
+            SelfWindowMask.Apply(frame, SelfWindowMask.ScreenRects(_settings.TargetHandle?.Invoke() ?? 0));
         captureWatch.Stop();
         Interlocked.Increment(ref _frames);
 
@@ -344,6 +381,7 @@ public sealed class TranslationPipeline : IAsyncDisposable
 
         if (!forced && distance < _options.ChangeThresholdBits && _options.TranslateOnlyOnChange)
         {
+            if (_pendingSource is not null) return;
             Publish(new PipelineUpdate
             {
                 Status = PipelineStatus.Unchanged,
@@ -351,7 +389,7 @@ public sealed class TranslationPipeline : IAsyncDisposable
                 Signature = signature,
                 SignatureDistance = distance,
                 SourceText = _lastSourceText ?? string.Empty,
-                Translation = _lastTranslation,
+                Translation = _pendingSource is null ? _lastTranslation : null,
                 CaptureDuration = captureWatch.Elapsed,
                 TotalDuration = iteration.Elapsed,
             });
@@ -363,6 +401,7 @@ public sealed class TranslationPipeline : IAsyncDisposable
         var prepared = ImageOps.Upscale(ImageOps.ToGrayscale(frame, _options.OcrGrayscale), _options.OcrScale);
         var ocr = await _settings.Recognizer.RecognizeAsync(prepared, cancellationToken).ConfigureAwait(false);
         Interlocked.Increment(ref _recognitions);
+        if (revision != Interlocked.Read(ref _revision) || _paused) return;
 
         _lastSignature = signature;
         _lastCells = cells;
@@ -372,6 +411,7 @@ public sealed class TranslationPipeline : IAsyncDisposable
         var skip = SkipReason(sourceText, _settings.Languages().From);
         if (skip != PipelineSkipReason.None || sourceText.Length < _options.MinTextLength)
         {
+            InvalidateTranslation();
             // A flat colour means the problem is upstream of recognition, not in it.
             var blank = sourceText.Length == 0 && IsBlank(frame);
             Publish(new PipelineUpdate
@@ -394,7 +434,7 @@ public sealed class TranslationPipeline : IAsyncDisposable
 
         // The same line re-read with a character of OCR noise is not a new line; reusing
         // its translation is what keeps a static box from paying per poll.
-        if (_lastSourceText is not null
+        if (_pendingSource is null && _lastSourceText is not null
             && _lastTranslation is not null
             && TextNormalizer.Similarity(_lastSourceText, sourceText) >= _options.RepeatSimilarity)
         {
@@ -418,6 +458,12 @@ public sealed class TranslationPipeline : IAsyncDisposable
             return;
         }
 
+        lock (_state)
+        {
+            if (revision != _revision || _paused) return;
+            if (_pendingSource is not null && TextNormalizer.Similarity(_pendingSource, sourceText) >= _options.RepeatSimilarity)
+                return;
+        }
         var languages = _settings.Languages();
         var profile = _settings.Profile();
         var request = new TranslationRequest
@@ -429,10 +475,77 @@ public sealed class TranslationPipeline : IAsyncDisposable
             StyleHint = profile.StyleHint,
             Worldview = profile.Worldview,
             // The recent lines keep pronouns and tone consistent across a conversation.
-            Context = _options.HistoryLines > 0 ? [.. _recent] : [],
+            Context = [],
         };
 
+        lock (_state)
+        {
+            if (revision != _revision || _paused) return;
+            _revision++;
+            _activeTranslation?.Cancel();
+            _pendingSource = sourceText;
+            _pending.Writer.TryWrite(new TranslationWork(_revision, request, new PipelineUpdate
+            {
+                Status = PipelineStatus.Translating, At = DateTimeOffset.Now, Frame = frame,
+                Signature = signature, SignatureDistance = distance, Ocr = ocr, SourceText = sourceText,
+                CaptureDuration = captureWatch.Elapsed, OcrDuration = ocr.Duration,
+                Revision = _revision,
+            }));
+        }
+    }
+
+    private async Task TranslateLoopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await foreach (var work in _pending.Reader.ReadAllAsync(cancellationToken))
+            {
+                using var requestCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+                TranslationRequest request;
+                lock (_state)
+                {
+                    if (work.Revision != _revision || _paused) continue;
+                    _activeTranslation = requestCancellation;
+                    request = work.Request with { Context = _options.HistoryLines > 0 ? [.. _recent] : [] };
+                }
+                try
+                {
+                    await TranslateWorkAsync(work, request, requestCancellation.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (requestCancellation.IsCancellationRequested) { }
+                catch (Exception exception)
+                {
+                    lock (_state)
+                    {
+                        if (work.Revision == _revision)
+                        {
+                            Interlocked.Increment(ref _errors);
+                            Publish(work.Update with { Status = PipelineStatus.Error, Error = exception.Message });
+                        }
+                    }
+                    await SafeDelayAsync(_options.ErrorBackoffMs, cancellationToken).ConfigureAwait(false);
+                }
+                finally
+                {
+                    lock (_state)
+                    {
+                        if (ReferenceEquals(_activeTranslation, requestCancellation)) _activeTranslation = null;
+                        if (work.Revision == _revision) { _pendingSource = null; _forceNext = true; }
+                    }
+                }
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+    }
+
+    private async Task TranslateWorkAsync(TranslationWork work, TranslationRequest request, CancellationToken cancellationToken)
+    {
         var translateWatch = Stopwatch.StartNew();
+        lock (_state)
+        {
+            if (work.Revision != _revision) return;
+            Publish(work.Update);
+        }
         string translation;
         var fromCache = false;
         IReadOnlyList<TermFix> fixes = [];
@@ -446,55 +559,49 @@ public sealed class TranslationPipeline : IAsyncDisposable
         {
             // Report the growing text so the overlay fills in as the model writes.
             translation = await streaming
-                .TranslateAsync(request, partial => Publish(new PipelineUpdate
+                .TranslateAsync(request, partial =>
                 {
-                    Status = PipelineStatus.Translating,
-                    At = DateTimeOffset.Now,
-                    Ocr = ocr,
-                    SourceText = sourceText,
-                    Translation = Enforce(partial, request, _options, out _),
-                    CaptureDuration = captureWatch.Elapsed,
-                    OcrDuration = ocr.Duration,
-                    TotalDuration = iteration.Elapsed,
-                }), cancellationToken)
+                    lock (_state)
+                    {
+                        if (work.Revision != _revision || cancellationToken.IsCancellationRequested) return;
+                        Publish(work.Update with {
+                            Translation = Enforce(partial, request, _options, out _),
+                            TranslateDuration = translateWatch.Elapsed,
+                        });
+                    }
+                }, cancellationToken)
                 .ConfigureAwait(false);
 
             translation = Enforce(translation, request, _options, out fixes);
-            _cache.Set(_settings.Translator.Id, request, translation);
+            cancellationToken.ThrowIfCancellationRequested();
             Interlocked.Increment(ref _translations);
         }
         else
         {
             translation = await _settings.Translator.TranslateAsync(request, cancellationToken).ConfigureAwait(false);
             translation = Enforce(translation, request, _options, out fixes);
-            _cache.Set(_settings.Translator.Id, request, translation);
+            cancellationToken.ThrowIfCancellationRequested();
             Interlocked.Increment(ref _translations);
         }
 
         translateWatch.Stop();
-        _lastSourceText = sourceText;
-        _lastTranslation = translation;
-        Remember(sourceText, translation);
-
-        Publish(new PipelineUpdate
+        lock (_state)
         {
-            Status = PipelineStatus.Translated,
-            At = DateTimeOffset.Now,
-            Frame = frame,
-            Signature = signature,
-            SignatureDistance = distance,
-            Ocr = ocr,
-            SourceText = sourceText,
-            Translation = translation,
-            TermFixes = fixes,
-            FromCache = fromCache,
-            CaptureDuration = captureWatch.Elapsed,
-            OcrDuration = ocr.Duration,
-            TranslateDuration = translateWatch.Elapsed,
-            TotalDuration = iteration.Elapsed,
-        });
-
-        _settings.Dumper?.Dump(frame, signature, ocr, sourceText, translation, distance);
+            if (work.Revision != _revision || cancellationToken.IsCancellationRequested) return;
+            _cache.Set(_settings.Translator.Id, request, translation);
+            _lastSourceText = request.Text;
+            _lastTranslation = translation;
+            Remember(request.Text, translation);
+            Publish(work.Update with
+            {
+                Status = PipelineStatus.Translated, At = DateTimeOffset.Now,
+                Translation = translation, TermFixes = fixes, FromCache = fromCache,
+                TranslateDuration = translateWatch.Elapsed,
+                TotalDuration = work.Update.CaptureDuration + work.Update.OcrDuration + translateWatch.Elapsed,
+            });
+        }
+        if (work.Update.Frame is { } frame && work.Update.Signature is { } signature)
+            _settings.Dumper?.Dump(frame, signature, work.Update.Ocr!, request.Text, translation, work.Update.SignatureDistance);
     }
 
     /// <summary>Apply the game profile's terms to a translation.</summary>
@@ -565,7 +672,6 @@ public sealed class TranslationPipeline : IAsyncDisposable
         // can be all kanji, so separating them would reject valid dialogue.
         "ja" or "japanese" => IsCjk,
         "zh" or "zh-hans" or "zh-hant" or "zh-hans-cn" or "zh-hant-tw" or "chinese" => IsCjk,
-        "ko" or "korean" => character => IsCjk(character) || (character >= '\uAC00' && character <= '\uD7A3'),
         _ => null,
     };
 
@@ -582,7 +688,7 @@ public sealed class TranslationPipeline : IAsyncDisposable
     {
         try
         {
-            Updated?.Invoke(update);
+            Updated?.Invoke(update with { Revision = update.Revision == 0 ? Interlocked.Read(ref _revision) : update.Revision });
         }
         catch (Exception)
         {

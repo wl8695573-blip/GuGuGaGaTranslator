@@ -82,7 +82,7 @@ public partial class SetupWindow : Window
         DirectionCombo.SelectedIndex = directionIndex >= 0 ? directionIndex : 0;
 
         VersionText.Text = "屏幕实时翻译 · 首次设置";
-        StorageHint.Text = $"密钥只保存在本机:{_session.Store.FilePath}(明文 JSON,请勿分享该文件)";
+        StorageHint.Text = "密钥使用 Windows 当前账户加密保存；换电脑或账户后需要重新填写。";
         AdvancedExpander.IsExpanded = string.IsNullOrWhiteSpace(translator.ApiKey);
 
         _loading = false;

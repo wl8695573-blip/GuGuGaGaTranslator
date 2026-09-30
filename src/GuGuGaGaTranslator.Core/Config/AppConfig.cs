@@ -117,7 +117,7 @@ public sealed class OverlayConfig
 
     public bool TextOutline { get; set; } = true;
 
-    public int MaxLines { get; set; } = 4;
+    public int MaxLines { get; set; } = 0;
 
     /// <summary>Panel width in pixels; 0 follows the captured region's width.</summary>
     public int Width { get; set; }
@@ -245,21 +245,37 @@ public sealed class LanguagePreset
     public override string ToString() => Label;
 }
 
-/// <summary>The switcher's out-of-the-box directions.</summary>
+/// <summary>The switcher's out-of-the-box directions: 中 / 日 / 英, all six pairs.</summary>
 public static class DefaultLanguagePresets
 {
     public static List<LanguagePreset> Create() =>
     [
         new() { Label = "日 → 中", From = "ja", To = "zh-Hans", Ocr = "ja" },
-        new() { Label = "自动识别 → 中文", From = "auto", To = "zh-Hans", Ocr = "auto" },
         new() { Label = "英 → 中", From = "en", To = "zh-Hans", Ocr = "en-US" },
-        new() { Label = "韩 → 中", From = "ko", To = "zh-Hans", Ocr = "ko" },
+        new() { Label = "自动识别 → 中文", From = "auto", To = "zh-Hans", Ocr = "auto" },
         new() { Label = "中 → 日", From = "zh-Hans", To = "ja", Ocr = "zh-Hans-CN" },
         new() { Label = "中 → 英", From = "zh-Hans", To = "en", Ocr = "zh-Hans-CN" },
-        new() { Label = "中 → 韩", From = "zh-Hans", To = "ko", Ocr = "zh-Hans-CN" },
         new() { Label = "日 → 英", From = "ja", To = "en", Ocr = "ja" },
         new() { Label = "英 → 日", From = "en", To = "ja", Ocr = "en-US" },
     ];
+
+    /// <summary>The three languages this tool translates between, and nothing else.</summary>
+    public static readonly string[] SupportedLanguages = ["zh-Hans", "ja", "en"];
+
+    /// <summary>Whether a configured language is one of the three; <c>auto</c> counts as a source.</summary>
+    public static bool IsSupported(string? language, bool allowAuto) =>
+        !string.IsNullOrWhiteSpace(language)
+        && ((allowAuto && language.Equals("auto", StringComparison.OrdinalIgnoreCase))
+            || SupportedLanguages.Contains(language, StringComparer.OrdinalIgnoreCase));
+
+    /// <summary>Recognition language tags carry a region (<c>en-US</c>, <c>zh-Hans-CN</c>), so they are
+    /// matched by prefix rather than against the translation list.</summary>
+    public static bool IsSupportedOcr(string? language) =>
+        !string.IsNullOrWhiteSpace(language)
+        && (language.Equals("auto", StringComparison.OrdinalIgnoreCase)
+            || language.StartsWith("ja", StringComparison.OrdinalIgnoreCase)
+            || language.StartsWith("en", StringComparison.OrdinalIgnoreCase)
+            || language.StartsWith("zh", StringComparison.OrdinalIgnoreCase));
 }
 
 /// <summary>How often to look, and when a look is worth recognizing.</summary>
@@ -352,4 +368,23 @@ public sealed class AppConfig
     public PipelineConfig Pipeline { get; set; } = new();
 
     public DebugConfig Debug { get; set; } = new();
+
+    /// <summary>Drop language choices this version no longer offers, so a configuration carried over from an
+    /// older build cannot point at a language the interface can no longer select — the tool translates
+    /// 中 / 日 / 英 and nothing else.</summary>
+    public void NormalizeLanguages()
+    {
+        if (!DefaultLanguagePresets.IsSupported(Translation.From, allowAuto: true)) Translation.From = "auto";
+        if (!DefaultLanguagePresets.IsSupported(Translation.To, allowAuto: false)) Translation.To = "zh-Hans";
+        if (!DefaultLanguagePresets.IsSupportedOcr(Ocr.Language)) Ocr.Language = "auto";
+        Ocr.Fallbacks = [.. Ocr.Fallbacks.Where(DefaultLanguagePresets.IsSupportedOcr)];
+
+        var kept = Overlay.LanguagePresets
+            .Where(preset => DefaultLanguagePresets.IsSupported(preset.From, allowAuto: true)
+                && DefaultLanguagePresets.IsSupported(preset.To, allowAuto: false))
+            .ToList();
+
+        // 六个方向一个都不剩(例如旧配置只有韩语方向)就换回默认那套。
+        Overlay.LanguagePresets = kept.Count > 0 ? kept : DefaultLanguagePresets.Create();
+    }
 }

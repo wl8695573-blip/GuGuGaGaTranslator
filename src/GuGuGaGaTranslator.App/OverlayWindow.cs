@@ -162,7 +162,7 @@ public sealed class OverlayWindow : Window
             _ => TextAlignment.Left,
         };
 
-        // 隐藏底框(或把不透明度设成 0)就只剩带描边的文字浮在游戏上,也就是多数玩家要的「盖住原文」效果。
+        // A transparent panel leaves only outlined text visible.
         var alpha = config.ShowPanel
             ? (byte)Math.Clamp(config.BackgroundOpacity * 255, 0, 255)
             : (byte)0;
@@ -307,8 +307,8 @@ public sealed class OverlayWindow : Window
         _sourceText.Text = source;
 
         var lines = translation.Split('\n');
-        var maxLines = Math.Max(1, _config.MaxLines);
-        _translationText.Text = lines.Length <= maxLines
+        var maxLines = _config.MaxLines;
+        _translationText.Text = maxLines <= 0 || lines.Length <= maxLines
             ? translation
             : string.Join('\n', lines.Take(maxLines)) + " …";
 

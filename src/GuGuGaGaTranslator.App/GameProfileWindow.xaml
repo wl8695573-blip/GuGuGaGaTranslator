@@ -18,7 +18,7 @@
 
     <TextBlock Grid.Row="0" TextWrapping="Wrap" Margin="0,0,0,10"
                Foreground="{StaticResource MutedTextBrush}"
-               Text="一个「游戏档案」= 这款作品的术语表 + 世界观 + 语气。选中它之后,每次翻译都会把术语表作为硬性要求发给 AI;模型写错的译名会被自动改回既定译名,所以「新九人联盟」这类误译不会再出现在屏幕上。" />
+               Text="游戏档案包含术语表、世界观和风格要求。启用术语校正后，已列出的错误译法会在译后替换。" />
 
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
       <StackPanel>
@@ -27,7 +27,7 @@
         <TextBlock Text="名称(选择器里显示的文字)" Style="{StaticResource FieldLabel}" />
         <TextBox x:Name="NameBox" />
         <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                   Text="窗口标题关键字 —— 用逗号分隔。游戏窗口标题里出现其中任何一个,就自动启用这份档案。" />
+                   Text="窗口标题关键字（用逗号分隔）" />
         <TextBox x:Name="HintsBox" />
 
         <UniformGrid Columns="3" Margin="0,6,0,0">
@@ -49,7 +49,7 @@
 
         <TextBlock Text="② 世界观(让 AI 认出这是哪部作品)" Style="{StaticResource SectionText}" />
         <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                   Text="一两句话说明作品名、世界观、主角。这段**会随每一句台词一起发给 AI**,所以越短越好(三句以内)—— 但只要模型认得出作品,它就会自动沿用官方译名里那些你没列出来的词。" />
+                   Text="简要说明作品、世界观和主角。此内容会随台词发送给翻译引擎。" />
         <TextBox x:Name="WorldviewBox" AcceptsReturn="True" TextWrapping="Wrap" Height="70"
                  VerticalScrollBarVisibility="Auto" />
         <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Text="语气 / 风格要求(可留空)" />
@@ -62,7 +62,7 @@
         <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                    Text="每行一条:原文 = 译名 | 禁止: 错误译法1、错误译法2   (# 开头是注释)" />
         <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                   Text="例:新九人会 = 新九人会 | 禁止: 新九人联盟、新九人协会  ——  「禁止」里的写法一旦出现在译文里,程序会立刻改回左边的译名,所以误译不会漏到屏幕上。「=」两边写一样也是合法的,表示「必须原样保留,不许意译」。" />
+                   Text="示例：新九人会 = 新九人会 | 禁止：新九人联盟、新九人协会。等号两侧相同时表示原样保留。" />
         <TextBox x:Name="TermsBox" AcceptsReturn="True" TextWrapping="NoWrap" Height="220"
                  FontFamily="Consolas, Microsoft YaHei UI" VerticalScrollBarVisibility="Auto"
                  HorizontalScrollBarVisibility="Auto" />
@@ -71,11 +71,11 @@
 
         <TextBlock Text="④ 让 AI 起草术语表 / 世界观" Style="{StaticResource SectionText}" />
         <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                   Text="用当前配置的翻译引擎(本地或在线都行)生成。生成结果会合进上面的术语表(已有的条目不会被覆盖),AI 还会附一句「世界观」建议 —— 上面那栏是空的话会自动填进去。" />
+                   Text="使用当前翻译引擎生成术语表和世界观建议。已有术语不会被覆盖。" />
         <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Text="游戏名(可留空 = 让 AI 自己判断)" />
         <TextBox x:Name="GameNameBox" />
         <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                   Text="作品简介 / 参考资料(可留空;从百科、商店页、维基复制粘贴都行) —— 只用于生成这一次,不会随台词发送,所以可以长" />
+                   Text="作品简介 / 参考资料（仅用于本次生成，不随台词发送）" />
         <TextBox x:Name="SynopsisBox" AcceptsReturn="True" TextWrapping="Wrap" Height="90"
                  VerticalScrollBarVisibility="Auto" />
         <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
@@ -84,7 +84,7 @@
                  VerticalScrollBarVisibility="Auto" />
         <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
           <Button x:Name="FillSampleButton" Content="填入最近识别到的原文" Click="OnFillSample" />
-          <Button x:Name="GenerateButton" Content="✨ 生成 / 补全术语表" Click="OnGenerate" Style="{StaticResource PrimaryButton}" />
+          <Button x:Name="GenerateButton" Content="生成 / 补全术语表" Click="OnGenerate" Style="{StaticResource PrimaryButton}" />
         </StackPanel>
         <TextBlock x:Name="GenerateStatus" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,6,0,0" />
 

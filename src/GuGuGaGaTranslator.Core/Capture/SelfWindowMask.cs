@@ -13,13 +13,19 @@ namespace GuGuGaGaTranslator.Core.Capture;
 public static class SelfWindowMask
 {
     [SupportedOSPlatform("windows")]
-    public static IReadOnlyList<Int32Rect> ScreenRects()
+    public static IReadOnlyList<Int32Rect> ScreenRects(nint targetHandle = 0)
     {
         var processId = (uint)Environment.ProcessId;
         var rects = new List<Int32Rect>();
+        var foundTarget = targetHandle == 0;
 
         NativeMethods.EnumWindows((hwnd, _) =>
         {
+            // EnumWindows enumerates top-level windows from front to back.
+            if (targetHandle != 0 && hwnd == targetHandle) { foundTarget = true; return false; }
+            if (NativeMethods.IsIconic(hwnd)) return true;
+            if (NativeMethods.DwmGetWindowAttribute(hwnd, NativeMethods.DwmwaCloaked, out var cloaked, sizeof(int)) == 0 && cloaked != 0)
+                return true;
             NativeMethods.GetWindowThreadProcessId(hwnd, out var owner);
             if (owner != processId) return true;
             if (!NativeMethods.IsWindowVisible(hwnd)) return true;
@@ -34,7 +40,7 @@ public static class SelfWindowMask
             return true;
         }, 0);
 
-        return rects;
+        return foundTarget ? rects : [];
     }
 
     /// <summary>Blank every pixel of a frame that falls under one of this tool's own windows.</summary>

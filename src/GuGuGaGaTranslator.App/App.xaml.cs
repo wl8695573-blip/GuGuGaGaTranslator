@@ -7,6 +7,9 @@ namespace GuGuGaGaTranslator.App;
 /// <c>StartupUri</c>, so the session exists before the first window renders.</summary>
 public partial class App : Application
 {
+    private Mutex? _instanceMutex;
+    private bool _ownsMutex;
+
     public AppSession Session { get; private set; } = null!;
 
     /// <inheritdoc />
@@ -25,13 +28,23 @@ public partial class App : Application
             {
                 MessageBox.Show(
                     string.Join(Environment.NewLine, steps)
-                        + (ok ? Environment.NewLine + Environment.NewLine + "卸载完成。" : string.Empty),
+                        + (ok ? Environment.NewLine + Environment.NewLine + "关闭此提示后完成文件清理。" : string.Empty),
                     "卸载 GuGuGaGaTranslator",
                     MessageBoxButton.OK,
                     ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
             }
 
-            if (ok) Uninstall.ScheduleDirectoryRemoval(quiet ? null : steps.Add);
+
+            Shutdown();
+            return;
+        }
+
+        _instanceMutex = new Mutex(false, @"Local\GuGuGaGaTranslator-" + System.Security.Principal.WindowsIdentity.GetCurrent().User!.Value);
+        try { _ownsMutex = _instanceMutex.WaitOne(0); }
+        catch (AbandonedMutexException) { _ownsMutex = true; }
+        if (!_ownsMutex)
+        {
+            MessageBox.Show("程序已经在运行，请使用已打开的窗口。", "GuGuGaGaTranslator");
             Shutdown();
             return;
         }
@@ -39,7 +52,9 @@ public partial class App : Application
         // 清单里已经声明了 per-monitor-v2;这里是程序化的一份,兼顾忽略清单的宿主。
         GuGuGaGaTranslator.Core.Interop.DpiAwareness.EnablePerMonitorV2();
 
-        Session = new AppSession();
+        var configIndex = Array.IndexOf(e.Args, "--config-dir");
+        var configDirectory = configIndex >= 0 && configIndex + 1 < e.Args.Length ? e.Args[configIndex + 1] : null;
+        Session = new AppSession(configDirectory);
         Session.LoadConfig();
 
         // 设置卡片期间必须先设成显式退出:WPF 默认会在最后一个窗口关闭时立刻关闭程序,
@@ -90,6 +105,8 @@ public partial class App : Application
     /// <inheritdoc />
     protected override async void OnExit(ExitEventArgs e)
     {
+        if (_ownsMutex) { _instanceMutex?.ReleaseMutex(); _ownsMutex = false; }
+        _instanceMutex?.Dispose();
         if (Session is not null) await Session.DisposeAsync().ConfigureAwait(false);
         base.OnExit(e);
     }

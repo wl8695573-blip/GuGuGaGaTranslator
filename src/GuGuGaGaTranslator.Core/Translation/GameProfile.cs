@@ -6,6 +6,10 @@ namespace GuGuGaGaTranslator.Core.Translation;
 /// wordings that must never appear.</summary>
 public sealed class GameTerm
 {
+    /// <summary>Which language <see cref="Source"/> is written in — <c>en</c>, <c>ja</c>, or <c>zh</c>.
+    /// Null keeps the older meaning: the source is whatever language the game is being played in.</summary>
+    public string? Language { get; set; }
+
     public string Source { get; set; } = string.Empty;
 
     public string Target { get; set; } = string.Empty;
@@ -19,6 +23,7 @@ public sealed class GameTerm
     public override string ToString()
     {
         var builder = new StringBuilder();
+        if (!string.IsNullOrWhiteSpace(Language)) builder.Append(Language).Append(": ");
         builder.Append(Source).Append(" = ").Append(Target);
         if (Forbidden.Count > 0) builder.Append(" | 禁止: ").Append(string.Join("、", Forbidden));
         if (!string.IsNullOrWhiteSpace(Note)) builder.Append(" | 备注: ").Append(Note);
@@ -97,6 +102,10 @@ public static class TermSheet
             if (line.Length == 0) continue;
             if (line.StartsWith('#') || line.StartsWith("//") || line.StartsWith('－')) continue;
 
+            // 「en: Yi Sang = 李箱」这种语言标签:一条表里同时放几种原文,翻译时按当前方向取用。
+            var language = SplitLanguage(ref line);
+            if (line.Length == 0) continue;
+
             var split = SplitOnce(line);
             if (split is null)
             {
@@ -107,7 +116,7 @@ public static class TermSheet
             var (source, rest) = split.Value;
             var (target, extra) = SplitOnce(rest, '|');
 
-            var term = new GameTerm { Source = source.Trim(), Target = target.Trim() };
+            var term = new GameTerm { Language = language, Source = source.Trim(), Target = target.Trim() };
             foreach (var segment in (extra ?? string.Empty).Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
                 var (label, value) = SplitOnce(segment, ':', '：');
@@ -157,6 +166,27 @@ public static class TermSheet
 
     public static List<GameTerm> Parse(string text) => Parse(text, out _);
 
+    /// <summary>Take a leading language tag off a sheet line: <c>en:</c>, <c>ja:</c>, <c>zh:</c> (and their
+    /// long forms). Returns the normalised tag and leaves the rest of the line in <paramref name="line"/>.</summary>
+    private static string? SplitLanguage(ref string line)
+    {
+        var colon = line.IndexOfAny([':', '：']);
+        if (colon <= 0 || colon > 8) return null;
+
+        var tag = line[..colon].Trim().ToLowerInvariant();
+        var language = tag switch
+        {
+            "en" or "english" or "eng" => "en",
+            "ja" or "jp" or "japanese" or "jpn" => "ja",
+            "zh" or "cn" or "chinese" => "zh",
+            _ => null,
+        };
+        if (language is null) return null;
+
+        line = line[(colon + 1)..].Trim();
+        return language;
+    }
+
     /// <summary>Split on the first of several separators, longest first so <c>=&gt;</c> is not mistaken for <c>=</c>.</summary>
     private static (string Left, string Right)? SplitOnce(string text)
     {
@@ -186,8 +216,8 @@ public static class TermSheet
 /// <summary>The profiles a fresh install ships with, plus the lookups that decide which one a running game should use.</summary>
 public static class GameProfiles
 {
-    /// <summary>The starter profiles: deliberately few and honest, each one a syntax example meant to be replaced by
-    /// 「AI 生成」 plus a few corrections.</summary>
+    /// <summary>The starter profiles: one fully worked example that ships tuned for a real game, plus a syntax
+    /// template meant to be replaced by 「AI 生成」 plus a few corrections.</summary>
     public static List<GameProfile> Default() =>
     [
         new()
@@ -195,27 +225,12 @@ public static class GameProfiles
             Id = "limbus-company",
             Name = "边狱巴士 / Limbus Company",
             WindowHints = ["Limbus", "边狱", "림버스"],
-            Note = "Project Moon 的作品。都市世界观,十二位罪人,大量专有名词来自《废墟图书馆》与《脑叶公司》。",
-            Worldview = "《边狱巴士》(Limbus Company, Project Moon 出品)的对话。背景是「都市」这一巨型都市国家,"
-                + "玩家扮演管理者但丁,带领十二位「罪人」乘坐巴士回收「金枝」。"
-                + "专有名词沿用官方简体中文译名(与《废墟图书馆》《脑叶公司》一致),不要另造译名。",
-            StyleHint = "罪人之间以名字或绰号互称,语气现代、口语化、夹带黑色幽默;不要用文言或书面官腔。",
-            Terms =
-            [
-                new()
-                {
-                    Source = "新九人会",
-                    Target = "新九人会",
-                    Forbidden = ["新九人联盟", "新九人协会", "新九人會"],
-                    Note = "N 公司相关组织的官方译名,不要意译成「联盟」。",
-                },
-                new()
-                {
-                    Source = "N社",
-                    Target = "N公司",
-                    Forbidden = ["N 社", "恩社"],
-                },
-            ],
+            Note = "Project Moon 的作品。都市世界观,十二位罪人,大量专有名词来自《废墟图书馆》与《脑叶公司》。"
+                + "术语表按零协会汉化整理,同时带英文与日文两种原文,中/日/英互译都能用。",
+            Worldview = LimbusProfile.Worldview,
+            StyleHint = LimbusProfile.StyleHint,
+            // 表里同时有 en: 和 ja: 两种原文,翻译时按当前方向取用,见 GameProfiles.ForDirection。
+            Terms = TermSheet.Parse(LimbusProfile.Terms),
         },
         new()
         {
@@ -272,6 +287,86 @@ public static class GameProfiles
                     term.Target.Trim(),
                     term.Forbidden.Count > 0 ? term.Forbidden.ToArray() : null))
                 .ToList();
+
+    /// <summary>The terms that apply to one language direction. A sheet may carry several languages at once
+    /// (rows tagged <c>en:</c> / <c>ja:</c> / <c>zh:</c>), and the direction decides which side is used:
+    /// translating into Chinese takes the rows written in the source language as they are, translating out
+    /// of Chinese flips them, and between two foreign languages the Chinese column acts as the pivot.</summary>
+    public static List<GlossaryEntry> ForDirection(GameProfile? profile, string from, string to) =>
+        profile is null ? [] : ForDirection(profile.Terms, from, to);
+
+    public static List<GlossaryEntry> ForDirection(IReadOnlyList<GameTerm> terms, string from, string to)
+    {
+        var result = new List<GlossaryEntry>();
+
+        if (IsChinese(to))
+        {
+            foreach (var term in terms)
+            {
+                if (!IsUsable(term)) continue;
+                // 没标语言的按老格式理解:它就是「游戏原文 → 中文」,任何源语言都用得上。
+                if (term.Language is { Length: > 0 } tag && !Matches(tag, from)) continue;
+                result.Add(Entry(term.Source, term.Target, term.Forbidden));
+            }
+
+            return result;
+        }
+
+        if (IsChinese(from))
+        {
+            // 中 → 外语:把标了目标语言的行反过来用。禁止列写的是中文侧的错误写法,反转后不适用。
+            foreach (var term in terms)
+            {
+                if (!IsUsable(term)) continue;
+                if (term.Language is not { Length: > 0 } tag || !Matches(tag, to)) continue;
+                result.Add(Entry(term.Target, term.Source, null));
+            }
+
+            return result;
+        }
+
+        // 外语 → 外语:以中文那列为枢轴,找同一个中文译名在两种外语里各自的写法。
+        var pivot = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var term in terms)
+        {
+            if (!IsUsable(term)) continue;
+            if (term.Language is not { Length: > 0 } toTag || !Matches(toTag, to)) continue;
+            pivot[term.Target.Trim()] = term.Source.Trim();
+        }
+
+        foreach (var term in terms)
+        {
+            if (!IsUsable(term)) continue;
+            if (term.Language is not { Length: > 0 } fromTag || !Matches(fromTag, from)) continue;
+            if (!pivot.TryGetValue(term.Target.Trim(), out var translated)) continue;
+            result.Add(Entry(term.Source, translated, null));
+        }
+
+        return result;
+    }
+
+    /// <summary>Which of the three supported languages a tag or configuration value names, or null when it names none.</summary>
+    public static string? LanguageOf(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+
+        var text = value.Trim().ToLowerInvariant();
+        if (text.StartsWith("zh", StringComparison.Ordinal) || text is "cn" or "chinese") return "zh";
+        if (text.StartsWith("ja", StringComparison.Ordinal) || text is "jp" or "japanese" or "jpn") return "ja";
+        if (text.StartsWith("en", StringComparison.Ordinal) || text is "eng" or "english") return "en";
+        return null;
+    }
+
+    private static bool Matches(string tag, string language) =>
+        LanguageOf(tag) is { } left && LanguageOf(language) is { } right && left == right;
+
+    private static bool IsChinese(string language) => LanguageOf(language) == "zh";
+
+    private static bool IsUsable(GameTerm term) =>
+        !string.IsNullOrWhiteSpace(term.Source) && !string.IsNullOrWhiteSpace(term.Target);
+
+    private static GlossaryEntry Entry(string source, string target, List<string>? forbidden) =>
+        new(source.Trim(), target.Trim(), forbidden is { Count: > 0 } ? forbidden.ToArray() : null);
 
     /// <summary>Merge term lists, with the later list winning for the same source term so a hand-typed glossary can
     /// override a profile without editing it.</summary>

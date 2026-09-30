@@ -1,6 +1,8 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.Json.Nodes;
+using System.Security.Cryptography;
 
 namespace GuGuGaGaTranslator.Core.Config;
 
@@ -41,7 +43,26 @@ public sealed class ConfigStore
         try
         {
             var json = File.ReadAllText(FilePath);
-            return JsonSerializer.Deserialize<AppConfig>(json, Options) ?? new AppConfig();
+            var config = JsonSerializer.Deserialize<AppConfig>(json, Options) ?? new AppConfig();
+            var translator = config.Translation.Translator;
+            var migrate = (!string.IsNullOrEmpty(translator.ApiKey) && !translator.ApiKey.StartsWith(SecretProtection.Prefix))
+                || (!string.IsNullOrEmpty(translator.AppSecret) && !translator.AppSecret.StartsWith(SecretProtection.Prefix));
+            try
+            {
+                config.Translation.Translator = translator with
+                {
+                    ApiKey = SecretProtection.Unprotect(translator.ApiKey),
+                    AppSecret = SecretProtection.Unprotect(translator.AppSecret),
+                };
+            }
+            catch (Exception exception) when (exception is CryptographicException or FormatException)
+            {
+                LastLoadError = "密钥无法在当前 Windows 账户中解密，请重新填写 API Key。";
+                config.Translation.Translator = translator with { ApiKey = "", AppSecret = "" };
+                migrate = false;
+            }
+            if (migrate) Save(config);
+            return config;
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
         {
@@ -57,9 +78,20 @@ public sealed class ConfigStore
     {
         // Fully qualified: this class's own Directory property shadows the type.
         System.IO.Directory.CreateDirectory(Directory);
-        var temporary = FilePath + ".tmp";
-        File.WriteAllText(temporary, JsonSerializer.Serialize(config, Options));
-        File.Move(temporary, FilePath, overwrite: true);
+        var temporary = FilePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        var disk = JsonSerializer.SerializeToNode(config, Options)!;
+        var translator = disk["translation"]!["translator"]!;
+        translator["apiKey"] = SecretProtection.Protect(config.Translation.Translator.ApiKey);
+        translator["appSecret"] = SecretProtection.Protect(config.Translation.Translator.AppSecret);
+        try
+        {
+            File.WriteAllText(temporary, disk.ToJsonString(Options));
+            File.Move(temporary, FilePath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
     }
 
     private void TryBackup()

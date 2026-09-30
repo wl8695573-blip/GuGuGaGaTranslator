@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Windows;
 using Microsoft.Win32;
+using GuGuGaGaTranslator.Installation;
 
 namespace GuGuGaGaTranslator.Installer;
 
@@ -15,7 +16,7 @@ namespace GuGuGaGaTranslator.Installer;
 public partial class InstallerWindow : Window
 {
     private const string ProductName = "GuGuGaGaTranslator";
-    private const string Version = "1.1.0";
+    private static string Version => Assembly.GetExecutingAssembly().GetName().Version!.ToString(3);
     private const string Payload = "payload.app.zip";
     private const string RegistryKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\" + ProductName;
 
@@ -73,6 +74,7 @@ public partial class InstallerWindow : Window
 
     private async void OnInstall(object sender, RoutedEventArgs e)
     {
+        if (_installed) { Close(); return; }
         InstallButton.IsEnabled = false;
         CancelButton.IsEnabled = false;
         BrowseButton.IsEnabled = false;
@@ -80,10 +82,12 @@ public partial class InstallerWindow : Window
         var directory = PathBox.Text.Trim();
         try
         {
+            var desktop = DesktopShortcutCheck.IsChecked == true;
+            var startMenu = StartMenuShortcutCheck.IsChecked == true;
             await Task.Run(() => Install(
                 directory,
-                DesktopShortcutCheck.IsChecked == true,
-                StartMenuShortcutCheck.IsChecked == true,
+                desktop,
+                startMenu,
                 message => Dispatcher.Invoke(() => StatusText.Text = message)));
 
             _installed = true;
@@ -115,6 +119,16 @@ public partial class InstallerWindow : Window
     {
         if (string.IsNullOrWhiteSpace(directory)) throw new InvalidOperationException("请先填写安装目录。");
 
+        directory = InstallationManifest.ValidateDirectory(directory);
+        using var existingRegistration = Registry.CurrentUser.OpenSubKey(RegistryKey);
+        var registered = existingRegistration?.GetValue("InstallLocation") as string;
+        if (Directory.Exists(directory) && Directory.EnumerateFileSystemEntries(directory).Any())
+        {
+            if (registered is null || !Path.GetFullPath(registered).TrimEnd('\\').Equals(directory, StringComparison.OrdinalIgnoreCase)
+                || !File.Exists(Path.Combine(directory, ProductName + ".exe")))
+                throw new InvalidOperationException("请选择空目录。仅已登记的本产品目录允许覆盖升级。");
+        }
+        var files = new List<string>();
         Directory.CreateDirectory(directory);
         message($"正在解压到 {directory} …");
 
@@ -137,7 +151,8 @@ public partial class InstallerWindow : Window
                     : name;
                 if (relative.Length == 0) continue;
 
-                var target = Path.Combine(directory, relative.Replace('/', Path.DirectorySeparatorChar));
+                var target = InstallationManifest.ResolveFile(directory, relative.Replace('/', Path.DirectorySeparatorChar));
+                files.Add(relative.Replace('/', Path.DirectorySeparatorChar));
                 Directory.CreateDirectory(Path.GetDirectoryName(target)!);
                 entry.ExtractToFile(target, overwrite: true);
             }
@@ -160,7 +175,9 @@ public partial class InstallerWindow : Window
             message("已创建桌面快捷方式");
         }
 
-        RegisterUninstall(directory, exe);
+        var manifest = new InstallationManifest(ProductName, Guid.NewGuid().ToString(), files.ToArray());
+        manifest.Save(directory);
+        RegisterUninstall(directory, exe, manifest.Id);
         message("已登记到「应用和功能」");
     }
 
@@ -209,7 +226,7 @@ public partial class InstallerWindow : Window
     /// <summary>Register the Programs-and-features entry, whose uninstall command is the app itself.</summary>
     /// <param name="directory">Install directory.</param>
     /// <param name="exe">The installed executable.</param>
-    private static void RegisterUninstall(string directory, string exe)
+    private static void RegisterUninstall(string directory, string exe, string installationId)
     {
         using var key = Registry.CurrentUser.CreateSubKey(RegistryKey)
             ?? throw new InvalidOperationException("无法写入注册表,安装目录已经复制完成,可以从那里直接运行。");
@@ -219,6 +236,7 @@ public partial class InstallerWindow : Window
         key.SetValue("Publisher", ProductName);
         key.SetValue("DisplayIcon", exe);
         key.SetValue("InstallLocation", directory);
+        key.SetValue("InstallationId", installationId);
         key.SetValue("UninstallString", $"\"{exe}\" --uninstall");
         key.SetValue("QuietUninstallString", $"\"{exe}\" --uninstall --quiet");
         key.SetValue("NoModify", 1, RegistryValueKind.DWord);

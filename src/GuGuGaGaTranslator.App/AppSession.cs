@@ -1,5 +1,6 @@
 using System.IO;
 using System.Windows;
+using GuGuGaGaTranslator.Core.Imaging;
 using GuGuGaGaTranslator.Core.Capture;
 using GuGuGaGaTranslator.Core.Config;
 using GuGuGaGaTranslator.Core.Ocr;
@@ -14,11 +15,15 @@ namespace GuGuGaGaTranslator.App;
 public sealed class AppSession : IAsyncDisposable
 {
     private ITranslator? _translator;
+    private bool _stopping;
+    private Task? _stopTask;
     private FrameDumper? _dumper;
     private LanguagePair _languages = new("ja", "zh-Hans");
     private readonly List<string> _recentSources = [];
 
-    public ConfigStore Store { get; } = new();
+    public ConfigStore Store { get; }
+
+    public AppSession(string? configDirectory = null) => Store = new ConfigStore(configDirectory);
 
     public AppConfig Config { get; private set; } = new();
 
@@ -41,6 +46,8 @@ public sealed class AppSession : IAsyncDisposable
     public void LoadConfig()
     {
         Config = Store.Load();
+        // 旧版本存过韩语/繁体这类现在已经不在界面上的语言:先把配置拉回三语范围内。
+        Config.NormalizeLanguages();
         if (Store.LastLoadError is { } error)
         {
             Notice?.Invoke($"配置文件无法读取,已回退默认值:{error}");
@@ -105,6 +112,7 @@ public sealed class AppSession : IAsyncDisposable
         var client = window.ClientRect;
         Config.Target.Identity = window.Identity;
         Config.Target.TitleHint = window.Title;
+        Pipeline?.InvalidateTranslation();
         Config.Target.Region = new RegionRect(
             screenRegion.X - client.X,
             screenRegion.Y - client.Y,
@@ -114,6 +122,7 @@ public sealed class AppSession : IAsyncDisposable
 
     public void ClearRegion()
     {
+        Pipeline?.InvalidateTranslation();
         Config.Target.Region = null;
         Config.Target.Identity = null;
         Config.Target.TitleHint = null;
@@ -122,7 +131,11 @@ public sealed class AppSession : IAsyncDisposable
     /// <summary>Start the translation loop, rebuilding the recognizer, translator, and dumper from the current configuration.</summary>
     public void Start()
     {
-        if (IsRunning) return;
+        if (IsRunning || _stopping) return;
+        if (Recognizer is IDisposable previous) previous.Dispose();
+        Recognizer = null;
+        if (_translator is IDisposable previousTranslator) previousTranslator.Dispose();
+        _translator = null;
 
         if (Config.Target.Region is null)
         {
@@ -155,6 +168,9 @@ public sealed class AppSession : IAsyncDisposable
         var settings = new PipelineSettings
         {
             RegionProvider = ResolveRegion,
+            TargetHandle = () => FindTarget()?.Handle ?? 0,
+            IsScreenCapture = !Config.Target.CaptureBackend.Equals("printwindow", StringComparison.OrdinalIgnoreCase),
+            Capture = CaptureFrame,
             Recognizer = recognizer,
             // 每次翻译都重新读,悬浮层的语言切换条才能不重启循环就换方向。
             Languages = () => _languages,
@@ -200,16 +216,23 @@ public sealed class AppSession : IAsyncDisposable
                     ? string.Empty
                     : $"(注意:{Config.Ocr.Language} 不可用,已回退到 {recognizer.LanguageTag})")
             + (_translator is MockTranslator
-                // mock 只是原样回显,它的输出看着像「翻译失败」而不是「根本没翻」,所以先说明。
-                ? "。⚠ 当前引擎是 mock:它不会翻译,只会把原文回显成 [mock 源→目标] 原文。"
-                    + "要真正译成中文,请在「识别与翻译」页把「翻译引擎」换成 openai-compatible,"
-                    + "并填好接口地址与模型(本地 Ollama 或在线 API)。"
+                ? "。当前引擎为 mock，仅回显原文：[mock 源→目标] 原文。"
+                    + "请在“识别与翻译”页选择 openai-compatible，并填写接口地址和模型后再使用翻译功能。"
                 : string.Empty));
     }
 
     /// <summary>Stop the loop and release the engine.</summary>
-    public async Task StopAsync()
+    public Task StopAsync()
     {
+        if (_stopTask is { IsCompleted: false }) return _stopTask;
+        return _stopTask = StopCoreAsync();
+    }
+
+    private async Task StopCoreAsync()
+    {
+        _stopping = true;
+        try
+        {
         if (Pipeline is not null)
         {
             await Pipeline.StopAsync().ConfigureAwait(false);
@@ -218,8 +241,11 @@ public sealed class AppSession : IAsyncDisposable
 
         if (_translator is IDisposable disposable) disposable.Dispose();
         _translator = null;
+        if (Recognizer is IDisposable recognizerDisposable) recognizerDisposable.Dispose();
         Recognizer = null;
         _dumper = null;
+        }
+        finally { _stopping = false; }
     }
 
     /// <summary>Pause or resume recognition without stopping the loop.</summary>
@@ -265,14 +291,18 @@ public sealed class AppSession : IAsyncDisposable
     public event Action<GameProfile?>? ProfileChanged;
 
     /// <summary>What the pipeline sends with every line: the profile's terms, style, and
-    /// worldview, with the hand-typed glossary layered on top.</summary>
+    /// worldview, with the hand-typed glossary layered on top. The terms are picked for the language
+    /// direction in force right now, so a sheet carrying several languages only sends the relevant one.</summary>
     public ProfileContext CurrentProfile
     {
         get
         {
             var profile = ActiveProfile;
+            var languages = _languages;
             return new ProfileContext(
-                GameProfiles.Merge(GameProfiles.ToGlossary(profile), Config.Translation.Glossary),
+                GameProfiles.Merge(
+                    GameProfiles.ForDirection(profile, languages.From, languages.To),
+                    Config.Translation.Glossary),
                 string.IsNullOrWhiteSpace(profile?.StyleHint) ? Config.Translation.Translator.StyleHint : profile.StyleHint,
                 profile?.Worldview);
         }
@@ -395,6 +425,16 @@ public sealed class AppSession : IAsyncDisposable
     }
 
     /// <summary>Build the recognizer named by the configuration: the Windows one, the offline RapidOCR model, or Windows in its <c>auto</c> mode.</summary>
+    private Frame CaptureFrame(Int32Rect region)
+    {
+        if (!Config.Target.CaptureBackend.Equals("printwindow", StringComparison.OrdinalIgnoreCase))
+            return ScreenCapture.CaptureScreenRegion(region);
+        var window = FindTarget() ?? throw new InvalidOperationException("目标窗口已关闭。");
+        var client = ScreenCapture.CaptureWindowClient(window, CaptureBackend.PrintWindow);
+        return ImageOps.Crop(client, new Int32Rect(
+            region.X - client.SourceRegion.X, region.Y - client.SourceRegion.Y, region.Width, region.Height));
+    }
+
     private ITextRecognizer? CreateRecognizer()
     {
         if (Config.Ocr.Engine.Equals("rapidocr", StringComparison.OrdinalIgnoreCase))

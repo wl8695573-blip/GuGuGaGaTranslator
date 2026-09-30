@@ -90,7 +90,7 @@ public partial class GameProfileWindow : Window
 
     public bool Created { get; private set; }
 
-    /// <summary>Start drafting a term sheet as soon as the window appears; set by 「✨ AI 生成术语表…」 so that button is one click.</summary>
+    /// <summary>Starts term-sheet generation when the window opens.</summary>
     public bool GenerateOnLoad
     {
         get => _generateOnLoad;
@@ -246,7 +246,7 @@ public partial class GameProfileWindow : Window
                 GameNameBox.Text = detected;
             }
 
-            // 模型写的世界观每次都会随每句话发送,所以已有的(用户自己的措辞)绝不覆盖,只补空缺。
+            // Preserve an existing user-written worldview.
             var filledWorldview = false;
             if (!string.IsNullOrWhiteSpace(suggested) && WorldviewBox.Text.Trim().Length == 0)
             {
@@ -258,9 +258,9 @@ public partial class GameProfileWindow : Window
             GenerateStatus.Text = $"AI 返回 {terms.Count} 条(新增 {added} 条,补全 {terms.Count - added} 条的禁用译法),"
                 + $"其中 {bans} 条带禁止译法,用时 {(DateTime.Now - started).TotalSeconds:0} 秒。"
                 + (string.IsNullOrWhiteSpace(detected) ? string.Empty : $" 识别到的作品:{detected}")
-                + (filledWorldview ? " 已顺手把「世界观」那一栏填上 AI 的建议,可以自己改短。" : string.Empty)
+                + (filledWorldview ? " 已填入 AI 建议的世界观，可按需修改。" : string.Empty)
                 + (problems.Count > 0 ? $" 有 {problems.Count} 行没读懂。" : string.Empty)
-                + " 检查一遍再保存 —— 尤其是译名,AI 偶尔会把几年前的旧译名当成官方译名。";
+                + " 请检查术语后再保存，尤其是译名。";
         }
         catch (Exception exception)
         {
