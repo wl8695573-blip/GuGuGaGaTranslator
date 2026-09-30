@@ -29,8 +29,8 @@ internal static class Uninstall
             _manifest = manifest;
             ScheduleDirectoryRemoval(onMessage);
             foreach (var shortcut in new[] {
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", ProductName + ".lnk"),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), ProductName + ".lnk") })
+                Path.Combine(InstallationManifest.UserFolder(Environment.SpecialFolder.StartMenu), "Programs", ProductName + ".lnk"),
+                Path.Combine(InstallationManifest.UserFolder(Environment.SpecialFolder.DesktopDirectory), ProductName + ".lnk") })
                 if (File.Exists(shortcut)) File.Delete(shortcut);
             Registry.CurrentUser.DeleteSubKeyTree(RegistryKey, false);
             onMessage?.Invoke("卸载已安排，将在程序退出后删除安装清单中的文件。用户添加的文件会保留。");

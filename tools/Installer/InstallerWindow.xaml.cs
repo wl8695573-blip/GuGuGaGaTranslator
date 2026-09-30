@@ -52,13 +52,13 @@ public partial class InstallerWindow : Window
     {
         try
         {
-            Install(directory, desktopShortcut: false, startMenuShortcut: true, message: _ => { });
+            Install(directory, desktopShortcut: false, startMenuShortcut: true, message: Console.WriteLine);
             Console.WriteLine($"installed to {directory}");
             return 0;
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine($"install failed: {exception.GetType().Name}: {exception.Message}");
+            Console.Error.WriteLine($"install failed: {exception}");
             return 1;
         }
     }
@@ -164,14 +164,14 @@ public partial class InstallerWindow : Window
         if (startMenuShortcut)
         {
             CreateShortcut(Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", ProductName + ".lnk"), exe, directory);
+                InstallationManifest.UserFolder(Environment.SpecialFolder.StartMenu), "Programs", ProductName + ".lnk"), exe, directory);
             message("已添加到开始菜单");
         }
 
         if (desktopShortcut)
         {
             CreateShortcut(Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), ProductName + ".lnk"), exe, directory);
+                InstallationManifest.UserFolder(Environment.SpecialFolder.DesktopDirectory), ProductName + ".lnk"), exe, directory);
             message("已创建桌面快捷方式");
         }
 

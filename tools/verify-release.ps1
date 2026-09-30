@@ -23,8 +23,8 @@ if ($savedKey) {
     $savedKey.Dispose()
 }
 $shortcutPaths = @(
-    (Join-Path ([Environment]::GetFolderPath('StartMenu')) 'Programs\GuGuGaGaTranslator.lnk'),
-    (Join-Path ([Environment]::GetFolderPath('DesktopDirectory')) 'GuGuGaGaTranslator.lnk')
+    (Join-Path ([Environment]::GetFolderPath('StartMenu', 'DoNotVerify')) 'Programs\GuGuGaGaTranslator.lnk'),
+    (Join-Path ([Environment]::GetFolderPath('DesktopDirectory', 'DoNotVerify')) 'GuGuGaGaTranslator.lnk')
 )
 $savedShortcuts = @{}
 foreach ($path in $shortcutPaths) { if (Test-Path -LiteralPath $path) { $savedShortcuts[$path] = [IO.File]::ReadAllBytes($path) } }

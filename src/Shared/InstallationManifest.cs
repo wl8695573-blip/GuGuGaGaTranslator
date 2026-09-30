@@ -8,6 +8,14 @@ public sealed record InstallationManifest(string Product, string Id, string[] Fi
     public const string ProductName = "GuGuGaGaTranslator";
     public const string FileName = ".gugugaga-install.json";
 
+    public static string UserFolder(Environment.SpecialFolder folder)
+    {
+        var path = Environment.GetFolderPath(folder, Environment.SpecialFolderOption.DoNotVerify);
+        if (string.IsNullOrEmpty(path) || !Path.IsPathFullyQualified(path))
+            throw new InvalidOperationException($"无法定位当前用户目录：{folder}。");
+        return path;
+    }
+
     public static string ValidateDirectory(string directory)
     {
         var full = Path.GetFullPath(directory).TrimEnd(Path.DirectorySeparatorChar);
