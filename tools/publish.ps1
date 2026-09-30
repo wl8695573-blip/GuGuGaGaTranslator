@@ -20,9 +20,9 @@
 param(
     [Parameter(Mandatory)][string] $Repo,
 
-    [string] $Tag = 'v1.0.1',
+    [string] $Tag = 'v1.1.0',
 
-    [string] $Title = 'GuGuGaGaTranslator 1.0.1',
+    [string] $Title = 'GuGuGaGaTranslator 1.1.0',
 
     [string] $NotesFile = '',
 

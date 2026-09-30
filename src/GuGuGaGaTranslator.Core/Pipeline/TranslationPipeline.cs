@@ -120,6 +120,10 @@ public sealed record PipelineOptions
     /// <summary>Rewrite the glossary's terms into the finished translation, so the official wording holds even when the model chose another.</summary>
     public bool EnforceTerms { get; init; } = true;
 
+    /// <summary>Blank this tool's own windows out of every frame before it is read, so the control window
+    /// or the translation panel can never be mistaken for the text being translated.</summary>
+    public bool MaskOwnWindows { get; init; } = true;
+
     public double OcrScale { get; init; } = 2.0;
 
     public double OcrGrayscale { get; init; }
@@ -325,6 +329,9 @@ public sealed class TranslationPipeline : IAsyncDisposable
 
         var captureWatch = Stopwatch.StartNew();
         var frame = ScreenCapture.CaptureScreenRegion(region.Value);
+        // 先抹掉自己的窗口再判断画面有没有变:否则语言条上的按钮高亮、翻译框里换了一句话,
+        // 都会被当成「游戏画面变了」而触发一次多余的识别。
+        if (_options.MaskOwnWindows) SelfWindowMask.Apply(frame);
         captureWatch.Stop();
         Interlocked.Increment(ref _frames);
 

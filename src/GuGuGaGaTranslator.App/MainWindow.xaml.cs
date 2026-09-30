@@ -3,7 +3,9 @@ using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Media;
 using GuGuGaGaTranslator.Core.Capture;
 using GuGuGaGaTranslator.Core.Config;
 using GuGuGaGaTranslator.Core.Interop;
@@ -23,6 +25,19 @@ public partial class MainWindow : Window
     private const int HotkeySource = 9004;
     private const int HotkeyPanel = 9005;
     private const int HotkeyEdit = 9006;
+    private const int HotkeyRegionAndStart = 9007;
+
+    /// <summary>One configurable global hotkey: where its text lives, what it does, and how it reads in the UI.</summary>
+    private sealed record HotkeyAction(
+        int Id,
+        string Label,
+        string Hint,
+        Func<HotkeyConfig, string> Read,
+        Action<HotkeyConfig, string> Write,
+        Action Invoke);
+
+    /// <summary>What the region picker hid, so it can be put back exactly as it was.</summary>
+    private sealed record HiddenOwnWindows(bool Main, bool Panel);
 
     /// <summary>One dropdown entry: the machine value stored in the configuration plus the sentence a person reads.</summary>
     private sealed record Choice(string Value, string Label)
@@ -95,6 +110,9 @@ public partial class MainWindow : Window
     private OverlayWindow? _overlay;
     private nint _handle;
     private bool _loadingUi;
+    private List<HotkeyAction> _actions = [];
+    private readonly List<int> _registeredHotkeys = [];
+    private readonly List<string> _hotkeyFailures = [];
 
     /// <summary>Create the window over a session.</summary>
     public MainWindow(AppSession session)
@@ -133,12 +151,7 @@ public partial class MainWindow : Window
         if (_handle != 0)
         {
             HwndSource.FromHwnd(_handle)?.RemoveHook(OnWindowMessage);
-            HotkeyInterop.Unregister(_handle, HotkeyToggle);
-            HotkeyInterop.Unregister(_handle, HotkeyPause);
-            HotkeyInterop.Unregister(_handle, HotkeyRegion);
-            HotkeyInterop.Unregister(_handle, HotkeySource);
-            HotkeyInterop.Unregister(_handle, HotkeyPanel);
-            HotkeyInterop.Unregister(_handle, HotkeyEdit);
+            UnregisterHotkeys();
         }
 
         _session.Updated -= OnPipelineUpdate;
@@ -148,22 +161,207 @@ public partial class MainWindow : Window
         _overlay?.Close();
     }
 
+    /// <summary>Every configurable global hotkey: its text in the configuration, what it does, and how it reads.</summary>
+    private List<HotkeyAction> HotkeyActions() =>
+    [
+        new(HotkeyToggle, "开始 / 停止翻译", "在游戏里按一下就开始,再按一下停",
+            config => config.StartStop, (config, value) => config.StartStop = value,
+            () => { if (_session.IsRunning) OnStop(this, new RoutedEventArgs()); else OnStart(this, new RoutedEventArgs()); }),
+        new(HotkeyRegionAndStart, "一键框选并翻译", "按一下直接进框选,Enter 确认后立刻开始翻译 —— 不用切回控制窗口",
+            config => config.RegionAndStart, (config, value) => config.RegionAndStart = value,
+            OnRegionAndStart),
+        new(HotkeyRegion, "只重新框选区域", "换一块区域,框完接着翻译(已经在翻译时用它)",
+            config => config.Region, (config, value) => config.Region = value,
+            () => OnPickRegion(this, new RoutedEventArgs())),
+        new(HotkeyPause, "暂停 / 继续识别", "只停识别,翻译框保留最后一句",
+            config => config.Pause, (config, value) => config.Pause = value,
+            () => OnPause(this, new RoutedEventArgs())),
+        new(HotkeySource, "显示 / 隐藏原文", "译文上方显示识别到的原文",
+            config => config.ShowSource, (config, value) => config.ShowSource = value,
+            () => ToggleOverlayOption(source: true)),
+        new(HotkeyPanel, "显示 / 隐藏翻译框", "临时把译文藏起来看原画面",
+            config => config.TogglePanel, (config, value) => config.TogglePanel = value,
+            () => ToggleOverlayOption(source: false)),
+        new(HotkeyEdit, "解锁 / 锁定翻译框", "解锁后可拖动、拖四角缩放;锁回后点击穿透给游戏",
+            config => config.ToggleEdit, (config, value) => config.ToggleEdit = value,
+            ToggleOverlayEditMode),
+    ];
+
+    private void UnregisterHotkeys()
+    {
+        foreach (var id in _registeredHotkeys) HotkeyInterop.Unregister(_handle, id);
+        _registeredHotkeys.Clear();
+    }
+
+    /// <summary>Register every configured hotkey; the ones Windows refuses (already taken, or malformed) are reported.</summary>
     private void RegisterHotkeys()
     {
-        var modifiers = HotkeyInterop.ModControl | HotkeyInterop.ModAlt;
-        var failures = new List<string>();
+        if (_handle == 0) return;
 
-        if (!HotkeyInterop.Register(_handle, HotkeyToggle, modifiers, 0x54)) failures.Add("Ctrl+Alt+T");
-        if (!HotkeyInterop.Register(_handle, HotkeyPause, modifiers, 0x50)) failures.Add("Ctrl+Alt+P");
-        if (!HotkeyInterop.Register(_handle, HotkeyRegion, modifiers, 0x52)) failures.Add("Ctrl+Alt+R");
-        if (!HotkeyInterop.Register(_handle, HotkeySource, modifiers, 0x4F)) failures.Add("Ctrl+Alt+O");
-        if (!HotkeyInterop.Register(_handle, HotkeyPanel, modifiers, 0x48)) failures.Add("Ctrl+Alt+H");
-        if (!HotkeyInterop.Register(_handle, HotkeyEdit, modifiers, 0x55)) failures.Add("Ctrl+Alt+U");
+        _actions = HotkeyActions();
+        UnregisterHotkeys();
+        _hotkeyFailures.Clear();
 
-        if (failures.Count > 0)
+        var seen = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var action in _actions)
         {
-            HotkeyText.Text += $"\n以下热键被其他程序占用,注册失败:{string.Join("、", failures)}";
+            var text = action.Read(_session.Config.Hotkeys);
+            if (!HotkeyGesture.TryParse(text, out var gesture))
+            {
+                if (!string.IsNullOrWhiteSpace(text)) _hotkeyFailures.Add($"{action.Label}:「{text}」看不懂,已跳过");
+                continue;
+            }
+
+            if (seen.TryGetValue(gesture.ToString(), out var owner))
+            {
+                _hotkeyFailures.Add($"{action.Label}:和「{owner}」撞在同一个键 {gesture} 上,已跳过");
+                continue;
+            }
+
+            if (HotkeyInterop.Register(_handle, action.Id, gesture.RegisterModifiers, gesture.VirtualKey))
+            {
+                _registeredHotkeys.Add(action.Id);
+                seen[gesture.ToString()] = action.Label;
+            }
+            else
+            {
+                _hotkeyFailures.Add($"{action.Label}:{gesture} 被其他程序占用了");
+            }
         }
+
+        UpdateHotkeySummary();
+        BuildHotkeyRows();
+    }
+
+    /// <summary>Restate the current bindings and anything that failed, in both places that show them.</summary>
+    private void UpdateHotkeySummary()
+    {
+        var lines = _actions
+            .Select(action => (Action: action, Text: action.Read(_session.Config.Hotkeys)))
+            .Where(pair => !string.IsNullOrWhiteSpace(pair.Text))
+            .Select(pair => $"{pair.Text}  {pair.Action.Label}");
+
+        HotkeyText.Text = "全局热键(在游戏里直接按,不用切出来):" + Environment.NewLine
+            + string.Join(" · ", lines)
+            + (_hotkeyFailures.Count > 0
+                ? Environment.NewLine + "⚠ 没注册成功:" + string.Join(";", _hotkeyFailures)
+                : string.Empty);
+
+        if (HotkeyStatus is not null) HotkeyStatus.Text = HotkeyText.Text;
+    }
+
+    /// <summary>Build the editable rows of the 热键 page: one labelled box per action, typing straight into it records a combination.</summary>
+    private void BuildHotkeyRows()
+    {
+        if (HotkeyRows is null) return;
+
+        HotkeyRows.Children.Clear();
+        var label = (Style)FindResource("FieldLabel");
+
+        foreach (var action in _actions)
+        {
+            var row = new StackPanel { Margin = new Thickness(0, 0, 0, 12) };
+            row.Children.Add(new TextBlock
+            {
+                Text = $"{action.Label} —— {action.Hint}",
+                Style = label,
+                TextWrapping = TextWrapping.Wrap,
+            });
+
+            var box = new TextBox
+            {
+                Text = action.Read(_session.Config.Hotkeys),
+                Width = 240,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Tag = action,
+                ToolTip = "点进来直接按组合键即可录入;Backspace 清除 = 停用这一项",
+            };
+            box.PreviewKeyDown += OnHotkeyBoxKeyDown;
+            box.LostKeyboardFocus += (_, _) => RefreshHotkeyRows();
+            row.Children.Add(box);
+
+            HotkeyRows.Children.Add(row);
+        }
+    }
+
+    /// <summary>Show the stored bindings again after a recording attempt.</summary>
+    private void RefreshHotkeyRows()
+    {
+        if (HotkeyRows is null) return;
+
+        foreach (var child in HotkeyRows.Children)
+        {
+            if (child is not StackPanel row || row.Children.Count < 2) continue;
+            if (row.Children[1] is not TextBox box || box.Tag is not HotkeyAction action) continue;
+            box.Text = action.Read(_session.Config.Hotkeys);
+        }
+    }
+
+    /// <summary>Record a combination by pressing it: no syntax to type, and nothing is written until it parses.</summary>
+    private void OnHotkeyBoxKeyDown(object sender, KeyEventArgs e)
+    {
+        if (sender is not TextBox box || box.Tag is not HotkeyAction action) return;
+        e.Handled = true;
+
+        // 只按修饰键不算一个组合,等真正的按键。
+        if (e.Key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt
+            or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin or Key.System)
+        {
+            return;
+        }
+
+        if (e.Key is Key.Back or Key.Delete)
+        {
+            ApplyHotkey(action, HotkeyGesture.None);
+            return;
+        }
+
+        if (e.Key == Key.Escape)
+        {
+            box.Text = action.Read(_session.Config.Hotkeys);
+            return;
+        }
+
+        var virtualKey = (uint)KeyInterop.VirtualKeyFromKey(e.Key);
+        var gesture = new HotkeyGesture(ModifiersOf(Keyboard.Modifiers), virtualKey);
+        if (gesture.RegisterModifiers == 0)
+        {
+            OnNotice("全局热键至少要带一个 Ctrl / Alt / Shift / Win,否则会把普通按键从游戏手里抢走。");
+            return;
+        }
+
+        ApplyHotkey(action, gesture);
+    }
+
+    private void ApplyHotkey(HotkeyAction action, HotkeyGesture gesture)
+    {
+        action.Write(_session.Config.Hotkeys, gesture.IsEmpty ? string.Empty : gesture.ToString());
+        _session.SaveConfig();
+        RegisterHotkeys();
+        BuildHotkeyRows();
+
+        OnNotice(gesture.IsEmpty
+            ? $"已停用「{action.Label}」的热键。"
+            : $"「{action.Label}」的热键现在是 {gesture}。");
+    }
+
+    private static uint ModifiersOf(ModifierKeys keys)
+    {
+        uint modifiers = 0;
+        if ((keys & ModifierKeys.Control) != 0) modifiers |= HotkeyInterop.ModControl;
+        if ((keys & ModifierKeys.Alt) != 0) modifiers |= HotkeyInterop.ModAlt;
+        if ((keys & ModifierKeys.Shift) != 0) modifiers |= HotkeyInterop.ModShift;
+        if ((keys & ModifierKeys.Windows) != 0) modifiers |= HotkeyGesture.ModWin;
+        return modifiers;
+    }
+
+    private void OnResetHotkeys(object sender, RoutedEventArgs e)
+    {
+        _session.Config.Hotkeys = HotkeyConfig.Default();
+        _session.SaveConfig();
+        RegisterHotkeys();
+        BuildHotkeyRows();
+        OnNotice("热键已恢复默认。");
     }
 
     private nint OnWindowMessage(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
@@ -171,30 +369,42 @@ public partial class MainWindow : Window
         if (message != HotkeyInterop.WmHotkey) return 0;
         handled = true;
 
-        switch ((int)wParam)
-        {
-            case HotkeyToggle:
-                if (_session.IsRunning) OnStop(this, new RoutedEventArgs());
-                else OnStart(this, new RoutedEventArgs());
-                break;
-            case HotkeyPause:
-                OnPause(this, new RoutedEventArgs());
-                break;
-            case HotkeyRegion:
-                OnPickRegion(this, new RoutedEventArgs());
-                break;
-            case HotkeySource:
-                ToggleOverlayOption(source: true);
-                break;
-            case HotkeyPanel:
-                ToggleOverlayOption(source: false);
-                break;
-            case HotkeyEdit:
-                ToggleOverlayEditMode();
-                break;
-        }
+        var action = _actions?.FirstOrDefault(candidate => candidate.Id == (int)wParam);
+        action?.Invoke();
 
         return 0;
+    }
+
+    /// <summary>一键框选并翻译:没有选过窗口就顺手把当前前台窗口认下来,这样游戏里一个键就能开工。</summary>
+    private void OnRegionAndStart()
+    {
+        if (WindowList.SelectedItem is not WindowInfo)
+        {
+            var foreground = ForegroundTarget();
+            if (foreground is null)
+            {
+                OnNotice("没能认出当前窗口:先在左侧列表里点一个窗口,或用 Ctrl+Alt+R 框选。");
+                return;
+            }
+
+            _session.SetTarget(foreground);
+            RefreshWindowList();
+            OnNotice($"已自动选中当前窗口:{foreground.Title}");
+        }
+
+        OnPickRegion(this, new RoutedEventArgs());
+    }
+
+    /// <summary>The window the user is working in, unless it is one of ours or has no title to remember it by.</summary>
+    private static WindowInfo? ForegroundTarget()
+    {
+        var handle = HotkeyInterop.ForegroundWindow();
+        if (handle == 0) return null;
+
+        var window = WindowEnumerator.TryDescribe(handle);
+        if (window is null) return null;
+        if (window.ProcessId == Environment.ProcessId) return null;
+        return string.IsNullOrWhiteSpace(window.Title) ? null : window;
     }
 
     private void PopulateChoices()
@@ -370,6 +580,7 @@ public partial class MainWindow : Window
         ClickThroughCheck.IsChecked = config.Overlay.ClickThrough;
         LanguageBarCheck.IsChecked = config.Overlay.ShowLanguageBar;
         ExcludeFromCaptureCheck.IsChecked = config.Overlay.ExcludeFromCapture;
+        HideOwnWindowsCheck.IsChecked = config.RegionPicker.HideOwnWindows;
 
         DumpFramesCheck.IsChecked = config.Debug.DumpFrames;
         DumpDirBox.Text = string.IsNullOrWhiteSpace(config.Debug.DumpDirectory)
@@ -434,6 +645,7 @@ public partial class MainWindow : Window
         config.Overlay.ClickThrough = ClickThroughCheck.IsChecked == true;
         config.Overlay.ShowLanguageBar = LanguageBarCheck.IsChecked == true;
         config.Overlay.ExcludeFromCapture = ExcludeFromCaptureCheck.IsChecked == true;
+        config.RegionPicker.HideOwnWindows = HideOwnWindowsCheck.IsChecked == true;
 
         config.Debug.DumpFrames = DumpFramesCheck.IsChecked == true;
         config.Debug.DumpDirectory = DumpDirBox.Text.Trim();
@@ -500,13 +712,32 @@ public partial class MainWindow : Window
             return;
         }
 
-        var wasRunning = _session.IsRunning;
-        if (wasRunning) OnStop(this, new RoutedEventArgs());
+        PickRegionFor(target);
+    }
 
-        // 悬浮层会压在正在框选的区域上,先藏起来。
-        _overlay?.Hide();
+    /// <summary>Frame a region for a target and translate it; shared by the button and the hotkey.</summary>
+    private void PickRegionFor(WindowInfo target)
+    {
+        // 和微信截图一样:框选时把自己的窗口收起来,免得控制窗口、翻译框和语言条压在要框的东西上。
+        // 关掉这个选项时什么也不藏,方便对照着原来的界面框。
+        var hidden = HideOwnWindows(_session.Config.RegionPicker.HideOwnWindows);
+        Int32Rect? region;
+        try
+        {
+            region = RegionSelectorWindow.Select(this, _session.Config.RegionPicker.HideOwnWindows, hide =>
+            {
+                // 勾选框实时生效:先把自己藏起来的恢复回去,再按新选择重来,免得越藏越多。
+                RestoreOwnWindows(hidden);
+                hidden = HideOwnWindows(hide);
+                _session.Config.RegionPicker.HideOwnWindows = hide;
+                _session.SaveConfig();
+            });
+        }
+        finally
+        {
+            RestoreOwnWindows(hidden);
+        }
 
-        var region = RegionSelectorWindow.Select(this);
         if (region is not { Width: >= 8, Height: >= 8 })
         {
             OnNotice("已取消框选。");
@@ -518,11 +749,41 @@ public partial class MainWindow : Window
         UpdateTargetSummary();
 
         // 框完区域就是要翻译:让人再按一次开始按钮,只是代码写成这样的产物。
-        OnStart(this, new RoutedEventArgs());
+        // 已经在翻译的(例如换了块区域)不重启循环,新区域下一次迭代就会生效。
+        if (!_session.IsRunning) OnStart(this, new RoutedEventArgs());
         OnNotice(_session.IsRunning
             ? $"已开始持续翻译,区域相对客户区 {_session.Config.Target.Region};窗口移动会自动跟随,"
                 + "按 Ctrl+Alt+R 可重新框选。"
             : $"区域已记录(相对客户区 {_session.Config.Target.Region}),但没能开始翻译 —— 看上方的状态提示。");
+    }
+
+    /// <summary>Hide the control window and the overlay (panel + switcher) so the screen shows only what is
+    /// being framed; returns what was actually hidden, to be handed back to <see cref="RestoreOwnWindows"/>.</summary>
+    private HiddenOwnWindows HideOwnWindows(bool hide)
+    {
+        if (!hide) return new HiddenOwnWindows(false, false);
+
+        var main = false;
+        if (IsVisible)
+        {
+            Hide();
+            main = true;
+        }
+
+        var panel = _overlay?.SuspendForPicker() ?? false;
+        return new HiddenOwnWindows(main, panel);
+    }
+
+    private void RestoreOwnWindows(HiddenOwnWindows hidden)
+    {
+        if (hidden.Main)
+        {
+            // 不抢焦点:框完还要接着玩游戏。
+            ShowActivated = false;
+            Show();
+        }
+
+        _overlay?.ResumeAfterPicker(hidden.Panel);
     }
 
     private void OnClearRegion(object sender, RoutedEventArgs e)
@@ -773,6 +1034,16 @@ public partial class MainWindow : Window
             ? "翻译框已重新对录屏/截图隐藏。若它盖住了识别区域,现在起会重新读到游戏原文。"
             : "翻译框已允许被录屏/截图拍到,现在可以连翻译一起截图了。注意:若翻译框盖住识别区域,"
                 + "程序可能把自己的译文当成原文读到 —— 录完记得勾回去。");
+    }
+
+    /// <summary>Remember whether framing hides this tool's own windows; the picker has the same switch, so the
+    /// choice survives whichever place it was made.</summary>
+    private void OnHideOwnWindowsChanged(object sender, RoutedEventArgs e)
+    {
+        if (_loadingUi) return;
+
+        _session.Config.RegionPicker.HideOwnWindows = HideOwnWindowsCheck.IsChecked == true;
+        _session.SaveConfig();
     }
 
     /// <summary>The switcher's "其他" button: show the full direction list under the bar and apply whatever comes back.</summary>

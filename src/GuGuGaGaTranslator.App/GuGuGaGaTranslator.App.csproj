@@ -10,7 +10,7 @@
     <RootNamespace>GuGuGaGaTranslator.App</RootNamespace>
     <AssemblyName>GuGuGaGaTranslator</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
 
     <!-- The icon: the community whale-girl .ico — CC BY-NC-SA 4.0, attribution in
          THIRD_PARTY_NOTICES.md. Embedded in the executable so a copied dist folder

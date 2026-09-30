@@ -13,9 +13,11 @@ public sealed class RegionSelectorWindow : Window
     private readonly Border _selection;
     private readonly TextBlock _readout = new();
     private readonly TextBlock _hint = new();
+    private readonly CheckBox _hideOwn = new();
 
     private Point _startClient;
     private Int32Rect? _selectionScreen;
+    private Action<bool>? _onHideChanged;
 
     private RegionSelectorWindow()
     {
@@ -48,9 +50,19 @@ public sealed class RegionSelectorWindow : Window
         _hint.Background = Theme.Brush("ChipColor", Color.FromArgb(0xCC, 0x10, 0x12, 0x1A));
         _hint.Padding = new Thickness(10, 6, 10, 6);
 
+        // 和微信截图一样:框选时把自家窗口收起来,免得控制窗口和翻译框挡住要框的东西。
+        _hideOwn.Content = "隐藏翻译界面(推荐)";
+        _hideOwn.Foreground = Brushes.White;
+        _hideOwn.FontSize = 14;
+        _hideOwn.Padding = new Thickness(10, 6, 10, 6);
+        _hideOwn.Background = Theme.Brush("ChipColor", Color.FromArgb(0xCC, 0x10, 0x12, 0x1A));
+        _hideOwn.Checked += (_, _) => _onHideChanged?.Invoke(true);
+        _hideOwn.Unchecked += (_, _) => _onHideChanged?.Invoke(false);
+
         _canvas.Children.Add(_selection);
         _canvas.Children.Add(_readout);
         _canvas.Children.Add(_hint);
+        _canvas.Children.Add(_hideOwn);
         Content = _canvas;
 
         MouseLeftButtonDown += OnMouseDown;
@@ -74,10 +86,15 @@ public sealed class RegionSelectorWindow : Window
         };
     }
 
-    /// <summary>Show the picker and return the chosen screen rectangle, or null when cancelled.</summary>
-    public static Int32Rect? Select(Window owner)
+    /// <summary>Show the picker and return the chosen screen rectangle, or null when cancelled.
+    /// <paramref name="hideOwnWindows"/> is the starting state of the「隐藏翻译界面」switch, and
+    /// <paramref name="onHideChanged"/> is called every time the user flips it, so the caller can hide or
+    /// restore its own windows live.</summary>
+    public static Int32Rect? Select(Window owner, bool hideOwnWindows, Action<bool>? onHideChanged = null)
     {
         var selector = new RegionSelectorWindow { Owner = owner };
+        selector._onHideChanged = onHideChanged;
+        selector._hideOwn.IsChecked = hideOwnWindows;
         return selector.ShowDialog() == true ? selector._selectionScreen : null;
     }
 
@@ -85,6 +102,8 @@ public sealed class RegionSelectorWindow : Window
     {
         Canvas.SetLeft(_hint, 40);
         Canvas.SetTop(_hint, 40);
+        Canvas.SetLeft(_hideOwn, 40);
+        Canvas.SetTop(_hideOwn, 84);
     }
 
     private void OnMouseDown(object sender, MouseButtonEventArgs e)

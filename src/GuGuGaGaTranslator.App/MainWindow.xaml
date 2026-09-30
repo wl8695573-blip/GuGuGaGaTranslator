@@ -34,6 +34,10 @@
                 ToolTip="按 galgame 的常见布局,自动把区域设在窗口底部约 30% 的横条上,之后可再用「框选区域」微调" />
         <Button x:Name="ClearRegionButton" Content="清除区域" Click="OnClearRegion" />
       </UniformGrid>
+      <CheckBox x:Name="HideOwnWindowsCheck" DockPanel.Dock="Top" Margin="0,0,0,8"
+                Content="框选时隐藏翻译界面(推荐)"
+                Checked="OnHideOwnWindowsChanged" Unchecked="OnHideOwnWindowsChanged"
+                ToolTip="和微信截图一样:一进框选就把控制窗口、翻译框和语言条收起来,框到的就是你看到的那块屏幕;框完自动恢复。框选框里也有同一个开关,可以当场改。" />
       <ListView x:Name="WindowList" DisplayMemberPath="Display"
                 SelectionChanged="OnWindowSelected" />
     </DockPanel>
@@ -306,6 +310,22 @@
             <TextBox x:Name="OverlayFontFamilyBox" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                        Text="全部外观都能在 config.json 的 overlay 段里改;想加一套新外观,往 overlay.presets 里加一条即可,不用改代码。" />
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
+      <TabItem Header="热键">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="12">
+            <TextBlock Text="⑤ 全局快捷键:在游戏里直接按,不用切出来" Style="{StaticResource SectionText}" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
+                       Text="点进右边的方框,然后直接按下你想用的组合键就录好了(至少带一个 Ctrl / Alt / Shift / Win)。按 Backspace 清除 = 停用这一项,按 Esc 放弃这次录入。改完立即生效,不用重启。" />
+            <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap" Margin="0,6,0,0"
+                       Text="「一键框选并翻译」是给游戏里用的:按一下直接进框选,Enter 确认后立刻开始翻译 —— 没选过窗口时它会自动认下当前前台窗口。" />
+            <StackPanel x:Name="HotkeyRows" Margin="0,14,0,0" />
+            <Button x:Name="HotkeyResetButton" Content="恢复默认快捷键" Click="OnResetHotkeys"
+                    HorizontalAlignment="Left" Padding="10,6" />
+            <TextBlock x:Name="HotkeyStatus" Style="{StaticResource FieldLabel}" Margin="0,12,0,0" TextWrapping="Wrap" />
           </StackPanel>
         </ScrollViewer>
       </TabItem>

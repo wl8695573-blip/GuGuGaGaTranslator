@@ -43,6 +43,9 @@ public sealed class OverlayWindow : Window
     private string? _profileLabel;
     private LanguagePair _languages = new("ja", "zh-Hans");
 
+    /// <summary>True while the region picker is open: translations keep being computed, but the panel stays off screen.</summary>
+    private bool _suspended;
+
     public OverlayWindow()
     {
         WindowStyle = WindowStyle.None;
@@ -183,6 +186,32 @@ public sealed class OverlayWindow : Window
         if (_region.Width > 0) PlaceAt(_region);
     }
 
+    /// <summary>Hide the panel and its switcher while a region is being framed, the way a screenshot tool
+    /// hides itself. Reports whether the panel had been on screen, so it can be put back exactly as it was.</summary>
+    public bool SuspendForPicker()
+    {
+        var wasVisible = IsVisible && !_suspended;
+        _suspended = true;
+        if (IsVisible) Hide();
+        _bar?.Hide();
+        return wasVisible;
+    }
+
+    /// <summary>Bring the panel and switcher back after framing.</summary>
+    public void ResumeAfterPicker(bool wasVisible)
+    {
+        _suspended = false;
+        if (wasVisible)
+        {
+            ShowActivated = false;
+            Show();
+            // 框选期间记住的位置现在才生效(见 PlaceAt 里的说明)。
+            if (_region.Width > 0) PlaceAt(_region);
+        }
+
+        if (_config is not null) UpdateLanguageBar();
+    }
+
     /// <summary>Move the panel with the mouse; the drag delta arrives in device-independent units and is converted to physical pixels here.</summary>
     private void OnDragMove(object sender, DragDeltaEventArgs e)
     {
@@ -284,7 +313,8 @@ public sealed class OverlayWindow : Window
             : string.Join('\n', lines.Take(maxLines)) + " …";
 
         PlaceAt(region);
-        if (!IsVisible) Show();
+        // 框选期间保持隐藏:这时循环还在跑,新译文照样算,但面板不能弹回屏幕挡住要框的东西。
+        if (!IsVisible && !_suspended) Show();
     }
 
     /// <summary>Reposition the overlay for a region in physical screen pixels, following the target window.</summary>
@@ -292,6 +322,10 @@ public sealed class OverlayWindow : Window
     {
         _region = region;
         if (_handle == 0) return;
+
+        // 框选期间面板是收起来的:移动窗口用的 SetWindowPos 带 SWP_SHOWWINDOW,一动就会把它重新露出来,
+        // 所以这时候只记住位置,等恢复时再摆。
+        if (_suspended) return;
 
         // WPF 的尺寸是设备无关单位、位置是物理像素:混用会让悬浮层在缩放显示器上漂移,
         // 所以转换只在这里做。

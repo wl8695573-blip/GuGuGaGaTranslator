@@ -25,4 +25,8 @@ public static class HotkeyInterop
     [SupportedOSPlatform("windows")]
     public static bool Unregister(nint handle, int id) =>
         NativeMethods.UnregisterHotKey(handle, id);
+
+    /// <summary>The window the user is working in;「一键框选并翻译」adopts it so one key is enough to start.</summary>
+    [SupportedOSPlatform("windows")]
+    public static nint ForegroundWindow() => NativeMethods.GetForegroundWindow();
 }

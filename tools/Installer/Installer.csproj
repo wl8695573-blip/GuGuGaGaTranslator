@@ -10,7 +10,7 @@
     <RootNamespace>GuGuGaGaTranslator.Installer</RootNamespace>
     <AssemblyName>GuGuGaGaTranslator-Setup</AssemblyName>
     <ApplicationIcon>..\..\src\GuGuGaGaTranslator.App\Assets\icon.ico</ApplicationIcon>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>

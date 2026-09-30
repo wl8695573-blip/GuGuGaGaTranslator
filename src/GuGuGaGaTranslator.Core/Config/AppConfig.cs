@@ -285,6 +285,40 @@ public sealed class PipelineConfig
 
     /// <summary>Pause after a capture or recognition error, so a failure cannot spin.</summary>
     public int ErrorBackoffMs { get; set; } = 1500;
+
+    /// <summary>Blank this tool's own windows out of every frame before recognition. Off only makes sense
+    /// when the control window and the translation panel are guaranteed to sit outside the region.</summary>
+    public bool MaskOwnWindows { get; set; } = true;
+}
+
+/// <summary>How the region picker behaves while it is open.</summary>
+public sealed class RegionPickerConfig
+{
+    /// <summary>Hide this tool's own windows while framing, the way a screenshot tool hides itself: what
+    /// you frame is then exactly what will be read, with no panel or control bar in the way.</summary>
+    public bool HideOwnWindows { get; set; } = true;
+}
+
+/// <summary>The global hotkeys, as text such as <c>Ctrl+Alt+T</c>; empty disables one.</summary>
+public sealed class HotkeyConfig
+{
+    public string StartStop { get; set; } = "Ctrl+Alt+T";
+
+    public string Pause { get; set; } = "Ctrl+Alt+P";
+
+    /// <summary>Re-frame the region; translation continues with the new region.</summary>
+    public string Region { get; set; } = "Ctrl+Alt+R";
+
+    /// <summary>Frame a region and start translating in one press: the whole tool from one key.</summary>
+    public string RegionAndStart { get; set; } = "Ctrl+Alt+S";
+
+    public string ShowSource { get; set; } = "Ctrl+Alt+O";
+
+    public string TogglePanel { get; set; } = "Ctrl+Alt+H";
+
+    public string ToggleEdit { get; set; } = "Ctrl+Alt+U";
+
+    public static HotkeyConfig Default() => new();
 }
 
 /// <summary>Evidence capture, so a run can be checked without watching the screen.</summary>
@@ -310,6 +344,10 @@ public sealed class AppConfig
     public TranslationConfig Translation { get; set; } = new();
 
     public OverlayConfig Overlay { get; set; } = new();
+
+    public RegionPickerConfig RegionPicker { get; set; } = new();
+
+    public HotkeyConfig Hotkeys { get; set; } = new();
 
     public PipelineConfig Pipeline { get; set; } = new();
 

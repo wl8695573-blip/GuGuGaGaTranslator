@@ -179,6 +179,14 @@ internal static class NativeMethods
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool SetWindowDisplayAffinity(nint hwnd, uint affinity);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool GetWindowDisplayAffinity(nint hwnd, out uint affinity);
+
+    /// <summary>The window the user is working in, so「一键框选」can adopt it without a trip to the list.</summary>
+    [DllImport("user32.dll")]
+    internal static extern nint GetForegroundWindow();
+
     internal static readonly nint HwndTopmost = -1;
 
     internal const uint SwpNoSize = 0x0001;

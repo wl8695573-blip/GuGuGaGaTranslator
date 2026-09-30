@@ -92,6 +92,13 @@ public sealed class AppSession : IAsyncDisposable
         return new Int32Rect(x, y, width, height);
     }
 
+    /// <summary>Adopt a window as the target without touching the region it already has; used by「一键框选并翻译」.</summary>
+    public void SetTarget(WindowInfo window)
+    {
+        Config.Target.Identity = window.Identity;
+        Config.Target.TitleHint = window.Title;
+    }
+
     /// <summary>Record a screen-space selection as a client-relative region for the given target window.</summary>
     public void SetRegion(WindowInfo window, Int32Rect screenRegion)
     {
@@ -166,6 +173,7 @@ public sealed class AppSession : IAsyncDisposable
                 MinTextLength = Config.Pipeline.MinTextLength,
                 ScriptGuard = Config.Pipeline.ScriptGuard,
                 EnforceTerms = Config.Translation.EnforceTerms,
+                MaskOwnWindows = Config.Pipeline.MaskOwnWindows,
                 // RapidOCR 内部自己会缩放,提前放大只是多算一遍随后被丢掉的像素;
                 // 系统识别器则相反,小字放大后好读得多。
                 OcrScale = Config.Ocr.Engine.Equals("rapidocr", StringComparison.OrdinalIgnoreCase)
