@@ -81,6 +81,8 @@ Sakura-GalTransl 主要用于日译中，选择 `sakura` 指令格式；通用�
 
 内置《边狱巴士》档案以零协会汉化为参考，包含英文和日文术语。使用前请核对游戏版本和译名。
 
+发现缺少的术语或错误译名，可填写 [术语补充／纠错表单](https://github.com/wl8695573-blip/GuGuGaGaTranslator/issues/new?template=terminology.yml)，提供原文、建议译名和出处，由维护者核对后整理。提交步骤见 [术语贡献说明](../CONTRIBUTING.md)。修改本机术语不会自动提交到 GitHub，程序也不会自动同步公共术语更新。
+
 ```text
 en: Outis = 奥提斯 | 禁止: 奥德修斯、奥蒂斯
 ja: ウーティス = 奥提斯 | 禁止: 奥德修斯、奥蒂斯

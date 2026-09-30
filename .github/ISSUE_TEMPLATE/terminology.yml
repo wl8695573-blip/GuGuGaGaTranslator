@@ -1,0 +1,64 @@
+name: 术语补充／纠错
+description: 提交边狱巴士或其他游戏的专有名词，由维护者核对后整理
+title: "[术语] "
+assignees:
+  - wl8695573-blip
+body:
+  - type: markdown
+    attributes:
+      value: |
+        不需要修改代码。填写原文、建议译名和出处后提交，维护者会在这里回复核对结果。
+        请先搜索已有 Issues，避免重复提交。同一个词的英文、日文写法可以放在一起；无关词语请分开提交。
+        本页提交内容公开可见。剧情截图请注明剧透章节，并遮盖私人信息。
+  - type: input
+    id: game
+    attributes:
+      label: 游戏名称
+      value: 边狱巴士 / Limbus Company
+      description: 其他游戏也可以提交，请改为对应名称。
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: 提交类型
+      options:
+        - 补充缺少的术语
+        - 纠正已有译名
+        - 补充英文／日文写法
+    validations:
+      required: true
+  - type: textarea
+    id: source
+    attributes:
+      label: 英文／日文原文
+      description: 请按游戏中的写法填写，并标明语言。只有一种语言的原文也可以提交。
+      placeholder: |
+        英文：Outis
+        日文：ウーティス
+    validations:
+      required: true
+  - type: input
+    id: target
+    attributes:
+      label: 建议中文译名
+      placeholder: 奥提斯
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: 当前错误译名或问题（选填）
+      description: 如果是纠错，请填写实际译文，并说明是否已启用对应游戏档案。
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 出处、说明或截图
+      description: 请提供游戏章节／场景、译名来源或可核对的链接。可以将截图拖入此框；截图不便提供时请写明出处。边狱巴士术语目前以零协会汉化为参考，如采用其他译名请说明。
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        提交后可在本条 Issue 下继续补充资料。维护者核对并修改后会回复处理结果，注明更新的获取方式，再关闭 Issue。
+        提交建议或修改本机术语不会自动更新公共术语库，也不会自动同步到其他用户的程序。
