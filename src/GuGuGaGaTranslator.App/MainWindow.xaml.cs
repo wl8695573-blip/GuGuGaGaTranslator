@@ -647,13 +647,13 @@ public partial class MainWindow : Window
         var config = _session.Config;
 
         config.Ocr.Engine = ValueOf(OcrEngineCombo, "windows");
-        config.Ocr.Language = ValueOf(OcrLanguageCombo, "ja");
+        config.Ocr.Language = ValueOf(OcrLanguageCombo, "auto");
         config.Ocr.Scale = Number(OcrScaleBox.Text, config.Ocr.Scale);
         config.Ocr.Grayscale = Number(OcrGrayBox.Text, config.Ocr.Grayscale);
         config.Ocr.RapidLimitSideLen = Math.Max(0, (int)Number(RapidLimitSideBox.Text, config.Ocr.RapidLimitSideLen));
         config.Ocr.RapidModelDirectory = RapidModelsBox.Text.Trim();
 
-        config.Translation.From = ValueOf(FromCombo, "ja");
+        config.Translation.From = ValueOf(FromCombo, "auto");
         config.Translation.To = ValueOf(ToCombo, "zh-Hans");
         var provider = ValueOf(ProviderCombo, "mock");
         var classic = ClassicEngines.ContainsKey(provider);

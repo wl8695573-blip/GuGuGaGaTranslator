@@ -59,9 +59,12 @@ dotnet build GuGuGaGaTranslator.slnx -c Release
 dotnet run --project tools/Regression -c Release
 dotnet run --project tools/Benchmark -c Release -- --engine rapid --iterations 3 --check
 dotnet run --project tools/UiPreview -c Release -- .artifacts/ui
+dotnet run --project tools/InteractionChecks -c Release -- .artifacts/interactions
 ```
 
 `tools/Probe` 检查窗口、抓屏、识别和翻译；`tools/SampleWindow` 提供合成对话窗口。使用临时配置和合成台词，避免提交真实台词或密钥。报告定义和检查范围见 [验证与发布](docs/VERIFICATION.md)。
+
+`tools/InteractionChecks` 使用真实模态菜单检查选择、取消、失焦和关闭期间的事件顺序，并检查运行中语言切换。窗口位于屏幕外，不读取用户配置或抓取桌面。
 
 辅助脚本：`start-ollama.ps1` 启动已安装的本地服务，`setup-sakura.ps1` 注册 Sakura 模型，`compare-models.ps1` 比较本地模型处理相同文本的结果。可指定路径，使用前确认模型许可。
 

@@ -16,6 +16,7 @@ namespace GuGuGaGaTranslator.App;
 public sealed class DirectionChooserWindow : Window
 {
     private LanguagePreset? _chosen;
+    private bool _closing;
 
     private DirectionChooserWindow()
     {
@@ -26,6 +27,8 @@ public sealed class DirectionChooserWindow : Window
         Topmost = true;
         ShowInTaskbar = false;
         SizeToContent = SizeToContent.WidthAndHeight;
+        Closing += (_, _) => _closing = true;
+        Closed += (_, _) => _closing = true;
     }
 
     /// <summary>Show the chooser under a bar and return what was picked. <paramref name="anchor"/> is the bar's physical-pixel rectangle.</summary>
@@ -74,9 +77,10 @@ public sealed class DirectionChooserWindow : Window
             row.MouseLeftButtonUp += (_, e) =>
             {
                 e.Handled = true;
+                if (_closing)
+                    return;
                 _chosen = preset;
-                DialogResult = true;
-                Close();
+                Complete(true);
             };
             row.MouseEnter += (sender, _) =>
             {
@@ -108,15 +112,27 @@ public sealed class DirectionChooserWindow : Window
         {
             if (e.Key != Key.Escape)
                 return;
-            DialogResult = false;
-            Close();
+            e.Handled = true;
+            Complete(false);
         };
 
         Deactivated += (_, _) =>
         {
-            if (IsLoaded)
+            if (IsLoaded && !_closing)
+            {
+                _closing = true;
                 Close();
+            }
         };
+    }
+
+    private void Complete(bool accepted)
+    {
+        if (_closing)
+            return;
+        // 设置 DialogResult 会关闭模态窗口；关闭引起的失焦不能再次调用 Close。
+        _closing = true;
+        DialogResult = accepted;
     }
 
     private void Place(Int32Rect anchor)

@@ -2,7 +2,7 @@
 
 Windows 屏幕翻译工具。选择游戏窗口和文字区域后，程序会识别画面中的文字，将译文显示在置顶悬浮层中。支持中文、日语和英语互译，适用于窗口模式下的游戏对话和字幕。
 
-**当前版本：1.3.0** · [下载](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/latest) · [使用说明](docs/USAGE.md) · [更新记录](CHANGELOG.md) · [问题反馈](https://github.com/wl8695573-blip/GuGuGaGaTranslator/issues/new/choose)
+**当前版本：1.3.1** · [下载](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/latest) · [使用说明](docs/USAGE.md) · [更新记录](CHANGELOG.md) · [问题反馈](https://github.com/wl8695573-blip/GuGuGaGaTranslator/issues/new/choose)
 
 ![主界面](assets/screenshot-main.png)
 
@@ -14,16 +14,16 @@ Windows 屏幕翻译工具。选择游戏窗口和文字区域后，程序会识
 
 | 下载文件 | 使用方式 |
 |---|---|
-| [GuGuGaGaTranslator-Setup-1.3.0.exe](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.3.0/GuGuGaGaTranslator-Setup-1.3.0.exe) | 安装版。运行后选择目录；创建快捷方式，并登记到 Windows 应用列表。 |
-| [GuGuGaGaTranslator-win-x64-1.3.0.zip](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.3.0/GuGuGaGaTranslator-win-x64-1.3.0.zip) | 便携版。完整解压后运行 `GuGuGaGaTranslator.exe`，保留同目录的 `models` 和其他文件。 |
-| [SHA256SUMS-1.3.0.txt](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.3.0/SHA256SUMS-1.3.0.txt) | 上述两个文件的 SHA256 校验值。 |
+| [GuGuGaGaTranslator-Setup-1.3.1.exe](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.3.1/GuGuGaGaTranslator-Setup-1.3.1.exe) | 安装版。运行后选择目录；创建快捷方式，并登记到 Windows 应用列表。 |
+| [GuGuGaGaTranslator-win-x64-1.3.1.zip](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.3.1/GuGuGaGaTranslator-win-x64-1.3.1.zip) | 便携版。完整解压后运行 `GuGuGaGaTranslator.exe`，保留同目录的 `models` 和其他文件。 |
+| [SHA256SUMS-1.3.1.txt](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.3.1/SHA256SUMS-1.3.1.txt) | 上述两个文件的 SHA256 校验值。 |
 
 安装到当前用户有写入权限的目录时不需要管理员权限。新安装请选择空目录；升级时先退出旧程序，再安装到原来已登记的目录。便携版建议解压到新目录，避免混用不同版本的文件。用户设置位于 `%APPDATA%\GuGuGaGaTranslator`，升级和正常卸载会保留这些设置。
 
-1.3.0 发行文件未进行代码签名，Windows 可能显示发布者无法验证的提示。请从本仓库 Release 下载并核对校验值：
+1.3.1 发行文件未进行代码签名，Windows 可能显示发布者无法验证的提示。请从本仓库 Release 下载并核对校验值：
 
 ```powershell
-Get-FileHash .\GuGuGaGaTranslator-Setup-1.3.0.exe -Algorithm SHA256
+Get-FileHash .\GuGuGaGaTranslator-Setup-1.3.1.exe -Algorithm SHA256
 ```
 
 GitHub 自动生成的 “Source code” 压缩包只包含源码，不能直接运行。
@@ -35,6 +35,8 @@ GitHub 自动生成的 “Source code” 压缩包只包含源码，不能直接
 3. **选择文字区域。** 点击“框选区域”，拖出对话框范围，按 `Enter` 确认、`Esc` 取消。也可用“底部对话框”预设，再根据游戏布局调整。
 4. **开始翻译。** 检查翻译方向后点击“开始翻译”。主界面显示识别原文和译文，悬浮层显示当前译文。
 5. **调整悬浮层。** 点击控制条的“编辑”，拖动或缩放翻译框；再次点击恢复鼠标穿透。
+
+新配置默认使用“自动识别 → 中文”和通用翻译。框选只确定位置；已有配置会保留原来的翻译方向。翻译英文报纸等普通内容时，在“游戏模式”选择通用翻译，在悬浮栏选择“英 → 中”或“自动识别 → 中文”。
 
 ![首次设置](assets/screenshot-setup.png)
 
