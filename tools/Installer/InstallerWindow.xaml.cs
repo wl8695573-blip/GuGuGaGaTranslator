@@ -15,7 +15,7 @@ namespace GuGuGaGaTranslator.Installer;
 public partial class InstallerWindow : Window
 {
     private const string ProductName = "GuGuGaGaTranslator";
-    private const string Version = "1.0.0";
+    private const string Version = "1.0.1";
     private const string Payload = "payload.app.zip";
     private const string RegistryKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\" + ProductName;
 
