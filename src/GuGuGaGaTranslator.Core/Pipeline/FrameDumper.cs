@@ -25,15 +25,16 @@ public sealed class FrameDumper
         System.IO.Directory.CreateDirectory(Directory);
     }
 
-    public string Directory { get; }
+    public string Directory { get;  }
 
-    public int KeepLast { get; }
+    public int KeepLast { get;  }
 
     public int Written
     {
         get
         {
-            lock (_gate) return _sequence;
+            lock (_gate)
+                return _sequence;
         }
     }
 
@@ -89,7 +90,13 @@ public sealed class FrameDumper
                     lines = ocr.Lines.Select(line => new
                     {
                         line.Text,
-                        box = new { x = line.Box.X, y = line.Box.Y, width = line.Box.Width, height = line.Box.Height },
+                        box = new
+                        {
+                            x = line.Box.X,
+                            y = line.Box.Y,
+                            width = line.Box.Width,
+                            height = line.Box.Height
+                        },
                     }),
                 },
                 sourceText,
@@ -106,7 +113,8 @@ public sealed class FrameDumper
     private void Prune()
     {
         var frames = System.IO.Directory.GetFiles(Directory, "*.png");
-        if (frames.Length <= KeepLast) return;
+        if (frames.Length <= KeepLast)
+            return;
 
         Array.Sort(frames, StringComparer.Ordinal);
         foreach (var stale in frames.Take(frames.Length - KeepLast))

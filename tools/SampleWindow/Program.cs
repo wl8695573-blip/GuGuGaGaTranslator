@@ -6,8 +6,7 @@ using System.Windows.Threading;
 
 namespace GuGuGaGaTranslator.SampleWindow;
 
-/// <summary>A stand-in for a game's dialogue box: dark panel, large text, no title bar by default,
-/// whose <c>--cycle</c> option advances its line on a timer to exercise change detection.</summary>
+/// <summary>合成对话窗口，支持定时切换文本。</summary>
 internal static class Program
 {
     private const string DefaultText =
@@ -29,7 +28,8 @@ internal static class Program
         var options = Options.Parse(args);
         var text = options.Get("text")?.Replace("\\n", "\n") ?? DefaultText;
         var customCycle = options.Get("cycle-lines")?.Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (customCycle is { Length: > 0 }) text = customCycle[0];
+        if (customCycle is { Length: > 0 })
+            text = customCycle[0];
         var width = options.GetInt("w", 1000);
         var height = options.GetInt("h", 300);
         var left = options.GetInt("x", 200);
@@ -114,7 +114,8 @@ internal static class Program
             {
                 if (arg.StartsWith("--", StringComparison.Ordinal))
                 {
-                    if (pending is not null) options._values[pending] = "true";
+                    if (pending is not null)
+                        options._values[pending] = "true";
                     pending = arg[2..];
                 }
                 else if (pending is not null)
@@ -124,7 +125,8 @@ internal static class Program
                 }
             }
 
-            if (pending is not null) options._values[pending] = "true";
+            if (pending is not null)
+                options._values[pending] = "true";
             return options;
         }
 

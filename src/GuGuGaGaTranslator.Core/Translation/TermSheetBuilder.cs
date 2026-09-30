@@ -3,11 +3,10 @@ using System.Text.Json;
 
 namespace GuGuGaGaTranslator.Core.Translation;
 
-/// <summary>Builds a game's term sheet with the model's help, and reads the answer back however the model chose to
-/// format it.</summary>
+/// <summary>生成术语表并解析模型返回的文本。</summary>
 public static class TermSheetBuilder
 {
-    /// <summary>The role the model answers in.</summary>
+    /// <summary>术语表生成的系统提示。</summary>
     public const string SystemPrompt =
         "你是游戏本地化术语库编辑,熟悉各款游戏官方简体中文译名(尤其日韩游戏的官方中文版)。"
         + "你的任务是产出一个可以被程序直接解析的术语表。只输出术语表本身,不要解释、不要寒暄。";
@@ -102,7 +101,8 @@ public static class TermSheetBuilder
     {
         var merged = existing.ToList();
         var index = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        for (var i = 0; i < merged.Count; i++) index[merged[i].Source] = i;
+        for (var i = 0; i < merged.Count; i++)
+            index[merged[i].Source] = i;
 
         var added = 0;
         foreach (var term in incoming)
@@ -141,10 +141,12 @@ public static class TermSheetBuilder
     private static string StripFences(string text)
     {
         var trimmed = text.Trim();
-        if (!trimmed.StartsWith("```", StringComparison.Ordinal)) return trimmed;
+        if (!trimmed.StartsWith("```", StringComparison.Ordinal))
+            return trimmed;
 
         var firstLineEnd = trimmed.IndexOf('\n');
-        if (firstLineEnd < 0) return trimmed;
+        if (firstLineEnd < 0)
+            return trimmed;
         var body = trimmed[(firstLineEnd + 1)..];
         var closing = body.LastIndexOf("```", StringComparison.Ordinal);
         return closing < 0 ? body : body[..closing];
@@ -171,7 +173,8 @@ public static class TermSheetBuilder
 
             foreach (var prefix in prefixes)
             {
-                if (!trimmed.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!trimmed.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    continue;
                 if (found is null)
                 {
                     found = trimmed[prefix.Length..].Trim().Trim('「', '」', '『', '』', '"', '\'', '*', ' ');
@@ -181,7 +184,8 @@ public static class TermSheetBuilder
                 break;
             }
 
-            if (!isLabelLine) kept.Add(line);
+            if (!isLabelLine)
+                kept.Add(line);
         }
 
         text = string.Join('\n', kept);
@@ -222,14 +226,17 @@ public static class TermSheetBuilder
 
             foreach (var item in root.EnumerateArray())
             {
-                if (item.ValueKind != JsonValueKind.Object) continue;
+                if (item.ValueKind != JsonValueKind.Object)
+                    continue;
                 var source = ReadString(item, "source", "原文", "term", "src");
                 var target = ReadString(item, "target", "译名", "译文", "dst", "translation");
-                if (source.Length == 0 || target.Length == 0) continue;
+                if (source.Length == 0 || target.Length == 0)
+                    continue;
 
                 var term = new GameTerm { Source = source, Target = target, Note = ReadString(item, "note", "备注") };
                 term.Forbidden.AddRange(ReadList(item, "forbidden", "禁止", "aliases", "wrong"));
-                if (term.Note.Length == 0) term.Note = null;
+                if (term.Note.Length == 0)
+                    term.Note = null;
                 terms.Add(term);
             }
         }
@@ -248,7 +255,8 @@ public static class TermSheetBuilder
         foreach (var raw in text.Replace("\r\n", "\n").Split('\n'))
         {
             var line = NormalizeLine(raw);
-            if (line.Length == 0) continue;
+            if (line.Length == 0)
+                continue;
             prepared.Append(line).Append('\n');
         }
 
@@ -262,14 +270,17 @@ public static class TermSheetBuilder
     private static string NormalizeLine(string raw)
     {
         var line = raw.Trim();
-        if (line.Length == 0) return string.Empty;
+        if (line.Length == 0)
+            return string.Empty;
 
         // Markdown table rows: | 原文 | 译名 | 禁止 |
         if (line.StartsWith('|'))
         {
             var cells = line.Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-            if (cells.Length == 0 || cells.All(cell => cell.All(character => character is '-' or ':'))) return string.Empty;
-            if (cells.Length == 1) return string.Empty;
+            if (cells.Length == 0 || cells.All(cell => cell.All(character => character is '-' or ':')))
+                return string.Empty;
+            if (cells.Length == 1)
+                return string.Empty;
             if (cells[0].Contains("原文", StringComparison.Ordinal) || cells[0].Contains("source", StringComparison.OrdinalIgnoreCase))
             {
                 return string.Empty;
@@ -289,7 +300,8 @@ public static class TermSheetBuilder
 
         line = line.TrimStart('-', '*', '+', ' ', '\t', '#');
         var digits = 0;
-        while (digits < line.Length && char.IsDigit(line[digits])) digits++;
+        while (digits < line.Length && char.IsDigit(line[digits]))
+            digits++;
         if (digits > 0 && digits < line.Length && line[digits] is '.' or '、' or ')' or '）' or ':')
         {
             line = line[(digits + 1)..].TrimStart();
@@ -301,19 +313,23 @@ public static class TermSheetBuilder
         foreach (var (open, close) in new[] { ('（', '）'), ('(', ')'), ('【', '】') })
         {
             var start = line.IndexOf(open);
-            if (start < 0) continue;
+            if (start < 0)
+                continue;
             var end = line.IndexOf(close, start);
-            if (end < 0) continue;
+            if (end < 0)
+                continue;
 
             var inner = line[(start + 1)..end].Trim();
             var isBan = inner.StartsWith("禁止", StringComparison.Ordinal) || inner.StartsWith("禁用", StringComparison.Ordinal)
                 || inner.StartsWith("不要", StringComparison.Ordinal) || inner.StartsWith("误译", StringComparison.Ordinal)
                 || inner.StartsWith("错译", StringComparison.Ordinal);
-            if (!isBan) continue;
+            if (!isBan)
+                continue;
 
             foreach (var prefix in new[] { "禁止译法:", "禁止译法：", "禁止:", "禁止：", "禁用:", "禁用：", "不要:", "不要：", "误译:", "误译：", "错译:", "错译：" })
             {
-                if (!inner.StartsWith(prefix, StringComparison.Ordinal)) continue;
+                if (!inner.StartsWith(prefix, StringComparison.Ordinal))
+                    continue;
                 inner = inner[prefix.Length..].Trim();
                 break;
             }
@@ -329,8 +345,10 @@ public static class TermSheetBuilder
     {
         foreach (var name in names)
         {
-            if (!element.TryGetProperty(name, out var value)) continue;
-            if (value.ValueKind == JsonValueKind.String) return value.GetString()?.Trim() ?? string.Empty;
+            if (!element.TryGetProperty(name, out var value))
+                continue;
+            if (value.ValueKind == JsonValueKind.String)
+                return value.GetString()?.Trim() ?? string.Empty;
         }
 
         return string.Empty;
@@ -340,12 +358,14 @@ public static class TermSheetBuilder
     {
         foreach (var name in names)
         {
-            if (!element.TryGetProperty(name, out var value)) continue;
+            if (!element.TryGetProperty(name, out var value))
+                continue;
             if (value.ValueKind == JsonValueKind.Array)
             {
                 foreach (var item in value.EnumerateArray())
                 {
-                    if (item.ValueKind == JsonValueKind.String && item.GetString() is { Length: > 0 } text) yield return text.Trim();
+                    if (item.ValueKind == JsonValueKind.String && item.GetString() is { Length: > 0 } text)
+                        yield return text.Trim();
                 }
             }
             else if (value.ValueKind == JsonValueKind.String && value.GetString() is { Length: > 0 } list)

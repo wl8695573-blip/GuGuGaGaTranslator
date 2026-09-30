@@ -2,23 +2,23 @@ using System.Runtime.Versioning;
 
 namespace GuGuGaGaTranslator.Core.Interop;
 
-/// <summary>The two window-style tricks an overlay needs: let mouse input fall through to the game
-/// underneath, and keep the overlay out of screen captures so the pipeline cannot read its own
-/// translation back as source text.</summary>
+/// <summary>应用鼠标穿透和窗口捕获排除标记。</summary>
 public static class OverlayWindowInterop
 {
     /// <summary>Toggle click-through. Windows are made layered as well, which is what lets a WPF window with a transparent background composite correctly.</summary>
     [SupportedOSPlatform("windows")]
     public static bool ApplyClickThrough(nint handle, bool enabled)
     {
-        if (handle == 0) return false;
+        if (handle == 0)
+            return false;
 
         var style = NativeMethods.GetWindowLongW(handle, NativeMethods.GwlExStyle);
         var updated = enabled
             ? style | NativeMethods.WsExTransparent | NativeMethods.WsExLayered | NativeMethods.WsExNoActivate
             : style & ~(NativeMethods.WsExTransparent | NativeMethods.WsExNoActivate);
 
-        if (updated == style) return true;
+        if (updated == style)
+            return true;
         return NativeMethods.SetWindowLongPtrW(handle, NativeMethods.GwlExStyle, updated) != 0;
     }
 
@@ -40,7 +40,8 @@ public static class OverlayWindowInterop
     [SupportedOSPlatform("windows")]
     public static bool MoveTo(nint handle, int x, int y, bool topmost = true)
     {
-        if (handle == 0) return false;
+        if (handle == 0)
+            return false;
         var flags = NativeMethods.SwpNoSize | NativeMethods.SwpNoActivate | NativeMethods.SwpShowWindow;
         return NativeMethods.SetWindowPos(handle, topmost ? NativeMethods.HwndTopmost : 0, x, y, 0, 0, flags);
     }

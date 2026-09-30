@@ -4,12 +4,7 @@ using GuGuGaGaTranslator.Core.Interop;
 
 namespace GuGuGaGaTranslator.Core.Capture;
 
-/// <summary>The rectangles covered by this tool's own windows that the operating system would include
-/// in a screen capture. The region being translated is read straight off the screen, so anything of
-/// ours that overlaps it — the control window, the translation panel, the language switcher — is read
-/// back as if it were the game's text, and the frames are masked with these rectangles before
-/// recognition. Windows carrying WDA_EXCLUDEFROMCAPTURE are skipped: the capture already lacks them,
-/// and blanking their area would erase whatever is visible behind them.</summary>
+/// <summary>获取 OCR 输入中需要遮盖的自身窗口区域；已被系统排除捕获的窗口无需再次遮盖。</summary>
 public static class SelfWindowMask
 {
     [SupportedOSPlatform("windows")]
@@ -22,19 +17,29 @@ public static class SelfWindowMask
         NativeMethods.EnumWindows((hwnd, _) =>
         {
             // EnumWindows enumerates top-level windows from front to back.
-            if (targetHandle != 0 && hwnd == targetHandle) { foundTarget = true; return false; }
-            if (NativeMethods.IsIconic(hwnd)) return true;
+            if (targetHandle != 0 && hwnd == targetHandle)
+            {
+                foundTarget = true;
+                return false;
+            }
+            if (NativeMethods.IsIconic(hwnd))
+                return true;
             if (NativeMethods.DwmGetWindowAttribute(hwnd, NativeMethods.DwmwaCloaked, out var cloaked, sizeof(int)) == 0 && cloaked != 0)
                 return true;
             NativeMethods.GetWindowThreadProcessId(hwnd, out var owner);
-            if (owner != processId) return true;
-            if (!NativeMethods.IsWindowVisible(hwnd)) return true;
+            if (owner != processId)
+                return true;
+            if (!NativeMethods.IsWindowVisible(hwnd))
+                return true;
 
             // 读不到亲和性时宁可遮掉:让自家文字混进 OCR 比多遮一块更糟。
-            if (NativeMethods.GetWindowDisplayAffinity(hwnd, out var affinity) && affinity != NativeMethods.WdaNone) return true;
+            if (NativeMethods.GetWindowDisplayAffinity(hwnd, out var affinity) && affinity != NativeMethods.WdaNone)
+                return true;
 
-            if (!WindowEnumerator.TryReadFrameRect(hwnd, out var rect)) return true;
-            if (rect.Width <= 0 || rect.Height <= 0) return true;
+            if (!WindowEnumerator.TryReadFrameRect(hwnd, out var rect))
+                return true;
+            if (rect.Width <= 0 || rect.Height <= 0)
+                return true;
 
             rects.Add(rect);
             return true;
@@ -51,7 +56,8 @@ public static class SelfWindowMask
     /// frame-local ones through the frame's own origin.</summary>
     public static void Apply(Frame frame, IReadOnlyList<Int32Rect> screenRects)
     {
-        if (screenRects.Count == 0) return;
+        if (screenRects.Count == 0)
+            return;
 
         var origin = frame.SourceRegion;
         foreach (var rect in screenRects)
@@ -60,7 +66,8 @@ public static class SelfWindowMask
             var top = Math.Max(0, rect.Y - origin.Y);
             var right = Math.Min(frame.Width, rect.X + rect.Width - origin.X);
             var bottom = Math.Min(frame.Height, rect.Y + rect.Height - origin.Y);
-            if (right <= left || bottom <= top) continue;
+            if (right <= left || bottom <= top)
+                continue;
 
             for (var y = top; y < bottom; y++)
             {

@@ -43,7 +43,8 @@ public sealed class TranslationCache : IDisposable
     {
         get
         {
-            lock (_gate) return _entries.Count;
+            lock (_gate)
+                return _entries.Count;
         }
     }
 
@@ -83,20 +84,25 @@ public sealed class TranslationCache : IDisposable
     /// <summary>Store a translation, evicting the least recently used entry when full.</summary>
     public void Set(string translatorId, TranslationRequest request, string translation)
     {
-        if (string.IsNullOrEmpty(translation)) return;
+        if (string.IsNullOrEmpty(translation))
+            return;
 
         var key = KeyFor(translatorId, request);
         lock (_gate)
         {
             Remember(key, translation);
-            try { _storage?.Set(key, translation); }
+            try
+            {
+                _storage?.Set(key, translation);
+            }
             catch (Exception error) { DisableFailedStorage(error); }
         }
     }
 
     private void Remember(string key, string translation)
     {
-        if (_entries.ContainsKey(key)) _recency.Remove(key);
+        if (_entries.ContainsKey(key))
+            _recency.Remove(key);
         _entries[key] = translation;
         _recency.AddFirst(key);
         while (_entries.Count > _capacity && _recency.Last is { } oldest)
@@ -108,7 +114,11 @@ public sealed class TranslationCache : IDisposable
 
     private void DisableFailedStorage(Exception error)
     {
-        try { _storage?.Dispose(); } catch { }
+        try
+        {
+            _storage?.Dispose();
+        }
+        catch { }
         _storage = null;
         StorageFailed?.Invoke(error);
     }
@@ -127,7 +137,11 @@ public sealed class TranslationCache : IDisposable
 
     public void ClearMemory()
     {
-        lock (_gate) { _entries.Clear(); _recency.Clear(); }
+        lock (_gate)
+        {
+            _entries.Clear();
+            _recency.Clear();
+        }
     }
 
     public void Dispose() => ConfigureStorage(null);
@@ -138,5 +152,9 @@ public sealed class TranslationCache : IDisposable
     /// </summary>
     public static string KeyFor(string translatorId, TranslationRequest request) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
-            JsonSerializer.Serialize(new { translatorId, request }))));
+            JsonSerializer.Serialize(new
+            {
+                translatorId,
+                request
+            }))));
 }

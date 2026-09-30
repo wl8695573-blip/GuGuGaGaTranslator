@@ -31,7 +31,8 @@ internal static class Uninstall
             foreach (var shortcut in new[] {
                 Path.Combine(InstallationManifest.UserFolder(Environment.SpecialFolder.StartMenu), "Programs", ProductName + ".lnk"),
                 Path.Combine(InstallationManifest.UserFolder(Environment.SpecialFolder.DesktopDirectory), ProductName + ".lnk") })
-                if (File.Exists(shortcut)) File.Delete(shortcut);
+                if (File.Exists(shortcut))
+                    File.Delete(shortcut);
             Registry.CurrentUser.DeleteSubKeyTree(RegistryKey, false);
             onMessage?.Invoke("卸载已安排，将在程序退出后删除安装清单中的文件。用户添加的文件会保留。");
             return true;
@@ -45,13 +46,19 @@ internal static class Uninstall
 
     private static void ScheduleDirectoryRemoval(Action<string>? onMessage)
     {
-        if (_manifest is null) throw new InvalidOperationException("缺少安装清单。");
+        if (_manifest is null)
+            throw new InvalidOperationException("缺少安装清单。");
         var files = _manifest.Files.Append(InstallationManifest.FileName)
             .Select(file => InstallationManifest.ResolveFile(InstallDirectory, file)).ToArray();
         // Keep the file list out of the Windows command line (limited to 32,767 characters).
         // The helper reads JSON data; only a bounded, encoded path enters its command line.
         var payloadPath = Path.Combine(Path.GetTempPath(), "gggt-uninstall-" + Guid.NewGuid().ToString("N") + ".json");
-        File.WriteAllText(payloadPath, JsonSerializer.Serialize(new { root = InstallDirectory, files, process = Environment.ProcessId }));
+        File.WriteAllText(payloadPath, JsonSerializer.Serialize(new
+        {
+            root = InstallDirectory,
+            files,
+            process = Environment.ProcessId
+        }));
         var payload = Convert.ToBase64String(Encoding.UTF8.GetBytes(payloadPath));
         var script = """
             $ErrorActionPreference = 'Stop'
@@ -94,8 +101,10 @@ internal static class Uninstall
         {
             using var process = Process.Start(new ProcessStartInfo(powershell, "-NoProfile -NonInteractive -EncodedCommand " + encoded)
             {
-                WorkingDirectory = Path.GetTempPath(), CreateNoWindow = true,
-                UseShellExecute = false, WindowStyle = ProcessWindowStyle.Hidden,
+                WorkingDirectory = Path.GetTempPath(),
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                WindowStyle = ProcessWindowStyle.Hidden,
             }) ?? throw new InvalidOperationException("无法启动卸载清理进程。");
         }
         catch { File.Delete(payloadPath); throw; }

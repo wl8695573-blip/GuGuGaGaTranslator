@@ -33,7 +33,8 @@ public sealed class ListChooserWindow : Window
     public static int Choose(Window owner, IReadOnlyList<Item> items, int current, Int32Rect anchor)
     {
         var chooser = new ListChooserWindow();
-        if (owner.IsVisible && owner.WindowState != WindowState.Minimized) chooser.Owner = owner;
+        if (owner.IsVisible && owner.WindowState != WindowState.Minimized)
+            chooser.Owner = owner;
         chooser.Build(items, current);
         chooser.Place(anchor);
         chooser.ShowDialog();
@@ -95,7 +96,8 @@ public sealed class ListChooserWindow : Window
             };
             chrome.MouseLeave += (_, _) =>
             {
-                if (!active) chrome.Background = Brushes.Transparent;
+                if (!active)
+                    chrome.Background = Brushes.Transparent;
             };
 
             list.Children.Add(chrome);
@@ -113,14 +115,16 @@ public sealed class ListChooserWindow : Window
 
         KeyDown += (_, e) =>
         {
-            if (e.Key != Key.Escape) return;
+            if (e.Key != Key.Escape)
+                return;
             DialogResult = false;
             Close();
         };
 
         Deactivated += (_, _) =>
         {
-            if (IsLoaded) Close();
+            if (IsLoaded)
+                Close();
         };
     }
 
@@ -134,7 +138,8 @@ public sealed class ListChooserWindow : Window
 
             var x = anchor.X;
             var y = anchor.Y + anchor.Height + 4;
-            if (y + height > screen.Y + screen.Height) y = Math.Max(screen.Y, anchor.Y - height - 4);
+            if (y + height > screen.Y + screen.Height)
+                y = Math.Max(screen.Y, anchor.Y - height - 4);
 
             var handle = new WindowInteropHelper(this).Handle;
             OverlayWindowInterop.ExcludeFromCapture(handle);

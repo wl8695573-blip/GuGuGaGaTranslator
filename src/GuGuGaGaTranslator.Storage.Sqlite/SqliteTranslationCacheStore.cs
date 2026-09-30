@@ -26,7 +26,10 @@ public sealed class SqliteTranslationCacheStore : ITranslationCacheStore
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         _connection = new SqliteConnection(new SqliteConnectionStringBuilder
         {
-            DataSource = fullPath, Mode = SqliteOpenMode.ReadWriteCreate, Pooling = false, DefaultTimeout = 3,
+            DataSource = fullPath,
+            Mode = SqliteOpenMode.ReadWriteCreate,
+            Pooling = false,
+            DefaultTimeout = 3,
         }.ToString());
         try
         {
@@ -57,7 +60,8 @@ public sealed class SqliteTranslationCacheStore : ITranslationCacheStore
             {
                 select.Parameters.AddWithValue("$key", key);
                 select.Parameters.AddWithValue("$cutoff", Cutoff());
-                if (select.ExecuteScalar() is not string value) return null;
+                if (select.ExecuteScalar() is not string value)
+                    return null;
                 encrypted = value;
             }
             string translation;
@@ -84,7 +88,8 @@ public sealed class SqliteTranslationCacheStore : ITranslationCacheStore
 
     public void Set(string key, string translation)
     {
-        if (translation.Length > 65536) return;
+        if (translation.Length > 65536)
+            return;
         lock (_gate)
         {
             using var command = Command("""
@@ -129,5 +134,9 @@ public sealed class SqliteTranslationCacheStore : ITranslationCacheStore
         return command;
     }
 
-    public void Dispose() { lock (_gate) _connection.Dispose(); }
+    public void Dispose()
+    {
+        lock (_gate)
+            _connection.Dispose();
+    }
 }

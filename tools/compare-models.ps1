@@ -1,16 +1,11 @@
-<#
+﻿<#
 .SYNOPSIS
     Runs the same Japanese lines through several translation models and prints a
     side-by-side table.
 
 .DESCRIPTION
-    Quality differences between models are easy to argue about and hard to see.
-    This script removes the argument: identical input, identical parameters, only
-    the model (and the instruction format it needs) changes.
-
-    It calls the probe's `translate` command, so no window and no screenshot is
-    involved — the OCR result is fixed text, which is what makes the comparison
-    about translation rather than about recognition.
+    向已安装的本地模型发送相同文本，使用各模型对应的提示格式，
+    输出译文和耗时。不执行抓屏或 OCR。
 
 .EXAMPLE
     .\compare-models.ps1
@@ -18,7 +13,7 @@
 #>
 [CmdletBinding()]
 param(
-    [string] $Probe = (Join-Path $PSScriptRoot 'GuGuGaGaTranslator.Probe\bin\Debug\net10.0-windows10.0.19041.0\gugugaga-probe.exe'),
+    [string] $Probe = (Join-Path $PSScriptRoot 'Probe\bin\Release\net10.0-windows10.0.19041.0\gugugaga-probe.exe'),
 
     [string] $BaseUrl = 'http://127.0.0.1:11434/v1',
 
@@ -50,8 +45,7 @@ $candidates = @(
 if (-not (Test-Path $Probe)) { throw "找不到探针:$Probe(先跑 build.ps1)" }
 
 Write-Host "对比 $($candidates.Count) 个模型,共 $($Lines.Count) 句。" -ForegroundColor Cyan
-Write-Host "注意:按模型分组跑,而不是逐句在两个模型之间切换 —— 6GB 显存装不下两个模型," -ForegroundColor DarkGray
-Write-Host "逐句切换会让 Ollama 每次都重新加载整个模型,测出来的时间会虚高十几倍。`n" -ForegroundColor DarkGray
+Write-Host "按模型分组调用，减少模型切换和重复加载对耗时的影响。" -ForegroundColor DarkGray
 
 $results = [ordered]@{}
 foreach ($candidate in $candidates) {

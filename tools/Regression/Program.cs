@@ -19,7 +19,8 @@ internal static class Program
     private static int _passed;
     internal static void Check(bool condition, string name)
     {
-        if (!condition) throw new Exception(name);
+        if (!condition)
+            throw new Exception(name);
         Console.WriteLine("PASS " + name);
         _passed++;
     }
@@ -28,12 +29,32 @@ internal static class Program
     {
         var request = new TranslationRequest { Text = "Hello!", From = "en", To = "zh" };
         var key = TranslationCache.KeyFor("engine", request);
-        Check(key != TranslationCache.KeyFor("engine", request with { Worldview = "world" }), "cache: worldview");
-        Check(key != TranslationCache.KeyFor("engine", request with { StyleHint = "style" }), "cache: style");
-        Check(key != TranslationCache.KeyFor("engine", request with { Context = [new("prior", "previous")] }), "cache: context");
-        Check(key != TranslationCache.KeyFor("engine", request with { Text = "Hello?" }), "cache: punctuation");
-        using var first = new OpenAiCompatibleTranslator(new() { BaseUrl = "https://one.invalid/v1", Model = "same" });
-        using var second = new OpenAiCompatibleTranslator(new() { BaseUrl = "https://two.invalid/v1", Model = "same" });
+        Check(key != TranslationCache.KeyFor("engine", request with
+        {
+            Worldview = "world"
+        }), "cache: worldview");
+        Check(key != TranslationCache.KeyFor("engine", request with
+        {
+            StyleHint = "style"
+        }), "cache: style");
+        Check(key != TranslationCache.KeyFor("engine", request with
+        {
+            Context = [new("prior", "previous")]
+        }), "cache: context");
+        Check(key != TranslationCache.KeyFor("engine", request with
+        {
+            Text = "Hello?"
+        }), "cache: punctuation");
+        using var first = new OpenAiCompatibleTranslator(new()
+        {
+            BaseUrl = "https://one.invalid/v1",
+            Model = "same"
+        });
+        using var second = new OpenAiCompatibleTranslator(new()
+        {
+            BaseUrl = "https://two.invalid/v1",
+            Model = "same"
+        });
         Check(first.Id != second.Id, "cache: endpoint");
 
         var scratch = Path.Combine(Path.GetTempPath(), "gggt-regression-" + Guid.NewGuid().ToString("N"));
@@ -42,7 +63,11 @@ internal static class Program
         {
             Improvements.CheckAll(scratch);
             var config = new AppConfig();
-            config.Translation.Translator = config.Translation.Translator with { ApiKey = "TEST-KEY-ONLY", AppSecret = "TEST-SECRET-ONLY" };
+            config.Translation.Translator = config.Translation.Translator with
+            {
+                ApiKey = "TEST-KEY-ONLY",
+                AppSecret = "TEST-SECRET-ONLY"
+            };
             var store = new ConfigStore(scratch);
             store.Save(config);
             var disk = File.ReadAllText(store.FilePath);
@@ -55,7 +80,11 @@ internal static class Program
             foreach (var path in new[] { @"..\outside.txt", @"C:\outside.txt", "file:stream" })
             {
                 var rejected = false;
-                try { InstallationManifest.ResolveFile(scratch, path); } catch (InvalidOperationException) { rejected = true; }
+                try
+                {
+                    InstallationManifest.ResolveFile(scratch, path);
+                }
+                catch (InvalidOperationException) { rejected = true; }
                 Check(rejected, "installer rejects " + path);
             }
             Check(InstallationManifest.ResolveFile(scratch, "models/test.onnx").StartsWith(scratch), "installer accepts nested payload");
@@ -81,14 +110,28 @@ internal static class Program
     private static Frame MakeFrame(Int32Rect region) => new()
     {
         Bgra = Enumerable.Repeat((byte)255, region.Width * region.Height * 4).ToArray(),
-        Width = region.Width, Height = region.Height, SourceRegion = region, CapturedAt = DateTimeOffset.Now,
+        Width = region.Width,
+        Height = region.Height,
+        SourceRegion = region,
+        CapturedAt = DateTimeOffset.Now,
     };
 
     private static TranslationPipeline Pipeline(FakeRecognizer recognizer, ITranslator translator) => new(new()
     {
-        RegionProvider = () => new Int32Rect(0, 0, 32, 32), Capture = MakeFrame,
-        Recognizer = recognizer, Translator = translator, Languages = () => new("en", "zh"),
-        Options = new() { PollIntervalMs = 10, OcrScale = 1, TranslateOnlyOnChange = false, MaskOwnWindows = false, ScriptGuard = false, ErrorBackoffMs = 10 },
+        RegionProvider = () => new Int32Rect(0, 0, 32, 32),
+        Capture = MakeFrame,
+        Recognizer = recognizer,
+        Translator = translator,
+        Languages = () => new("en", "zh"),
+        Options = new()
+        {
+            PollIntervalMs = 10,
+            OcrScale = 1,
+            TranslateOnlyOnChange = false,
+            MaskOwnWindows = false,
+            ScriptGuard = false,
+            ErrorBackoffMs = 10
+        },
     });
 
     private static async Task LatestWins()
@@ -103,7 +146,8 @@ internal static class Program
             if (update.Status == PipelineStatus.Translated)
             {
                 results.Enqueue(update.Translation!);
-                if (update.Translation == "second translation") done.TrySetResult();
+                if (update.Translation == "second translation")
+                    done.TrySetResult();
             }
         };
         pipeline.Start();
@@ -123,8 +167,10 @@ internal static class Program
         var errors = 0;
         pipeline.Updated += update =>
         {
-            if (update.Status == PipelineStatus.Error) Interlocked.Increment(ref errors);
-            if (update.Status == PipelineStatus.Translated) done.TrySetResult();
+            if (update.Status == PipelineStatus.Error)
+                Interlocked.Increment(ref errors);
+            if (update.Status == PipelineStatus.Translated)
+                done.TrySetResult();
         };
         pipeline.Start();
         await done.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -136,10 +182,23 @@ internal static class Program
     {
         using var http = new HttpClient(new StalledHandler());
         using var translator = new OpenAiCompatibleTranslator(
-            new() { BaseUrl = "https://test.invalid/v1", Model = "test", TimeoutSeconds = 1 }, http);
+            new()
+            {
+                BaseUrl = "https://test.invalid/v1",
+                Model = "test",
+                TimeoutSeconds = 1
+            }, http);
         var watch = Stopwatch.StartNew();
         var timedOut = false;
-        try { await translator.TranslateAsync(new() { Text = "hello", From = "en", To = "zh" }, _ => { }); }
+        try
+        {
+            await translator.TranslateAsync(new()
+            {
+                Text = "hello",
+                From = "en",
+                To = "zh"
+            }, _ => { });
+        }
         catch (OperationCanceledException) { timedOut = true; }
         Check(timedOut && watch.Elapsed < TimeSpan.FromSeconds(4), "stream deadline includes body reads");
     }
@@ -153,8 +212,12 @@ internal sealed class FakeRecognizer : ITextRecognizer, IDisposable
     public string LanguageTag => "en";
     public Task<OcrResult> RecognizeAsync(Frame frame, CancellationToken cancellationToken = default) => Task.FromResult(new OcrResult
     {
-        Lines = [new(Text, new Int32Rect(0, 0, 1, 1), [])], RecognizerId = Id,
-        LanguageTag = LanguageTag, SourceWidth = frame.Width, SourceHeight = frame.Height, Duration = TimeSpan.Zero,
+        Lines = [new(Text, new Int32Rect(0, 0, 1, 1), [])],
+        RecognizerId = Id,
+        LanguageTag = LanguageTag,
+        SourceWidth = frame.Width,
+        SourceHeight = frame.Height,
+        Duration = TimeSpan.Zero,
     });
     public void Dispose() => Disposed = true;
 }
@@ -175,7 +238,10 @@ internal sealed class SlowTranslator : ITranslator
             if (request.Text.StartsWith("first"))
             {
                 Started.TrySetResult();
-                try { await Task.Delay(3000, cancellationToken); }
+                try
+                {
+                    await Task.Delay(3000, cancellationToken);
+                }
                 catch (OperationCanceledException) { Canceled = true; }
                 // Deliberately emulate a provider that still returns after cancellation.
                 return "first translation";
@@ -207,14 +273,19 @@ internal sealed class StalledStream : Stream
     public override bool CanSeek => false;
     public override bool CanWrite => false;
     public override long Length => throw new NotSupportedException();
-    public override long Position { get => 0; set => throw new NotSupportedException(); }
+    public override long Position
+    {
+        get => 0; set => throw new NotSupportedException();
+    }
     public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
     {
         await Task.Delay(Timeout.Infinite, cancellationToken);
         return 0;
     }
     public override int Read(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    public override void Flush() { }
+    public override void Flush()
+    {
+    }
     public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
     public override void SetLength(long value) => throw new NotSupportedException();
     public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();

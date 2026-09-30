@@ -18,10 +18,33 @@ internal static class Program
         {
             var output = Path.GetFullPath(args.FirstOrDefault() ?? ".artifacts/ui");
             Directory.CreateDirectory(output);
-            var app = new App(); app.InitializeComponent();
+            var app = new App();
+            app.InitializeComponent();
+            var settingsSession = new AppSession(Path.Combine(output, "setup-check-config"));
+            settingsSession.Config.Translation.Translator = settingsSession.Config.Translation.Translator with
+            {
+                Provider = "openai-compatible",
+                BaseUrl = "https://example.invalid/custom/v1",
+                Model = "custom-model",
+                ApiKey = "TEST-SETUP-KEY"
+            };
+            var settings = new SetupWindow(settingsSession);
+            if (((TextBox)settings.FindName("BaseUrlBox")).Text != "https://example.invalid/custom/v1"
+                || ((TextBox)settings.FindName("ModelBox")).Text != "custom-model")
+                throw new InvalidOperationException("Setup overwrote custom configuration");
+            ((ComboBox)settings.FindName("ProviderCombo")).SelectedIndex = 0;
+            if (((PasswordBox)settings.FindName("ApiKeyBox")).Password.Length != 0
+                || ((TextBox)settings.FindName("ApiKeyPlainBox")).Text.Length != 0)
+                throw new InvalidOperationException("Setup retained another provider's key");
+            settingsSession.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            Console.WriteLine("PASS setup preserves custom fields and clears keys when changing provider.");
             var session = new AppSession(Path.Combine(output, "preview-config"));
             session.Config.Translation.Translator = session.Config.Translation.Translator with
-                { Provider = "openai-compatible", BaseUrl = "https://api.deepseek.com", Model = "deepseek-flash" };
+            {
+                Provider = "openai-compatible",
+                BaseUrl = "https://api.deepseek.com",
+                Model = "deepseek-flash"
+            };
             var main = new MainWindow(session);
             ((Panel)main.Content).Background = main.Background;
             foreach (var name in new[] { "PopulateChoices", "LoadConfigIntoUi" })
@@ -74,14 +97,17 @@ internal static class Program
     {
         content.Measure(new Size(width, height ?? double.PositiveInfinity));
         var size = new Size(width, height ?? content.DesiredSize.Height);
-        content.Arrange(new Rect(size)); content.UpdateLayout();
+        content.Arrange(new Rect(size));
+        content.UpdateLayout();
         var bitmap = new RenderTargetBitmap((int)Math.Ceiling(width * scale), (int)Math.Ceiling(size.Height * scale), 96 * scale, 96 * scale, PixelFormats.Pbgra32);
         var background = new DrawingVisual();
         using (var drawing = background.RenderOpen())
             drawing.DrawRectangle((Brush)Application.Current.Resources["WindowBackgroundBrush"], null, new Rect(size));
         bitmap.Render(background);
         bitmap.Render(content);
-        var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
-        using var stream = File.Create(path); encoder.Save(stream);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using var stream = File.Create(path);
+        encoder.Save(stream);
     }
 }

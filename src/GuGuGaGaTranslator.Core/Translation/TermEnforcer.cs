@@ -14,7 +14,8 @@ public static class TermEnforcer
         string translation,
         IReadOnlyList<GlossaryEntry> glossary)
     {
-        if (string.IsNullOrEmpty(translation) || glossary.Count == 0) return (translation, []);
+        if (string.IsNullOrEmpty(translation) || glossary.Count == 0)
+            return (translation, []);
 
         var text = translation;
         var fixes = new List<TermFix>();
@@ -29,7 +30,8 @@ public static class TermEnforcer
 
         foreach (var (variant, target) in forbidden)
         {
-            if (!text.Contains(variant, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!text.Contains(variant, StringComparison.OrdinalIgnoreCase))
+                continue;
 
             // When the required form is already somewhere in the line, the wrong one is a duplicate, so it is dropped.
             var required = text.Contains(target, StringComparison.OrdinalIgnoreCase);
@@ -41,13 +43,18 @@ public static class TermEnforcer
         // A source term the model left alone.
         foreach (var entry in glossary)
         {
-            if (string.IsNullOrWhiteSpace(entry.Source) || string.IsNullOrWhiteSpace(entry.Target)) continue;
-            if (entry.Source.Equals(entry.Target, StringComparison.OrdinalIgnoreCase)) continue;
-            if (entry.Source.Trim().Length < 2) continue;
-            if (!text.Contains(entry.Source, StringComparison.OrdinalIgnoreCase)) continue;
+            if (string.IsNullOrWhiteSpace(entry.Source) || string.IsNullOrWhiteSpace(entry.Target))
+                continue;
+            if (entry.Source.Equals(entry.Target, StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (entry.Source.Trim().Length < 2)
+                continue;
+            if (!text.Contains(entry.Source, StringComparison.OrdinalIgnoreCase))
+                continue;
 
             var replaced = Replace(text, entry.Source, entry.Target, out var count);
-            if (count == 0) continue;
+            if (count == 0)
+                continue;
             text = replaced;
             fixes.Add(new TermFix(entry.Source, entry.Target, "原文未译"));
         }
@@ -61,7 +68,8 @@ public static class TermEnforcer
     /// <see cref="string.GetHashCode()"/> is not stable across processes.</summary>
     public static string Fingerprint(IReadOnlyList<GlossaryEntry> glossary)
     {
-        if (glossary.Count == 0) return string.Empty;
+        if (glossary.Count == 0)
+            return string.Empty;
 
         var parts = glossary
             .Select(entry => $"{entry.Source}={entry.Target}|{string.Join(",", entry.Forbidden ?? [])}")
@@ -90,7 +98,8 @@ public static class TermEnforcer
     private static string Replace(string text, string word, string replacement, out int count)
     {
         count = 0;
-        if (word.Length == 0) return text;
+        if (word.Length == 0)
+            return text;
         if (!NeedsWordBoundaries(word))
         {
             count = CountOccurrences(text, word);

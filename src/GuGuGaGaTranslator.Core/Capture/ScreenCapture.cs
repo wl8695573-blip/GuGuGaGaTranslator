@@ -27,7 +27,8 @@ public static class ScreenCapture
         return CaptureVia(region.Width, region.Height, region, memoryDc =>
         {
             var desktopDc = NativeMethods.GetDC(0);
-            if (desktopDc == 0) throw new InvalidOperationException("GetDC(desktop) returned no DC");
+            if (desktopDc == 0)
+                throw new InvalidOperationException("GetDC(desktop) returned no DC");
             try
             {
                 // CAPTUREBLT keeps layered windows (including the overlay) in the copy on old drivers.
@@ -35,7 +36,8 @@ public static class ScreenCapture
                     memoryDc, 0, 0, region.Width, region.Height,
                     desktopDc, region.X, region.Y,
                     NativeMethods.Srccopy | NativeMethods.Captureblt);
-                if (!ok) throw new InvalidOperationException($"BitBlt failed for region {region.X},{region.Y} {region.Width}×{region.Height}");
+                if (!ok)
+                    throw new InvalidOperationException($"BitBlt failed for region {region.X},{region.Y} {region.Width}×{region.Height}");
             }
             finally
             {
@@ -52,7 +54,8 @@ public static class ScreenCapture
         if (!window.HasClientArea)
             throw new InvalidOperationException($"window {window.Title} has an empty client area");
 
-        if (backend == CaptureBackend.Screen) return CaptureScreenRegion(window.ClientRect);
+        if (backend == CaptureBackend.Screen)
+            return CaptureScreenRegion(window.ClientRect);
 
         // PrintWindow renders the whole window rectangle, frame included, so the
         // client area is cropped out afterwards. GetWindowRect is the right size
@@ -81,7 +84,8 @@ public static class ScreenCapture
     private static Frame CaptureVia(int width, int height, Int32Rect sourceRegion, Action<nint> draw)
     {
         var desktopDc = NativeMethods.GetDC(0);
-        if (desktopDc == 0) throw new InvalidOperationException("GetDC(desktop) returned no DC");
+        if (desktopDc == 0)
+            throw new InvalidOperationException("GetDC(desktop) returned no DC");
 
         nint memoryDc = 0;
         nint bitmap = 0;
@@ -89,7 +93,8 @@ public static class ScreenCapture
         try
         {
             memoryDc = NativeMethods.CreateCompatibleDC(desktopDc);
-            if (memoryDc == 0) throw new InvalidOperationException("CreateCompatibleDC failed");
+            if (memoryDc == 0)
+                throw new InvalidOperationException("CreateCompatibleDC failed");
 
             var info = new NativeMethods.BITMAPINFO
             {
@@ -106,7 +111,8 @@ public static class ScreenCapture
             };
 
             bitmap = NativeMethods.CreateDIBSection(memoryDc, ref info, NativeMethods.DibRgbColors, out var bits, 0, 0);
-            if (bitmap == 0 || bits == 0) throw new InvalidOperationException("CreateDIBSection failed");
+            if (bitmap == 0 || bits == 0)
+                throw new InvalidOperationException("CreateDIBSection failed");
 
             previousBitmap = NativeMethods.SelectObject(memoryDc, bitmap);
             draw(memoryDc);
@@ -125,9 +131,12 @@ public static class ScreenCapture
         }
         finally
         {
-            if (previousBitmap != 0 && memoryDc != 0) NativeMethods.SelectObject(memoryDc, previousBitmap);
-            if (bitmap != 0) NativeMethods.DeleteObject(bitmap);
-            if (memoryDc != 0) NativeMethods.DeleteDC(memoryDc);
+            if (previousBitmap != 0 && memoryDc != 0)
+                NativeMethods.SelectObject(memoryDc, previousBitmap);
+            if (bitmap != 0)
+                NativeMethods.DeleteObject(bitmap);
+            if (memoryDc != 0)
+                NativeMethods.DeleteDC(memoryDc);
             NativeMethods.ReleaseDC(0, desktopDc);
         }
     }

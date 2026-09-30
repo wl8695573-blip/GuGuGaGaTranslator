@@ -6,13 +6,10 @@ namespace GuGuGaGaTranslator.Core.Translation;
 /// before any engine is configured; a glossary term with forbidden wordings comes back wrong on purpose, so the term enforcer is measurable offline.</summary>
 public sealed class MockTranslator : ITranslator, IChatCompleter
 {
-    /// <inheritdoc />
     public string Id => "mock";
 
-    /// <inheritdoc />
     public bool RequiresNetwork => false;
 
-    /// <inheritdoc />
     public Task<string> TranslateAsync(TranslationRequest request, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -20,8 +17,10 @@ public sealed class MockTranslator : ITranslator, IChatCompleter
 
         foreach (var entry in request.Glossary)
         {
-            if (entry.Forbidden is not { Count: > 0 } variants || string.IsNullOrWhiteSpace(entry.Source)) continue;
-            if (!text.Contains(entry.Source, StringComparison.OrdinalIgnoreCase)) continue;
+            if (entry.Forbidden is not { Count: > 0 } variants || string.IsNullOrWhiteSpace(entry.Source))
+                continue;
+            if (!text.Contains(entry.Source, StringComparison.OrdinalIgnoreCase))
+                continue;
             text = text.Replace(entry.Source, variants[0], StringComparison.OrdinalIgnoreCase);
         }
 
@@ -40,9 +39,11 @@ public sealed class MockTranslator : ITranslator, IChatCompleter
         foreach (var line in userPrompt.Split('\n'))
         {
             var trimmed = line.Trim();
-            if (!trimmed.StartsWith("游戏名:", StringComparison.Ordinal)) continue;
+            if (!trimmed.StartsWith("游戏名:", StringComparison.Ordinal))
+                continue;
             var value = trimmed["游戏名:".Length..].Trim();
-            if (value.Length > 0) name = value;
+            if (value.Length > 0)
+                name = value;
             break;
         }
 

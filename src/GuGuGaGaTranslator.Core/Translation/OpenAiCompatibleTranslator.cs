@@ -21,13 +21,10 @@ public sealed record OpenAiTranslatorOptions
 
     public double Temperature { get; init; } = 0.2;
 
-    /// <summary>Which instruction format to send; a purpose-built game translator expects its own wording, and getting that
-    /// wrong costs more quality than the model choice does.</summary>
+    /// <summary>提示格式，通用游戏翻译或 Sakura 专用格式。</summary>
     public PromptStyle PromptStyle { get; init; } = PromptStyle.Galgame;
 
-    /// <summary>Ask the endpoint to skip its thinking/reasoning phase. This is the single biggest latency lever with
-    /// DeepSeek: measured 10.9 s with thinking against 1.1 s without, on one dialogue line with the same prompt. The field
-    /// is DeepSeek's own, and endpoints that do not know it ignore it.</summary>
+    /// <summary>关闭已知服务支持的思考模式；自定义接口不附加服务商字段。</summary>
     public bool DisableThinking { get; init; } = true;
 }
 
@@ -41,8 +38,7 @@ public enum PromptStyle
     Sakura,
 }
 
-/// <summary>One client for every OpenAI-compatible chat endpoint — local model servers (Ollama, LM Studio, llama.cpp) and
-/// hosted APIs (DeepSeek, OpenAI) speak the same protocol.</summary>
+/// <summary>OpenAI 兼容 Chat Completions 客户端，支持普通和流式响应。</summary>
 public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslator, IChatCompleter, IDisposable
 {
     private readonly HttpClient _http;
@@ -67,19 +63,17 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
         }
     }
 
-    /// <inheritdoc />
     public string Id => $"openai-compatible:{Endpoint}:{_options.Model}:{_options.PromptStyle}:{_options.Temperature.ToString(System.Globalization.CultureInfo.InvariantCulture)}:{_options.DisableThinking}";
 
-    /// <inheritdoc />
     public bool RequiresNetwork => true;
 
     /// <summary>The resolved request URL, which the UI shows so a typo is visible before the first call.</summary>
     public string Endpoint => ResolveEndpoint(_options.BaseUrl);
 
-    /// <inheritdoc />
     public async Task<string> TranslateAsync(TranslationRequest request, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(request.Text)) return string.Empty;
+        if (string.IsNullOrWhiteSpace(request.Text))
+            return string.Empty;
 
         var payload = JsonSerializer.Serialize(BuildBody(request, stream: false));
 
@@ -96,8 +90,7 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
         return ExtractContent(body);
     }
 
-    /// <summary>Ask the model a plain question with the translator's own endpoint, key, and thinking setting. Building a
-    /// game's term sheet is the one job that needs it: the answer is a list of terms rather than a translated line.</summary>
+    /// <summary>发送独立聊天请求，用于生成术语表。</summary>
     public async Task<string> CompleteAsync(
         string systemPrompt,
         string userPrompt,
@@ -116,8 +109,7 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
             ["stream"] = false,
         };
 
-        // Thinking is deliberately left at the endpoint's default here: a term sheet is drafted once and then reused on
-        // every line of the game, so the extra latency is the best trade in the whole program.
+        // 术语表生成保留服务默认思考设置，使用独立的较长超时。
 
         using var content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
         using var response = await _http.PostAsync(Endpoint, content, cancellationToken).ConfigureAwait(false);
@@ -132,8 +124,7 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
         return ExtractContent(reply);
     }
 
-    /// <summary>Build the request body. A dictionary rather than an anonymous object, because the thinking switch must be
-    /// absent — not null — for endpoints that validate their parameters strictly.</summary>
+    /// <summary>构建请求，仅按服务地址添加其支持的扩展字段。</summary>
     internal Dictionary<string, object?> BuildBody(TranslationRequest request, bool stream)
     {
         var body = new Dictionary<string, object?>
@@ -148,8 +139,18 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
             ["stream"] = stream,
         };
 
-        // DeepSeek turns thinking on by default at "high" effort; a translation needs none of it.
-        if (_options.DisableThinking) body["thinking"] = new { type = "disabled" };
+        // 这些字段属于服务商扩展，不能发给所有 OpenAI 兼容接口。
+        if (_options.DisableThinking && Uri.TryCreate(Endpoint, UriKind.Absolute, out var endpoint))
+        {
+            if (endpoint.Host.Equals("api.deepseek.com", StringComparison.OrdinalIgnoreCase))
+                body["thinking"] = new
+                {
+                    type = "disabled"
+                };
+            else if (endpoint.Host.Equals("api.siliconflow.cn", StringComparison.OrdinalIgnoreCase)
+                || endpoint.Host.Equals("api.siliconflow.com", StringComparison.OrdinalIgnoreCase))
+                body["enable_thinking"] = false;
+        }
 
         return body;
     }
@@ -163,8 +164,7 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
     /// <summary>The user message for the configured style.</summary>
     internal string BuildUserPrompt(TranslationRequest request) => BuildUserPrompt(request, _options.PromptStyle);
 
-    /// <summary>Render the prompts one request would produce, without sending anything; a term table that is not being
-    /// honored, or a setting description too vague to name the work, is visible here in one look.</summary>
+    /// <summary>预览请求提示词，不发送网络请求。</summary>
     public static (string System, string User) PreviewPrompts(TranslationRequest request, PromptStyle style) =>
         (style == PromptStyle.Sakura ? SakuraSystemPrompt : BuildGalgameSystemPrompt(request),
             BuildUserPrompt(request, style));
@@ -173,7 +173,8 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
     /// instruction in the user turn; the generic style translates the text as-is.</summary>
     internal static string BuildUserPrompt(TranslationRequest request, PromptStyle style)
     {
-        if (style == PromptStyle.Sakura) return BuildSakuraUserPrompt(request);
+        if (style == PromptStyle.Sakura)
+            return BuildSakuraUserPrompt(request);
 
         // The general style keeps the instructions in the system prompt and puts the running script in front of the
         // line, which is what stops a chat model from resolving pronouns sentence by sentence.
@@ -181,8 +182,7 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
         return context.Length == 0 ? request.Text.Trim() : $"{context}\n\n{request.Text.Trim()}";
     }
 
-    /// <summary>The exact system prompt Sakura-GalTransl was trained with. Paraphrasing it measurably degrades this
-    /// model's output, so it is not "improved".</summary>
+    /// <summary>Sakura-GalTransl 模型卡规定的系统提示。</summary>
     internal const string SakuraSystemPrompt =
         "你是一个视觉小说翻译模型，可以通顺地使用给定的术语表以指定的风格将日文翻译成简体中文，"
         + "并联系上下文正确使用人称代词，注意不要混淆使役态和被动态的主语和宾语，"
@@ -195,7 +195,8 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
         Action<string> onDelta,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(request.Text)) return string.Empty;
+        if (string.IsNullOrWhiteSpace(request.Text))
+            return string.Empty;
 
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(TimeSpan.FromSeconds(Math.Max(1, _options.TimeoutSeconds)));
@@ -224,16 +225,21 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
         while (!cancellationToken.IsCancellationRequested)
         {
             var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
-            if (line is null) break;
+            if (line is null)
+                break;
 
             // Server-sent events: one "data:" line per token group, then [DONE].
-            if (!line.StartsWith("data:", StringComparison.Ordinal)) continue;
+            if (!line.StartsWith("data:", StringComparison.Ordinal))
+                continue;
             var data = line[5..].Trim();
-            if (data.Length == 0) continue;
-            if (data == "[DONE]") break;
+            if (data.Length == 0)
+                continue;
+            if (data == "[DONE]")
+                break;
 
             var delta = ReadDelta(data);
-            if (delta.Length == 0) continue;
+            if (delta.Length == 0)
+                continue;
 
             builder.Append(delta);
             // Report in small steps: more updates would cost more than the words they carry.
@@ -280,7 +286,8 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
                 return string.Empty;
             }
 
-            if (!choices[0].TryGetProperty("delta", out var delta)) return string.Empty;
+            if (!choices[0].TryGetProperty("delta", out var delta))
+                return string.Empty;
             return delta.TryGetProperty("content", out var text) ? text.GetString() ?? string.Empty : string.Empty;
         }
         catch (JsonException)
@@ -290,8 +297,7 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
         }
     }
 
-    /// <summary>Build the instruction used with a general chat model: it names the task, forbids the failure modes that
-    /// make output read like machine translation, and asks for fixed terms and resolved pronouns.</summary>
+    /// <summary>构建通用翻译提示，加入语言、术语、设定和风格。</summary>
     internal static string BuildGalgameSystemPrompt(TranslationRequest request)
     {
         var builder = new StringBuilder();
@@ -324,7 +330,8 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
             builder.Append(" Use the official localization this work already has for every term it introduces, and keep its names spelled the way its players know them.");
         }
 
-        if (!string.IsNullOrWhiteSpace(request.StyleHint)) builder.Append(' ').Append(request.StyleHint.Trim());
+        if (!string.IsNullOrWhiteSpace(request.StyleHint))
+            builder.Append(' ').Append(request.StyleHint.Trim());
 
         return builder.ToString();
     }
@@ -340,7 +347,8 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
         }
 
         var glossary = DescribeGlossary(request.Glossary);
-        if (glossary.Length > 0) builder.Append("术语表：").Append(glossary).Append('\n');
+        if (glossary.Length > 0)
+            builder.Append("术语表：").Append(glossary).Append('\n');
 
         // Sakura's format carries one previous translation, and the most recent
         // one is what the next line's pronouns depend on.
@@ -358,15 +366,18 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
     /// "previous translation" line: it can see the exchange and pick pronouns from it.</summary>
     internal static string BuildContextBlock(IReadOnlyList<TranslationHistory> context)
     {
-        if (context.Count == 0) return string.Empty;
+        if (context.Count == 0)
+            return string.Empty;
 
         var builder = new StringBuilder();
         builder.Append("Previous lines, for context only (do not translate them again):\n");
         foreach (var line in context)
         {
-            if (string.IsNullOrWhiteSpace(line.Source)) continue;
+            if (string.IsNullOrWhiteSpace(line.Source))
+                continue;
             builder.Append("- ").Append(line.Source.Trim());
-            if (!string.IsNullOrWhiteSpace(line.Translation)) builder.Append("  →  ").Append(line.Translation.Trim());
+            if (!string.IsNullOrWhiteSpace(line.Translation))
+                builder.Append("  →  ").Append(line.Translation.Trim());
             builder.Append('\n');
         }
 
@@ -435,7 +446,8 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
                 || (trimmed.StartsWith('『') && trimmed.EndsWith('』'))))
         {
             var inner = trimmed[1..^1].Trim();
-            if (inner.Length > 0) trimmed = inner;
+            if (inner.Length > 0)
+                trimmed = inner;
         }
 
         return trimmed;
@@ -444,7 +456,8 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
     private static string ResolveEndpoint(string baseUrl)
     {
         var url = baseUrl.Trim();
-        if (url.EndsWith("/chat/completions", StringComparison.OrdinalIgnoreCase)) return url;
+        if (url.EndsWith("/chat/completions", StringComparison.OrdinalIgnoreCase))
+            return url;
         return $"{url.TrimEnd('/')}/chat/completions";
     }
 
@@ -462,9 +475,9 @@ public sealed class OpenAiCompatibleTranslator : ITranslator, IStreamingTranslat
     private static string Truncate(string text, int max) =>
         text.Length <= max ? text : text[..max] + "…";
 
-    /// <inheritdoc />
     public void Dispose()
     {
-        if (_ownsClient) _http.Dispose();
+        if (_ownsClient)
+            _http.Dispose();
     }
 }

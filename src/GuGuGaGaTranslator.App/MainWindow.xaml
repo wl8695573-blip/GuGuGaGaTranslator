@@ -244,13 +244,13 @@
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                        Text="每行一条:原文 = 译名 | 禁止: 错误译法1、错误译法2     (# 开头是注释)" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                       Text="行首可以标语言:en: / ja: / zh:。这样一张表能同时装几种原文,翻译时按当前方向自动取用 —— 译成中文就取源语言那一列,中文译成外语则反过来用,两种外语互译时以中间的中文译名为枢轴自动配对。不标语言的行按「任意外语 → 中文」处理。" />
+                       Text="行首用 en: / ja: / zh: 标记原文语言。译成中文时取源语言条目，中文译成外语时反向使用，日英互译时通过中文译名配对。不标语言时兼容旧格式。" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                        Text="en: Outis = 奥提斯 | 禁止: 奥德修斯、奥蒂斯" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                        Text="ja: ウーティス = 奥提斯 | 禁止: 奥德修斯、奥蒂斯" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                       Text="「=」两边写一样,意思是「这个词必须原样保留,不许意译」(例如日文的「良秀」就是中文的「良秀」)。「禁止」里的写法一旦出现在译文里,会被立刻改回右边的译名 —— 而且「禁止」列写的必须是**译文语言**的写法。想手改的话,直接编辑配置文件里的 translation.gameProfiles 也可以。" />
+                       Text="原文和译名相同表示保留该词。禁止译法填写目标语言中的常见错译，启用术语校正后会替换为既定译名。保存前请核对条目。" />
 
             <Separator Margin="0,10,0,10" />
 
@@ -260,7 +260,7 @@
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                        Text="2. 点击“生成 / 补全术语表”。AI 会按官方简中译名起草；游戏名留空时，会根据台词尝试识别作品。" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                       Text="3. 自己看一遍,把译错的改掉、把常见误译填进「禁止」。之后每次玩这款游戏,它都会自动按这套译名翻译。" />
+                       Text="3. 核对生成结果，修改译名并补充禁止译法，再保存档案。" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                        Text="世界观应简短说明作品和主要设定。" />
 

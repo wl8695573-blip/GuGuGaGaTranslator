@@ -16,8 +16,7 @@ using Microsoft.Win32;
 
 namespace GuGuGaGaTranslator.App;
 
-/// <summary>The control window: pick a target, frame a region, start the loop, and watch
-/// what it recognized. Every setting is read back into the configuration on save.</summary>
+/// <summary>主窗口，负责目标选择、设置、运行状态和悬浮层控制。</summary>
 public partial class MainWindow : Window
 {
     private const int HotkeyToggle = 9001;
@@ -28,7 +27,7 @@ public partial class MainWindow : Window
     private const int HotkeyEdit = 9006;
     private const int HotkeyRegionAndStart = 9007;
 
-    /// <summary>One configurable global hotkey: where its text lives, what it does, and how it reads in the UI.</summary>
+    /// <summary>热键绑定，包含配置读写和执行动作。</summary>
     private sealed record HotkeyAction(
         int Id,
         string Label,
@@ -40,16 +39,15 @@ public partial class MainWindow : Window
     /// <summary>What the region picker hid, so it can be put back exactly as it was.</summary>
     private sealed record HiddenOwnWindows(bool Main, bool Panel);
 
-    /// <summary>One dropdown entry: the machine value stored in the configuration plus the sentence a person reads.</summary>
+    /// <summary>下拉选项的配置值和显示名称。</summary>
     private sealed record Choice(string Value, string Label)
     {
-        /// <inheritdoc />
         public override string ToString() => Label;
     }
 
     private static readonly Choice AutoLanguage = new("auto", LanguageNames.Label("auto", "让引擎自己判断原文语言"));
 
-    /// <summary>The three languages this tool translates between; nothing else is offered.</summary>
+    /// <summary>支持的翻译语言。</summary>
     private static readonly Choice[] TranslationLanguages =
     [
         new("zh-Hans", LanguageNames.Label("zh-Hans")),
@@ -57,7 +55,7 @@ public partial class MainWindow : Window
         new("en", LanguageNames.Label("en")),
     ];
 
-    /// <summary>The recognition languages worth offering; availability is annotated when the list is populated.</summary>
+    /// <summary>可选识别语言，加载时标注系统可用性。</summary>
     private static readonly Choice[] OcrLanguages =
     [
         new("auto", LanguageNames.Label("auto", "逐个已装的语言试一遍,取最像文字的结果")),
@@ -68,14 +66,14 @@ public partial class MainWindow : Window
 
     private static readonly Choice[] EngineProviders =
     [
-        new("mock", "mock —— 只验证链路:不翻译,原样回显原文"),
-        new("openai-compatible", "openai-compatible —— AI 模型(DeepSeek / GLM / 本地模型都走这一项)"),
+        new("mock", "预览模式（mock）：只识别，不翻译"),
+        new("openai-compatible", "OpenAI 兼容接口（云端或本地 AI 模型）"),
         new("caiyun", "彩云小译 —— 基础翻译，支持译后术语校正"),
         new("youdao", "有道翻译 —— 基础翻译，支持译后术语校正"),
         new("baidu", "百度翻译 —— 基础翻译，支持译后术语校正"),
     ];
 
-    /// <summary>Where the translation panel sits relative to the dialogue box.</summary>
+    /// <summary>悬浮层相对识别区域的位置。</summary>
     private static readonly Choice[] OverlayPlacements =
     [
         new(OverlayPlacement.Over, "遮盖原文 —— 翻译框盖住原对话框(galgame 推荐)"),
@@ -86,15 +84,15 @@ public partial class MainWindow : Window
     /// <summary>Recognition backends: the in-box one, and the bundled offline model.</summary>
     private static readonly Choice[] OcrEngines =
     [
-        new("rapidocr", "RapidOCR 离线(推荐)—— 自带多语言模型,日/英/中通吃,不用装任何语言包,解压即用;比系统引擎慢一点"),
+        new("rapidocr", "RapidOCR：附带中、日、英模型，无需系统语言功能"),
         new("windows", "Windows OCR —— 系统自带，需对应语言包；耗时取决于区域与语言"),
     ];
 
     /// <summary>Endpoint presets; they only fill the three fields below.</summary>
     private static readonly (string Label, string BaseUrl, string Model, string PromptStyle)[] EnginePresets =
     [
-        ("本地 Ollama · 通用模型(离线免费,但口语日译中一般)", "http://127.0.0.1:11434/v1", "qwen2.5:7b-instruct", "galgame"),
-        ("本地 Sakura · galgame 专用(离线免费,推荐)", "http://127.0.0.1:11434/v1", "sakura-galtransl:7b", "sakura"),
+        ("本地 Ollama：通用模型", "http://127.0.0.1:11434/v1", "qwen2.5:7b-instruct", "galgame"),
+        ("本地 Sakura：日译中模型", "http://127.0.0.1:11434/v1", "sakura-galtransl:7b", "sakura"),
         ("DeepSeek 官方 API(按量计费)", "https://api.deepseek.com", "deepseek-flash", "galgame"),
         ("智谱 GLM(需自备 Key)", "https://open.bigmodel.cn/api/paas/v4", "glm-4-flash", "galgame"),
         ("硅基流动 SiliconFlow(需自备 Key)", "https://api.siliconflow.cn/v1", "Qwen/Qwen2.5-7B-Instruct", "galgame"),
@@ -141,7 +139,7 @@ public partial class MainWindow : Window
         LoadConfigIntoUi();
         RefreshWindowList();
 
-        // 上一局还开着的游戏自己就会报出身份:在第一句之前切好档案,而不是等第一个译错的名字。
+        // 启动时按已保存的目标窗口匹配档案。
         await _session.AutoDetectProfileAsync().ConfigureAwait(true);
         SyncProfileControls();
     }
@@ -149,8 +147,7 @@ public partial class MainWindow : Window
     private void OnClosed(object? sender, EventArgs e)
     {
         _providerTestCancellation?.Cancel();
-        // 窗口可能在加载之前就被关掉:那时没有句柄,而 HwndSource.FromHwnd(0) 会抛异常而不是
-        // 返回 null —— 启动途中关掉曾因此变成未处理异常(首次运行时设置卡片一度是最后一个窗口)。
+        // 加载前关闭窗口时句柄为 0，不能传给 HwndSource.FromHwnd。
         if (_handle != 0)
         {
             HwndSource.FromHwnd(_handle)?.RemoveHook(OnWindowMessage);
@@ -192,14 +189,16 @@ public partial class MainWindow : Window
 
     private void UnregisterHotkeys()
     {
-        foreach (var id in _registeredHotkeys) HotkeyInterop.Unregister(_handle, id);
+        foreach (var id in _registeredHotkeys)
+            HotkeyInterop.Unregister(_handle, id);
         _registeredHotkeys.Clear();
     }
 
     /// <summary>Register every configured hotkey; the ones Windows refuses (already taken, or malformed) are reported.</summary>
     private void RegisterHotkeys()
     {
-        if (_handle == 0) return;
+        if (_handle == 0)
+            return;
 
         _actions = HotkeyActions();
         UnregisterHotkeys();
@@ -211,7 +210,8 @@ public partial class MainWindow : Window
             var text = action.Read(_session.Config.Hotkeys);
             if (!HotkeyGesture.TryParse(text, out var gesture))
             {
-                if (!string.IsNullOrWhiteSpace(text)) _hotkeyFailures.Add($"{action.Label}:「{text}」看不懂,已跳过");
+                if (!string.IsNullOrWhiteSpace(text))
+                    _hotkeyFailures.Add($"{action.Label}:「{text}」看不懂,已跳过");
                 continue;
             }
 
@@ -250,13 +250,15 @@ public partial class MainWindow : Window
                 ? Environment.NewLine + "未注册成功：" + string.Join("；", _hotkeyFailures)
                 : string.Empty);
 
-        if (HotkeyStatus is not null) HotkeyStatus.Text = HotkeyText.Text;
+        if (HotkeyStatus is not null)
+            HotkeyStatus.Text = HotkeyText.Text;
     }
 
     /// <summary>Build the editable rows of the 热键 page: one labelled box per action, typing straight into it records a combination.</summary>
     private void BuildHotkeyRows()
     {
-        if (HotkeyRows is null) return;
+        if (HotkeyRows is null)
+            return;
 
         HotkeyRows.Children.Clear();
         var label = (Style)FindResource("FieldLabel");
@@ -290,12 +292,15 @@ public partial class MainWindow : Window
     /// <summary>Show the stored bindings again after a recording attempt.</summary>
     private void RefreshHotkeyRows()
     {
-        if (HotkeyRows is null) return;
+        if (HotkeyRows is null)
+            return;
 
         foreach (var child in HotkeyRows.Children)
         {
-            if (child is not StackPanel row || row.Children.Count < 2) continue;
-            if (row.Children[1] is not TextBox box || box.Tag is not HotkeyAction action) continue;
+            if (child is not StackPanel row || row.Children.Count < 2)
+                continue;
+            if (row.Children[1] is not TextBox box || box.Tag is not HotkeyAction action)
+                continue;
             box.Text = action.Read(_session.Config.Hotkeys);
         }
     }
@@ -303,7 +308,8 @@ public partial class MainWindow : Window
     /// <summary>Record a combination by pressing it: no syntax to type, and nothing is written until it parses.</summary>
     private void OnHotkeyBoxKeyDown(object sender, KeyEventArgs e)
     {
-        if (sender is not TextBox box || box.Tag is not HotkeyAction action) return;
+        if (sender is not TextBox box || box.Tag is not HotkeyAction action)
+            return;
         e.Handled = true;
 
         // 只按修饰键不算一个组合,等真正的按键。
@@ -351,10 +357,14 @@ public partial class MainWindow : Window
     private static uint ModifiersOf(ModifierKeys keys)
     {
         uint modifiers = 0;
-        if ((keys & ModifierKeys.Control) != 0) modifiers |= HotkeyInterop.ModControl;
-        if ((keys & ModifierKeys.Alt) != 0) modifiers |= HotkeyInterop.ModAlt;
-        if ((keys & ModifierKeys.Shift) != 0) modifiers |= HotkeyInterop.ModShift;
-        if ((keys & ModifierKeys.Windows) != 0) modifiers |= HotkeyGesture.ModWin;
+        if ((keys & ModifierKeys.Control) != 0)
+            modifiers |= HotkeyInterop.ModControl;
+        if ((keys & ModifierKeys.Alt) != 0)
+            modifiers |= HotkeyInterop.ModAlt;
+        if ((keys & ModifierKeys.Shift) != 0)
+            modifiers |= HotkeyInterop.ModShift;
+        if ((keys & ModifierKeys.Windows) != 0)
+            modifiers |= HotkeyGesture.ModWin;
         return modifiers;
     }
 
@@ -369,7 +379,8 @@ public partial class MainWindow : Window
 
     private nint OnWindowMessage(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
     {
-        if (message != HotkeyInterop.WmHotkey) return 0;
+        if (message != HotkeyInterop.WmHotkey)
+            return 0;
         handled = true;
 
         var action = _actions?.FirstOrDefault(candidate => candidate.Id == (int)wParam);
@@ -402,11 +413,14 @@ public partial class MainWindow : Window
     private static WindowInfo? ForegroundTarget()
     {
         var handle = HotkeyInterop.ForegroundWindow();
-        if (handle == 0) return null;
+        if (handle == 0)
+            return null;
 
         var window = WindowEnumerator.TryDescribe(handle);
-        if (window is null) return null;
-        if (window.ProcessId == Environment.ProcessId) return null;
+        if (window is null)
+            return null;
+        if (window.ProcessId == Environment.ProcessId)
+            return null;
         return string.IsNullOrWhiteSpace(window.Title) ? null : window;
     }
 
@@ -420,7 +434,10 @@ public partial class MainWindow : Window
             .Select(choice => choice.Value.Equals("auto", StringComparison.OrdinalIgnoreCase)
                 || installed.Contains(choice.Value, StringComparer.OrdinalIgnoreCase)
                     ? choice
-                    : choice with { Label = $"{choice.Label} —— 未安装语言包,需在 Windows 设置里添加" })
+                    : choice with
+                    {
+                        Label = $"{choice.Label} —— 未安装语言包,需在 Windows 设置里添加"
+                    })
             .ToList();
 
         foreach (var tag in installed.Where(tag => OcrLanguages.All(choice => !choice.Value.Equals(tag, StringComparison.OrdinalIgnoreCase))))
@@ -444,10 +461,11 @@ public partial class MainWindow : Window
         _loadingUi = false;
     }
 
-    /// <summary>Select the entry carrying a machine value, adding it on the spot when a hand-edited configuration names something not in the list.</summary>
+    /// <summary>按配置值选择下拉项，自定义值会补充到列表中。</summary>
     private static void SelectByValue(ComboBox combo, string value)
     {
-        if (combo.ItemsSource is not IEnumerable<Choice> choices) return;
+        if (combo.ItemsSource is not IEnumerable<Choice> choices)
+            return;
 
         var match = choices.FirstOrDefault(choice => choice.Value.Equals(value, StringComparison.OrdinalIgnoreCase));
         if (match is not null)
@@ -461,7 +479,7 @@ public partial class MainWindow : Window
         combo.SelectedItem = custom;
     }
 
-    /// <summary>Read the machine value out of a dropdown.</summary>
+    /// <summary>读取下拉项的配置值。</summary>
     private static string ValueOf(ComboBox combo, string fallback) =>
         combo.SelectedItem is Choice choice ? choice.Value
         : string.IsNullOrWhiteSpace(combo.Text) ? fallback
@@ -527,7 +545,8 @@ public partial class MainWindow : Window
 
     private void OnOcrEngineChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_loadingUi) return;
+        if (_loadingUi)
+            return;
         UpdateOcrEngineSummary();
     }
 
@@ -709,7 +728,8 @@ public partial class MainWindow : Window
         if (!string.IsNullOrEmpty(identity))
         {
             var match = windows.FirstOrDefault(window => window.Identity == identity);
-            if (match is not null) WindowList.SelectedItem = match;
+            if (match is not null)
+                WindowList.SelectedItem = match;
         }
 
         UpdateTargetSummary();
@@ -778,7 +798,8 @@ public partial class MainWindow : Window
         UpdateTargetSummary();
 
         // Keep the current pipeline running when only the selected region changes.
-        if (!_session.IsRunning) OnStart(this, new RoutedEventArgs());
+        if (!_session.IsRunning)
+            OnStart(this, new RoutedEventArgs());
         OnNotice(_session.IsRunning
             ? $"已开始持续翻译,区域相对客户区 {_session.Config.Target.Region};窗口移动会自动跟随,"
                 + "按 Ctrl+Alt+R 可重新框选。"
@@ -789,7 +810,8 @@ public partial class MainWindow : Window
     /// being framed; returns what was actually hidden, to be handed back to <see cref="RestoreOwnWindows"/>.</summary>
     private HiddenOwnWindows HideOwnWindows(bool hide)
     {
-        if (!hide) return new HiddenOwnWindows(false, false);
+        if (!hide)
+            return new HiddenOwnWindows(false, false);
 
         var main = false;
         if (IsVisible)
@@ -842,16 +864,20 @@ public partial class MainWindow : Window
         _overlay.SetProfile(_session.ActiveProfile?.Name);
         _session.Start();
 
-        if (!_session.IsRunning) return;
+        if (!_session.IsRunning)
+            return;
 
         var region = _session.ResolveRegion();
-        if (region is { } rect) _overlay.ShowTranslated(string.Empty, "等待台词…", rect);
-        else _overlay.Show();
+        if (region is { } rect)
+            _overlay.ShowTranslated(string.Empty, "等待台词…", rect);
+        else
+            _overlay.Show();
     }
 
     private void OnPause(object sender, RoutedEventArgs e)
     {
-        if (!_session.IsRunning) return;
+        if (!_session.IsRunning)
+            return;
         var paused = _session.Pipeline?.IsPaused == true;
         _session.SetPaused(!paused);
         StatusText.Text = paused ? "已继续" : "已暂停(仍在轮询,但不做识别)";
@@ -885,10 +911,17 @@ public partial class MainWindow : Window
     /// <summary>A preset was picked: fill the endpoint fields it names.</summary>
     private void OnPresetChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_loadingUi) return;
+        if (_loadingUi)
+            return;
         var label = ValueOf(PresetCombo, string.Empty);
         var preset = EnginePresets.FirstOrDefault(entry => entry.Label == label);
-        if (preset.Label is null) return;
+        if (preset.Label is null)
+            return;
+
+        if (!Uri.TryCreate(BaseUrlBox.Text.Trim(), UriKind.Absolute, out var previousEndpoint)
+            || !Uri.TryCreate(preset.BaseUrl, UriKind.Absolute, out var nextEndpoint)
+            || previousEndpoint.Authority != nextEndpoint.Authority)
+            ApiKeyBox.Clear();
 
         ProviderCombo.Text = string.Empty;
         SelectByValue(ProviderCombo, "openai-compatible");
@@ -904,18 +937,21 @@ public partial class MainWindow : Window
     /// <summary>An overlay field changed, so show what the current combination means.</summary>
     private void OnOverlayFieldChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_loadingUi) return;
+        if (_loadingUi)
+            return;
         UpdateOverlaySummary();
     }
 
     /// <summary>Apply a named look: a preset is data, copied into the flat overlay settings the overlay reads.</summary>
     private void OnOverlayPresetChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_loadingUi) return;
+        if (_loadingUi)
+            return;
 
         var name = ValueOf(OverlayPresetCombo, string.Empty);
         var preset = _session.Config.Overlay.Presets.FirstOrDefault(entry => entry.Name == name);
-        if (preset is null) return;
+        if (preset is null)
+            return;
 
         var overlay = _session.Config.Overlay;
         overlay.Placement = preset.Placement;
@@ -941,7 +977,7 @@ public partial class MainWindow : Window
         OnNotice($"已套用外观预设:{preset.Name}(可再微调下面的数值)");
     }
 
-    /// <summary>Describe the placement in force, so the choice is never a guess.</summary>
+    /// <summary>更新悬浮层位置说明。</summary>
     private void UpdateOverlaySummary()
     {
         var placement = ValueOf(PlacementCombo, OverlayPlacement.Below);
@@ -990,8 +1026,10 @@ public partial class MainWindow : Window
     /// <summary>Flip one overlay option from a hotkey so a player need not leave the game: <paramref name="source"/> toggles the original line, otherwise the panel.</summary>
     private void ToggleOverlayOption(bool source)
     {
-        if (source) ShowSourceCheck.IsChecked = ShowSourceCheck.IsChecked != true;
-        else ShowPanelCheck.IsChecked = ShowPanelCheck.IsChecked != true;
+        if (source)
+            ShowSourceCheck.IsChecked = ShowSourceCheck.IsChecked != true;
+        else
+            ShowPanelCheck.IsChecked = ShowPanelCheck.IsChecked != true;
 
         ReadUiIntoConfig();
         _session.SaveConfig();
@@ -1007,13 +1045,15 @@ public partial class MainWindow : Window
     private async void OnOpenSetup(object sender, RoutedEventArgs e)
     {
         var wasRunning = _session.IsRunning;
-        if (wasRunning) await _session.StopAsync().ConfigureAwait(true);
+        if (wasRunning)
+            await _session.StopAsync().ConfigureAwait(true);
 
         var setup = new SetupWindow(_session) { Owner = this };
         var confirmed = setup.ShowDialog();
 
         LoadConfigIntoUi();
-        if (confirmed == true && wasRunning) _session.Start();
+        if (confirmed == true && wasRunning)
+            _session.Start();
         OnNotice(confirmed == true ? "API 设置已保存。" : "未修改 API 设置。");
     }
 
@@ -1055,7 +1095,8 @@ public partial class MainWindow : Window
     /// read its own translation back, so this is toggled on and off around a recording rather than left on.</summary>
     private void OnExcludeFromCaptureChanged(object sender, RoutedEventArgs e)
     {
-        if (_loadingUi) return;
+        if (_loadingUi)
+            return;
 
         var exclude = ExcludeFromCaptureCheck.IsChecked == true;
         _session.Config.Overlay.ExcludeFromCapture = exclude;
@@ -1071,7 +1112,8 @@ public partial class MainWindow : Window
     /// choice survives whichever place it was made.</summary>
     private void OnHideOwnWindowsChanged(object sender, RoutedEventArgs e)
     {
-        if (_loadingUi) return;
+        if (_loadingUi)
+            return;
 
         _session.Config.RegionPicker.HideOwnWindows = HideOwnWindowsCheck.IsChecked == true;
         _session.SaveConfig();
@@ -1087,7 +1129,8 @@ public partial class MainWindow : Window
             _session.Languages,
             _overlay?.LanguageBarBounds() ?? default);
 
-        if (picked is not null) OnLanguageRequested(picked);
+        if (picked is not null)
+            OnLanguageRequested(picked);
     }
 
     /// <summary>A switcher toggle: the edit lock, the original line, or the panel.</summary>
@@ -1124,7 +1167,8 @@ public partial class MainWindow : Window
 
     private async void OnGameProfileChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_loadingUi) return;
+        if (_loadingUi)
+            return;
         var profile = _session.FindProfile(ValueOf(GameProfileCombo, string.Empty));
         await _session.ApplyProfileAsync(profile).ConfigureAwait(true);
         SyncProfileControls();
@@ -1132,10 +1176,15 @@ public partial class MainWindow : Window
 
     private async void OnProfileOptionChanged(object sender, RoutedEventArgs e)
     {
-        if (_loadingUi) return;
+        if (_loadingUi)
+            return;
         ReadUiIntoConfig();
         _session.SaveConfig();
-        if (_session.IsRunning) { await _session.StopAsync(); _session.Start(); }
+        if (_session.IsRunning)
+        {
+            await _session.StopAsync();
+            _session.Start();
+        }
         UpdateProfileSummary();
     }
 
@@ -1157,7 +1206,8 @@ public partial class MainWindow : Window
     private void OnImportProfile(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog { Filter = "GuGuGaGa 游戏档案 (*.ggprofile.json)|*.ggprofile.json|JSON 文件 (*.json)|*.json" };
-        if (dialog.ShowDialog(this) != true) return;
+        if (dialog.ShowDialog(this) != true)
+            return;
         try
         {
             var profile = GameProfileArchive.Read(dialog.FileName);
@@ -1165,18 +1215,26 @@ public partial class MainWindow : Window
             OpenProfileEditor(profile);
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-        { OnNotice("档案导入失败：" + error.Message); }
+        {
+            OnNotice("档案导入失败：" + error.Message);
+        }
     }
 
     private void OnExportProfile(object sender, RoutedEventArgs e)
     {
-        if (_session.ActiveProfile is not { } profile) { OnNotice("请先选择要导出的游戏档案。"); return; }
+        if (_session.ActiveProfile is not { } profile)
+        {
+            OnNotice("请先选择要导出的游戏档案。");
+            return;
+        }
         var dialog = new SaveFileDialog
         {
-            Filter = "GuGuGaGa 游戏档案 (*.ggprofile.json)|*.ggprofile.json", DefaultExt = ".ggprofile.json",
+            Filter = "GuGuGaGa 游戏档案 (*.ggprofile.json)|*.ggprofile.json",
+            DefaultExt = ".ggprofile.json",
             FileName = GameProfiles.MakeId(profile.Name, []) + ".ggprofile.json",
         };
-        if (dialog.ShowDialog(this) != true) return;
+        if (dialog.ShowDialog(this) != true)
+            return;
         try
         {
             var path = Path.GetFullPath(dialog.FileName);
@@ -1187,7 +1245,9 @@ public partial class MainWindow : Window
             OnNotice("档案已导出（仅作品设定和术语，不含密钥）。");
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException)
-        { OnNotice("档案导出失败：" + error.Message); }
+        {
+            OnNotice("档案导出失败：" + error.Message);
+        }
     }
 
     /// <summary>Open a new profile and start term-sheet generation.</summary>
@@ -1197,12 +1257,14 @@ public partial class MainWindow : Window
     {
         var wasRunning = _session.IsRunning;
         var window = new GameProfileWindow(_session, profile) { Owner = this };
-        if (generate) window.GenerateOnLoad = true;
+        if (generate)
+            window.GenerateOnLoad = true;
         var saved = window.ShowDialog();
 
         if (saved != true || window.Result is null)
         {
-            if (generate) OnNotice("没有保存游戏档案。");
+            if (generate)
+                OnNotice("没有保存游戏档案。");
             return;
         }
 
@@ -1279,7 +1341,8 @@ public partial class MainWindow : Window
             : 0;
 
         var picked = ListChooserWindow.Choose(this, items, activeIndex, _overlay?.LanguageBarBounds() ?? default);
-        if (picked < 0) return;
+        if (picked < 0)
+            return;
 
         var chosen = picked == 0 ? null : profiles[picked - 1];
         _ = ApplyProfileAndSyncAsync(chosen);
@@ -1311,7 +1374,7 @@ public partial class MainWindow : Window
 
         var bans = active.Terms.Sum(term => term.Forbidden.Count);
         GameProfileSummary.Text = $"当前生效:{active.Name} —— {active.Terms.Count} 条术语、{bans} 条禁用译法"
-            + (string.IsNullOrWhiteSpace(active.Worldview) ? " · 没有写世界观(补上它往往比加术语更有效)" : " · 已带世界观描述")            + (_session.Config.Translation.EnforceTerms ? " · 强制校正:开" : " · 强制校正:关(模型可以不理术语表)");
+            + (string.IsNullOrWhiteSpace(active.Worldview) ? " · 没有写世界观(补上它往往比加术语更有效)" : " · 已带世界观描述") + (_session.Config.Translation.EnforceTerms ? " · 强制校正:开" : " · 强制校正:关(模型可以不理术语表)");
     }
 
     /// <summary>The profile changed from somewhere else, such as auto-detection.</summary>
@@ -1341,14 +1404,16 @@ public partial class MainWindow : Window
         return _session.IsRunning;
     }
 
-    /// <summary>Open the current provider's own console so the reader can create a key; the
-    /// URL follows whatever the endpoint field already points at, so a proxy or a local server
-    /// does not send them to a vendor they are not using.</summary>
+    /// <summary>清除保存的翻译凭据。</summary>
     private void OnClearApiKey(object sender, RoutedEventArgs e)
     {
         ApiKeyBox.Password = "";
         ClassicSecretBox.Password = "";
-        _session.Config.Translation.Translator = _session.Config.Translation.Translator with { ApiKey = "", AppSecret = "" };
+        _session.Config.Translation.Translator = _session.Config.Translation.Translator with
+        {
+            ApiKey = "",
+            AppSecret = ""
+        };
         _session.SaveConfig();
         OnNotice("已删除保存的密钥。停止并重新开始翻译后生效。");
     }
@@ -1363,7 +1428,11 @@ public partial class MainWindow : Window
             "baidu" => "https://fanyi-api.baidu.com/",
             _ => "",
         };
-        if (classicUrl.Length > 0) { OpenExternal(classicUrl, "获取 API Key"); return; }
+        if (classicUrl.Length > 0)
+        {
+            OpenExternal(classicUrl, "获取 API Key");
+            return;
+        }
         var baseUrl = BaseUrlBox.Text.Trim();
         var url = baseUrl.Contains("api.deepseek.com", StringComparison.OrdinalIgnoreCase) ? "https://platform.deepseek.com/"
             : baseUrl.Contains("bigmodel.cn", StringComparison.OrdinalIgnoreCase) ? "https://open.bigmodel.cn/"
@@ -1386,7 +1455,7 @@ public partial class MainWindow : Window
     private void OnOpenLanguageSettings(object sender, RoutedEventArgs e) =>
         OpenExternal("ms-settings:regionlanguage", "Windows 语言设置");
 
-    /// <summary>Hand a URL to the shell; <c>UseShellExecute</c> is what makes the browser (or the Settings app, for an <c>ms-settings:</c> URI) open instead of .NET executing the string as a program.</summary>
+    /// <summary>通过系统 Shell 打开网址或设置页面。</summary>
     private void OpenExternal(string target, string what)
     {
         try
@@ -1402,7 +1471,8 @@ public partial class MainWindow : Window
 
     private void OnProviderChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_loadingUi) return;
+        if (_loadingUi)
+            return;
 
         // Traditional APIs use fixed endpoints and do not use these fields.
         var provider = ValueOf(ProviderCombo, "mock");
@@ -1429,22 +1499,36 @@ public partial class MainWindow : Window
 
     private void OnClearCache(object sender, RoutedEventArgs e)
     {
-        try { _session.ClearCache(); OnNotice("已删除内存和磁盘翻译缓存。"); }
+        try
+        {
+            _session.ClearCache();
+            OnNotice("已删除内存和磁盘翻译缓存。");
+        }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-        { OnNotice("缓存删除未完成：" + error.Message); }
+        {
+            OnNotice("缓存删除未完成：" + error.Message);
+        }
     }
 
     private void OnExportDiagnostics(object sender, RoutedEventArgs e)
     {
         var dialog = new SaveFileDialog
         {
-            Filter = "诊断 ZIP (*.zip)|*.zip", DefaultExt = ".zip",
+            Filter = "诊断 ZIP (*.zip)|*.zip",
+            DefaultExt = ".zip",
             FileName = "GuGuGaGaTranslator-diagnostics-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".zip",
         };
-        if (dialog.ShowDialog(this) != true) return;
-        try { _session.ExportDiagnostics(dialog.FileName); OnNotice("诊断包已导出。你可以自行查看并附到问题反馈中。"); }
+        if (dialog.ShowDialog(this) != true)
+            return;
+        try
+        {
+            _session.ExportDiagnostics(dialog.FileName);
+            OnNotice("诊断包已导出。你可以自行查看并附到问题反馈中。");
+        }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException)
-        { OnNotice("诊断包导出失败：" + error.Message); }
+        {
+            OnNotice("诊断包导出失败：" + error.Message);
+        }
     }
 
     private async void OnTestProvider(object sender, RoutedEventArgs e)
@@ -1458,15 +1542,27 @@ public partial class MainWindow : Window
         {
             translator = TranslatorFactory.Create(_session.Config.Translation.Translator);
             var language = _session.Config.Translation.From;
-            var text = GameProfiles.LanguageOf(language) switch { "ja" => "こんにちは。", "zh" => "你好。", _ => "Hello." };
-            await translator.TranslateAsync(new() { Text = text, From = language, To = _session.Config.Translation.To }, cancellation.Token);
-            if (IsLoaded) OnNotice(translator is MockTranslator ? "预览引擎正常；未调用翻译服务。" : "服务连接测试成功。");
+            var text = GameProfiles.LanguageOf(language) switch
+            {
+                "ja" => "こんにちは。",
+                "zh" => "你好。",
+                _ => "Hello."
+            };
+            await translator.TranslateAsync(new()
+            {
+                Text = text,
+                From = language,
+                To = _session.Config.Translation.To
+            }, cancellation.Token);
+            if (IsLoaded)
+                OnNotice(translator is MockTranslator ? "预览引擎正常；未调用翻译服务。" : "服务连接测试成功。");
         }
         catch (OperationCanceledException) { if (IsLoaded) OnNotice("连接测试已取消或超时。"); }
         catch (Exception error) { if (IsLoaded) OnNotice("连接测试失败：" + error.Message); }
         finally
         {
-            if (translator is IDisposable disposable) disposable.Dispose();
+            if (translator is IDisposable disposable)
+                disposable.Dispose();
             _providerTestCancellation = null;
             TestProviderButton.IsEnabled = true;
         }
@@ -1495,10 +1591,12 @@ public partial class MainWindow : Window
         var pipeline = _session.Pipeline;
         Dispatcher.BeginInvoke(new Action(() =>
         {
-            if (pipeline is null || !ReferenceEquals(pipeline, _session.Pipeline) || !pipeline.IsCurrent(update)) return;
+            if (pipeline is null || !ReferenceEquals(pipeline, _session.Pipeline) || !pipeline.IsCurrent(update))
+                return;
             StatusText.Text = Describe(update);
 
-            if (update.Ocr is not null) SourceBox.Text = update.SourceText;
+            if (update.Ocr is not null)
+                SourceBox.Text = update.SourceText;
 
             if (update.Status == PipelineStatus.NoText)
             {
@@ -1508,14 +1606,16 @@ public partial class MainWindow : Window
 
             if (update.Translation is null)
             {
-                if (update.Status == PipelineStatus.Translating) _overlay?.ClearText();
+                if (update.Status == PipelineStatus.Translating)
+                    _overlay?.ClearText();
                 return;
             }
 
             TranslationBox.Text = update.Translation;
 
             var region = _session.ResolveRegion();
-            if (region is { } rect) _overlay?.ShowTranslated(update.SourceText, update.Translation, rect);
+            if (region is { } rect)
+                _overlay?.ShowTranslated(update.SourceText, update.Translation, rect);
 
             var stats = _session.Pipeline?.Stats;
             if (stats is not null)
@@ -1550,10 +1650,17 @@ public partial class MainWindow : Window
 
     private void OnNotice(string message)
     {
-        if (Dispatcher.HasShutdownStarted) return;
-        void Apply() { StatusText.Text = message; UpdateCacheStatus(); }
-        if (Dispatcher.CheckAccess()) Apply();
-        else Dispatcher.BeginInvoke(Apply);
+        if (Dispatcher.HasShutdownStarted)
+            return;
+        void Apply()
+        {
+            StatusText.Text = message;
+            UpdateCacheStatus();
+        }
+        if (Dispatcher.CheckAccess())
+            Apply();
+        else
+            Dispatcher.BeginInvoke(Apply);
     }
 
     private void UpdateCacheStatus() => CacheStatusText.Text = _session.PersistentCacheAvailable

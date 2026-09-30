@@ -32,8 +32,8 @@
         </StackPanel>
       </Grid>
 
-      <TextBlock Text="输入 API 即可开始翻译" FontSize="19" FontWeight="SemiBold" Margin="0,22,0,4" />
-      <TextBlock Text="离线识别模型已包含在安装包中。翻译需要联网和 API Key。"
+      <TextBlock Text="配置翻译服务" FontSize="19" FontWeight="SemiBold" Margin="0,22,0,4" />
+      <TextBlock Text="识别模型已包含在安装包中。翻译可使用在线接口或本地模型。"
                  TextWrapping="Wrap" FontSize="12" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,16" />
 
       <TextBlock Text="服务商" Style="{StaticResource FieldLabel}" />
@@ -50,7 +50,7 @@
       <TextBlock x:Name="KeyLinkRow" Margin="0,0,0,10" TextWrapping="Wrap">
         <Hyperlink x:Name="KeyLink" RequestNavigate="OnOpenLink" FontSize="12"
                    Foreground="{StaticResource AccentSoftBrush}">
-          <Run x:Name="KeyLinkRun" Text="去领 API Key ↗" />
+          <Run x:Name="KeyLinkRun" Text="打开服务控制台 ↗" />
         </Hyperlink>
       </TextBlock>
       <TextBlock x:Name="StepsText" FontSize="11" Foreground="{StaticResource HintTextBrush}"

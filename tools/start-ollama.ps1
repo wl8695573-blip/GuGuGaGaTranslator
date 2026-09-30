@@ -1,16 +1,14 @@
-<#
+﻿<#
 .SYNOPSIS
     Starts or stops the local Ollama server that GuGuGaGaTranslator uses as its offline
     translation engine.
 
 .DESCRIPTION
-    Models are kept on the X: drive because the system drive is small, so this
-    script points OLLAMA_MODELS there before starting the server. Use -Persist
-    once to write that into the user environment, which also covers the Ollama
-    tray app starting on its own later.
+    使用已安装的 Ollama。-Models 指定模型目录；-Persist 将该目录保存到
+    当前用户环境变量。-OllamaHome 可指定便携版程序目录。
 
 .EXAMPLE
-    .\start-ollama.ps1                 # start the server (models on X:)
+    .\start-ollama.ps1                 # start the installed server
     .\start-ollama.ps1 -Persist        # start it and remember the model path
     .\start-ollama.ps1 -Stop           # stop every ollama process
 #>
@@ -20,15 +18,16 @@ param(
 
     [switch] $Persist,
 
-    [string] $Models = 'X:\ollama\models',
+    [string] $Models = (Join-Path $env:USERPROFILE '.ollama\models'),
 
-    [string] $OllamaHome = 'X:\ollama',
+    [string] $OllamaHome = '',
 
     [int] $TimeoutSeconds = 60
 )
 
 $ErrorActionPreference = 'Stop'
-$ollama = Join-Path $OllamaHome 'ollama.exe'
+. (Join-Path $PSScriptRoot 'ollama-path.ps1')
+$ollama = Resolve-OllamaExecutable $OllamaHome
 
 if ($Stop) {
     $stopped = 0
@@ -38,10 +37,6 @@ if ($Stop) {
     }
     Write-Host "已停止 $stopped 个 ollama 进程"
     return
-}
-
-if (-not (Test-Path $ollama)) {
-    throw "找不到 $ollama —— 便携版需要先解压到 $OllamaHome"
 }
 
 New-Item -ItemType Directory -Force $Models | Out-Null
@@ -54,9 +49,7 @@ if ($Persist) {
 
 function Test-OllamaServer {
     try {
-        # 127.0.0.1 rather than localhost: the server binds IPv4 only, while
-        # localhost resolves to ::1 first on this machine, which made a healthy
-        # server look dead.
+        # 使用 IPv4 回环地址，避免 localhost 的 IPv6 解析差异。
         return (Invoke-WebRequest 'http://127.0.0.1:11434/api/tags' -TimeoutSec 2 -UseBasicParsing).StatusCode -eq 200
     } catch {
         return $false

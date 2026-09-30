@@ -245,7 +245,6 @@ public partial class InstallerWindow : Window
         Process.Start(new ProcessStartInfo(exe) { WorkingDirectory = directory, UseShellExecute = true });
     }
 
-    /// <inheritdoc />
     protected override void OnClosed(EventArgs e)
     {
         base.OnClosed(e);

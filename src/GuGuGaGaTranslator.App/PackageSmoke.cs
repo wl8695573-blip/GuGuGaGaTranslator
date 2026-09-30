@@ -8,7 +8,7 @@ using GuGuGaGaTranslator.Storage.Sqlite;
 
 namespace GuGuGaGaTranslator.App;
 
-/// <summary>Unattended package acceptance: no game capture, UI display, account config, or network calls.</summary>
+/// <summary>发行包自检，使用指定临时配置，不抓屏或请求网络。</summary>
 internal static class PackageSmoke
 {
     public static int Run(string[] args)
@@ -30,33 +30,51 @@ internal static class PackageSmoke
             using (var storage = new SqliteTranslationCacheStore(database))
             {
                 storage.Set("smoke", "示例缓存");
-                if (storage.Get("smoke") != "示例缓存") throw new InvalidDataException("SQLite/DPAPI round trip failed");
+                if (storage.Get("smoke") != "示例缓存")
+                    throw new InvalidDataException("SQLite/DPAPI round trip failed");
             }
             using var recognizer = RapidOcrRecognizer.Create(new RapidOcrSettings());
             recognizer.RecognizeAsync(new Frame
             {
-                Bgra = Enumerable.Repeat((byte)255, 320 * 80 * 4).ToArray(), Width = 320, Height = 80,
-                SourceRegion = new Int32Rect(0, 0, 320, 80), CapturedAt = DateTimeOffset.UtcNow,
+                Bgra = Enumerable.Repeat((byte)255, 320 * 80 * 4).ToArray(),
+                Width = 320,
+                Height = 80,
+                SourceRegion = new Int32Rect(0, 0, 320, 80),
+                CapturedAt = DateTimeOffset.UtcNow,
             }).GetAwaiter().GetResult();
             foreach (var profile in GameProfiles.Default())
-                if (GameProfileArchive.Validate(profile).Count > 0) throw new InvalidDataException("Invalid built-in profile");
+                if (GameProfileArchive.Validate(profile).Count > 0)
+                    throw new InvalidDataException("Invalid built-in profile");
             // Construct the real views without Loaded events and without window handles.
             var session = new AppSession(directory);
             _ = new SetupWindow(session);
             _ = new MainWindow(session);
             session.DisposeAsync().AsTask().GetAwaiter().GetResult();
             File.WriteAllText(report, JsonSerializer.Serialize(new
-                { passed = true, version = typeof(App).Assembly.GetName().Version?.ToString(), checks = new[] { "SQLite", "DPAPI", "RapidOCR", "profiles", "WPF views" } }));
+            {
+                passed = true,
+                version = typeof(App).Assembly.GetName().Version?.ToString(),
+                checks = new[] { "SQLite", "DPAPI", "RapidOCR", "profiles", "WPF views" }
+            }));
             return 0;
         }
         catch (Exception error)
         {
-            if (report is not null) File.WriteAllText(report, JsonSerializer.Serialize(new { passed = false, error = error.GetType().Name }));
+            if (report is not null)
+                File.WriteAllText(report, JsonSerializer.Serialize(new
+                {
+                    passed = false,
+                    error = error.GetType().Name
+                }));
             return 1;
         }
         finally
         {
-            if (database is not null) { File.Delete(database); File.Delete(database + "-journal"); }
+            if (database is not null)
+            {
+                File.Delete(database);
+                File.Delete(database + "-journal");
+            }
         }
     }
 }

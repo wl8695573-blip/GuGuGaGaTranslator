@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory)][string] $Path,
     [string] $CertificateThumbprint = $env:GGGT_SIGN_CERTIFICATE_THUMBPRINT,

@@ -1,130 +1,84 @@
-# GuGuGaGaTranslator 维护指南
+# 维护指南
 
-本文说明常见改动的位置、构建方式和验证入口。功能使用说明请看 [README](README.md)。
+用户操作见 [使用说明](docs/USAGE.md)。本页说明代码入口、构建、检查和发布流程。
 
-## 工程结构
+## 环境与构建
 
-| 目录 | 内容 |
-|---|---|
-| `src/GuGuGaGaTranslator.Core` | 抓屏、配置、OCR 接口、翻译和轮询逻辑；不依赖 NuGet。 |
-| `src/GuGuGaGaTranslator.App` | WPF 主窗口、框选窗口、悬浮层和应用生命周期。 |
-| `src/GuGuGaGaTranslator.Ocr.Rapid` | RapidOCR 适配器。 |
-| `src/GuGuGaGaTranslator.Storage.Sqlite` | 可选、加密且有限容量的磁盘缓存。 |
-| `tools/Benchmark` / `tools/UiPreview` | 固定 OCR 语料及实际 WPF 界面渲染。 |
-| `tools/Probe` | 命令行验证工具。 |
-| `tools/SampleWindow` | 用于抓屏和框选的示例窗口。 |
-| `tools/Installer` | 当前用户范围的安装程序。 |
-
-配置文件位于 `%APPDATA%\GuGuGaGaTranslator\config.json`。升级时请保留未知字段和已有用户配置。
-
-缓存、档案格式、验收及签名的维护说明见 [验证与发布](docs/VERIFICATION.md) 和 [档案格式](docs/PROFILES.md)。缓存密文不提供跨账户迁移；诊断导出必须维护字段白名单，禁止加入请求正文、异常正文或配置文件。
-
-## 构建和运行
-
-需要 Windows 10 19041 或更新版本，以及 .NET 10 SDK。
+需要 Windows 10 2004（19041）或更高版本和 .NET 10 SDK。`models/v6` 的模型及字典已提交到仓库，完整克隆后即可构建。
 
 ```powershell
-cd X:\kotoba
+git clone https://github.com/wl8695573-blip/GuGuGaGaTranslator.git
+cd GuGuGaGaTranslator
 .\build.ps1 -Configuration Debug
-```
-
-启动调试版本：
-
-```powershell
 .\src\GuGuGaGaTranslator.App\bin\Debug\net10.0-windows10.0.19041.0\GuGuGaGaTranslator.exe
 ```
 
-程序运行时，Windows 会锁定输出文件。构建失败并提示文件被占用时，先退出程序及安装程序再重试。XAML 更改需要重新构建后才能看到效果。
+文件被占用时，先退出使用该输出目录的程序。版本由 `Directory.Build.props` 定义，格式约定见 `.editorconfig`。
 
-版本统一定义在 `Directory.Build.props`，应用清单与安装器在构建时同步。完整打包命令为 `.\build.ps1 -Publish -SingleFile -Zip -Installer`；提交并验证后运行 `.\tools\publish.ps1` 上传新 Release。
+## 数据流程
 
-## 修改界面和主题
+```text
+窗口选择和框选 → 客户区坐标换算 → 抓屏与自身窗口遮罩
+  → 画面变化判断和 OCR → 文本整理与重复检查
+  → 缓存或翻译服务 → 术语校正 → 主界面和悬浮层
+```
 
-全局颜色、字体和 WPF 控件样式定义在 `src/GuGuGaGaTranslator.App/App.xaml`。常规界面优先通过资源和样式修改；框选窗口、悬浮层和语言条是无边框窗口，颜色通过 `Theme` 读取相同资源。
+`AppSession` 组装服务、加载配置并管理生命周期。`TranslationPipeline` 分开执行 OCR 和网络翻译，新台词会取消过期请求。界面通过事件接收状态，后台通知异步转入 WPF Dispatcher，避免与缓存锁相互等待。
 
-常用入口：
+## 修改位置
 
-- 主界面：`MainWindow.xaml` 和 `MainWindow.xaml.cs`
-- 悬浮层：`OverlayWindow.cs`
-- 语言条：`LanguageBarWindow.cs`
-- 框选窗口：`RegionSelectorWindow.cs`
-- 首次设置：`SetupWindow.xaml` 和 `SetupWindow.xaml.cs`
+| 内容 | 入口 |
+|---|---|
+| 主窗口、设置、主题 | `App/MainWindow.xaml`、`MainWindow.xaml.cs`、`SetupWindow.xaml.cs`、`App.xaml`。 |
+| 框选和悬浮层 | `App/RegionSelectorWindow.cs`、`OverlayWindow.cs`、`LanguageBarWindow.cs`。 |
+| 抓屏和区域 | `Core/Capture/ScreenCapture.cs`、`TargetRegionResolver.cs`、`SelfWindowMask.cs`。 |
+| OCR | `Core/Ocr` 定义接口和 Windows 实现；`Ocr.Rapid` 实现 RapidOCR。 |
+| 翻译 | `Core/Translation/ITranslator.cs`、`OpenAiCompatibleTranslator.cs`、`ClassicApis.cs`。 |
+| 术语与档案 | `TermSheetBuilder.cs`、`TermEnforcer.cs`、`GameProfileArchive.cs`。 |
+| 配置与密钥 | `Core/Config/AppConfig.cs`、`ConfigStore.cs`、`SecretProtection.cs`。 |
+| 缓存与诊断 | `Core/Translation/TranslationCache.cs`、`Storage.Sqlite`、`Core/Diagnostics`。 |
+| 安装与卸载 | `tools/Installer`、`src/Shared/InstallationManifest.cs`、`App/Uninstall.cs`。 |
 
-悬浮层的尺寸使用 WPF 设备无关单位；移动窗口时使用的是物理像素。修改位置计算或 DPI 相关代码时，不要混用这两套坐标。
+表中的 `App`、`Core`、`Ocr.Rapid`、`Storage.Sqlite` 对应 `src/GuGuGaGaTranslator.*` 项目。
 
-## 修改抓屏和区域逻辑
+## 维护约定
 
-目标窗口和区域由 `AppSession` 组装，并传给 `TranslationPipeline`。区域保存为目标客户区内的物理像素坐标，因此窗口移动和缩放后可以重新计算屏幕位置。
+- 区分 WPF 设备无关单位与抓屏物理像素；选区带参考客户区尺寸，旧配置继续按像素处理。
+- 网络请求传递取消令牌，超时覆盖正文读取；停止时释放 OCR 会话。
+- 服务商扩展参数只发给已知支持的地址，通用兼容接口使用标准字段。
+- 新配置使用兼容默认值。密钥按账户加密，不写入日志或诊断。
+- 诊断采用字段白名单，不直接序列化配置、请求、异常、台词或档案。
+- 档案先校验再导入编辑器，保存为副本。格式见 [档案分享](docs/PROFILES.md)。
+- 安装和卸载校验登记目录、实例标记及文件清单，保留用户额外文件。
+- 注释解释约束、单位和特殊处理，避免重复方法名及没有依据的速度、质量保证。
 
-相关文件：
-
-- `Core/Capture/ScreenCapture.cs`：BitBlt 和 PrintWindow 抓屏。
-- `Core/Capture/SelfWindowMask.cs`：在 OCR 前遮盖会出现在截图中的本程序窗口。
-- `Core/Capture/FrameHasher.cs`：判断画面是否变化。
-- `App/RegionSelectorWindow.cs`：用户框选和坐标转换。
-
-修改后至少用两个显示器缩放比例测试：100% 和非 100%。还应测试窗口移动、最小化、目标窗口被遮挡、以及悬浮层不排除捕获时的行为。
-
-## 修改 OCR
-
-OCR 的公共接口在 `Core/Ocr/ITextRecognizer.cs`。Windows OCR 的实现位于 Core，RapidOCR 的实现位于 `GuGuGaGaTranslator.Ocr.Rapid`。
-
-添加 OCR 引擎时：
-
-1. 实现 `ITextRecognizer`，并正确释放模型或会话资源。
-2. 在 `AppSession` 中创建并在停止时释放实例。
-3. 为不可用的语言、模型路径和初始化失败提供明确错误。
-4. 用 `tools/Probe` 处理一张固定图片，记录识别结果和耗时。
-
-RapidOCR 模型不在源码仓库中。发布包必须包含 `models` 目录及其文件结构。
-
-## 修改翻译和术语表
-
-翻译器实现 `Core/Translation/ITranslator.cs`。OpenAI 兼容接口的提示词和请求组装在 `OpenAiCompatibleTranslator.cs`；术语表解析与强制替换在 `TermSheetBuilder.cs`、`TermEnforcer.cs`。
-
-新增翻译服务时：
-
-1. 不记录 API Key、台词或完整 HTTP 请求到日志。
-2. 为超时、非成功状态码和无效 JSON 返回可显示的错误。
-3. 保持取消令牌可传递到网络请求。
-4. 明确是否支持术语表、世界观和上下文；不支持时不要在界面中暗示这些设置会生效。
-
-修改提示词后，使用“查看提示词”检查系统提示词和用户文本的边界。屏幕文本应始终被当作待翻译内容，而不是指令。
-
-## 修改配置
-
-`Core/Config/AppConfig.cs` 定义默认值，`ConfigStore.cs` 负责读取、迁移和写入。新增字段时使用兼容默认值，不要在加载旧配置时抛出异常。
-
-用户配置中可能包含 API Key。调试时请使用临时配置，提交日志、截图或复现文件前先删除密钥。
-
-## 验证
-
-`tools/Probe` 用于快速验证纯逻辑和外部服务适配，`tools/SampleWindow` 用于验证窗口枚举、抓屏、框选与悬浮层。
-
-建议的最低验证集：
+## 检查入口
 
 ```powershell
 dotnet build GuGuGaGaTranslator.slnx -c Release
-dotnet run --project tools\Probe -- --help
-dotnet run --project tools\SampleWindow
+dotnet run --project tools/Regression -c Release
+dotnet run --project tools/Benchmark -c Release -- --engine rapid --iterations 3 --check
+dotnet run --project tools/UiPreview -c Release -- .artifacts/ui
 ```
 
-手工检查以下路径：
+`tools/Probe` 检查窗口、抓屏、识别和翻译；`tools/SampleWindow` 提供合成对话窗口。使用临时配置和合成台词，避免提交真实台词或密钥。报告定义和检查范围见 [验证与发布](docs/VERIFICATION.md)。
 
-- 首次启动后跳过设置，mock 引擎能完成抓屏和 OCR。
-- 配置 OpenAI 兼容接口后，测试连接、翻译和取消操作正常。
-- 框选、重新框选、暂停、热键、鼠标穿透和编辑模式可用。
-- 100% 与 125% 或 150% 缩放下，框选区域和悬浮层位置一致。
-- 安装、卸载、快捷方式和升级安装正常。
+辅助脚本：`start-ollama.ps1` 启动已安装的本地服务，`setup-sakura.ps1` 注册 Sakura 模型，`compare-models.ps1` 比较本地模型处理相同文本的结果。可指定路径，使用前确认模型许可。
 
-## 发布检查
+## 版本发布
 
-发布包至少应包含应用程序、`models` 目录、许可证和第三方声明。安装程序仅应删除它自己创建的安装目录；安装目录由用户指定时，卸载逻辑必须验证目标属于本产品。
+1. 更新 `Directory.Build.props`、README 下载链接、CHANGELOG 和 `tools/release-notes.md`。
+2. 提交改动，确认 GitHub 检查通过。
+3. 执行完整构建和包验收：
 
-发布前建议执行：
+   ```powershell
+   .\build.ps1 -Publish -SingleFile -Zip -Installer
+   .\tools\verify-release.ps1
+   ```
 
-```powershell
-.\build.ps1 -Publish -SingleFile
-```
+4. 将检查通过的提交合并到 `main`，本地检出同一提交。同版本重复构建时，将旧 `dist` 文件移到备份目录。
+5. 使用有发布权限的 GitHub 凭据运行 `.\tools\publish.ps1 -SkipPush`。
 
-随后在干净目录中解压或安装，完成一次首次启动、RapidOCR 识别、mock 预览和卸载测试。发行说明应描述用户可见的变化，不应包含内部调试过程。
+发布脚本先创建草稿，上传安装器、便携包和校验文件，核对大小与服务端摘要后公开。已公开的同名版本不会被覆盖。发布后检查三项资产和匿名下载。
+
+当前发行包未签名；证书要求和命令见 [签名说明](docs/VERIFICATION.md#正式签名)。SHA256 不能替代发布者签名。

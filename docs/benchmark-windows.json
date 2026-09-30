@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "engine": "windows",
   "iterations": 3,
-  "initializationMs": 0.008,
+  "initializationMs": 0.0057,
   "os": "Microsoft Windows NT 10.0.22631.0",
   "runtime": "10.0.12",
   "processorCount": 16,
@@ -13,8 +13,8 @@
       "status": "PASS",
       "actual": "We will meet again tomorrow.",
       "cer": 0,
-      "medianMs": 9.8923,
-      "p95Ms": 24.147,
+      "medianMs": 8.3144,
+      "p95Ms": 14.4951,
       "maximumCer": 0.15
     },
     {
@@ -22,8 +22,8 @@
       "status": "PASS",
       "actual": "We will meet again tomorrow.",
       "cer": 0,
-      "medianMs": 7.4611,
-      "p95Ms": 7.576,
+      "medianMs": 5.9031,
+      "p95Ms": 6.3466,
       "maximumCer": 0.15
     },
     {
@@ -31,8 +31,8 @@
       "status": "PASS",
       "actual": "We will meet again tomorrow.",
       "cer": 0,
-      "medianMs": 7.7323,
-      "p95Ms": 7.9505,
+      "medianMs": 5.7115,
+      "p95Ms": 6.2334,
       "maximumCer": 0.15
     },
     {
@@ -40,8 +40,8 @@
       "status": "PASS",
       "actual": "We will meet again tomorrow.",
       "cer": 0,
-      "medianMs": 9.3536,
-      "p95Ms": 13.929,
+      "medianMs": 7.8117,
+      "p95Ms": 7.9988,
       "maximumCer": 0.15
     },
     {
@@ -49,8 +49,8 @@
       "status": "PASS",
       "actual": "We will meet again tomorrow.",
       "cer": 0,
-      "medianMs": 14.9864,
-      "p95Ms": 49.266,
+      "medianMs": 6.769,
+      "p95Ms": 7.9429,
       "maximumCer": 0.15
     },
     {
@@ -58,8 +58,8 @@
       "status": "PASS",
       "actual": "We will meet again tomorrow.",
       "cer": 0,
-      "medianMs": 26.7443,
-      "p95Ms": 27.9358,
+      "medianMs": 7.6702,
+      "p95Ms": 8.6251,
       "maximumCer": 0.15
     },
     {
@@ -67,8 +67,8 @@
       "status": "PASS",
       "actual": "We will meet again tomorrow.",
       "cer": 0,
-      "medianMs": 17.6904,
-      "p95Ms": 17.7656,
+      "medianMs": 9.9615,
+      "p95Ms": 10.6756,
       "maximumCer": 0.15
     },
     {
@@ -76,8 +76,8 @@
       "status": "PASS",
       "actual": "We will meet again tomorrow.",
       "cer": 0,
-      "medianMs": 13.3168,
-      "p95Ms": 24.7481,
+      "medianMs": 10.3974,
+      "p95Ms": 11.5219,
       "maximumCer": 0.15
     },
     {
@@ -85,8 +85,8 @@
       "status": "PASS",
       "actual": "We will meet again tomorrow.",
       "cer": 0,
-      "medianMs": 13.9915,
-      "p95Ms": 15.9861,
+      "medianMs": 8.9203,
+      "p95Ms": 10.9337,
       "maximumCer": 0.15
     },
     {
@@ -175,8 +175,8 @@
       "status": "PASS",
       "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
       "cer": 0,
-      "medianMs": 20.4547,
-      "p95Ms": 21.4843,
+      "medianMs": 10.5184,
+      "p95Ms": 11.1785,
       "maximumCer": 0.15
     },
     {
@@ -184,8 +184,8 @@
       "status": "PASS",
       "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
       "cer": 0,
-      "medianMs": 14.0857,
-      "p95Ms": 23.6686,
+      "medianMs": 8.9344,
+      "p95Ms": 11.1878,
       "maximumCer": 0.15
     },
     {
@@ -193,8 +193,8 @@
       "status": "PASS",
       "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
       "cer": 0,
-      "medianMs": 16.0006,
-      "p95Ms": 22.9521,
+      "medianMs": 11.1836,
+      "p95Ms": 12.3339,
       "maximumCer": 0.15
     },
     {
@@ -202,8 +202,8 @@
       "status": "PASS",
       "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
       "cer": 0,
-      "medianMs": 16.4909,
-      "p95Ms": 19.2432,
+      "medianMs": 10.8943,
+      "p95Ms": 11.4911,
       "maximumCer": 0.15
     },
     {
@@ -211,8 +211,8 @@
       "status": "PASS",
       "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
       "cer": 0,
-      "medianMs": 18.1439,
-      "p95Ms": 19.6504,
+      "medianMs": 14.4748,
+      "p95Ms": 14.8624,
       "maximumCer": 0.15
     },
     {
@@ -220,8 +220,8 @@
       "status": "PASS",
       "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
       "cer": 0,
-      "medianMs": 15.5628,
-      "p95Ms": 21.049,
+      "medianMs": 13.2422,
+      "p95Ms": 14.3177,
       "maximumCer": 0.15
     },
     {
@@ -229,8 +229,8 @@
       "status": "PASS",
       "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
       "cer": 0,
-      "medianMs": 26.6239,
-      "p95Ms": 28.1872,
+      "medianMs": 21.8289,
+      "p95Ms": 22.2597,
       "maximumCer": 0.15
     },
     {
@@ -238,8 +238,8 @@
       "status": "PASS",
       "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
       "cer": 0,
-      "medianMs": 18.5977,
-      "p95Ms": 20.2885,
+      "medianMs": 12.8247,
+      "p95Ms": 13.0103,
       "maximumCer": 0.15
     },
     {
@@ -247,8 +247,8 @@
       "status": "PASS",
       "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
       "cer": 0,
-      "medianMs": 21.4333,
-      "p95Ms": 23.9001,
+      "medianMs": 12.9063,
+      "p95Ms": 13.2531,
       "maximumCer": 0.15
     }
   ]

@@ -32,7 +32,8 @@ public sealed record OcrResult
     {
         get
         {
-            if (Lines.Count == 0) return null;
+            if (Lines.Count == 0)
+                return null;
             var left = Lines.Min(line => line.Box.X);
             var top = Lines.Min(line => line.Box.Y);
             var right = Lines.Max(line => line.Box.X + line.Box.Width);

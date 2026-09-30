@@ -4,9 +4,7 @@ using GuGuGaGaTranslator.Core.Translation;
 
 namespace GuGuGaGaTranslator.Core.Config;
 
-/// <summary>A rectangle as it appears in the configuration file. It exists instead of
-/// <see cref="Int32Rect"/> because the framework type also serializes its computed
-/// <c>isEmpty</c>/<c>hasArea</c> properties, which would litter a hand-edited file.</summary>
+/// <summary>配置中的矩形，只保存位置和尺寸，避免序列化框架类型的派生属性。</summary>
 public readonly record struct RegionRect(int X, int Y, int Width, int Height)
 {
     /// <summary>True when the rectangle has a positive size. Computed, so it is never persisted.</summary>
@@ -21,7 +19,7 @@ public readonly record struct RegionRect(int X, int Y, int Width, int Height)
 /// <summary>Which window to read, and which part of it.</summary>
 public sealed class TargetConfig
 {
-    /// <summary>The restart-stable window identity (<c>process|class</c>), preferred over the title, which games rewrite.</summary>
+    /// <summary>窗口标识 process|class，用于窗口重启后的匹配。</summary>
     public string? Identity { get; set; }
 
     /// <summary>A title substring, used when no identity is recorded or it is gone.</summary>
@@ -30,11 +28,11 @@ public sealed class TargetConfig
     /// <summary>The translation region as an offset inside the target's client area, in physical pixels.</summary>
     public RegionRect? Region { get; set; }
 
-    /// <summary>Client size when the region was selected, used to follow window resizing and DPI changes.</summary>
+    /// <summary>框选时的客户区尺寸，供后续窗口缩放使用。</summary>
     public int ReferenceClientWidth { get; set; }
     public int ReferenceClientHeight { get; set; }
 
-    /// <summary><c>screen</c> copies what is visible; <c>printwindow</c> also works while covered.</summary>
+    /// <summary>screen 抓取可见屏幕；printwindow 的遮挡兼容性取决于目标程序。</summary>
     public string CaptureBackend { get; set; } = "screen";
 }
 
@@ -59,8 +57,7 @@ public sealed class OcrConfig
     /// <summary>Where the RapidOCR model files live; empty searches beside the executable.</summary>
     public string RapidModelDirectory { get; set; } = string.Empty;
 
-    /// <summary>RapidOCR detector resize target in pixels; lower is faster, 0 keeps the model preset's 736.
-    /// Measured on a large dialogue line: 736 → 1368 ms, 320 → 363 ms, with identical recognized text.</summary>
+    /// <summary>RapidOCR 检测尺寸；0 使用模型默认值，减小尺寸可降低处理量。</summary>
     public int RapidLimitSideLen { get; set; } = 320;
 
     /// <summary>Whether RapidOCR should try the CUDA provider before falling back to CPU.</summary>
@@ -85,7 +82,7 @@ public sealed class TranslationConfig
     /// <summary>Pick the profile from the target window's title; choosing one by hand wins until the window changes.</summary>
     public bool AutoDetectProfile { get; set; } = true;
 
-    /// <summary>Rewrite the profile's terms into the finished translation; a term table the model is free to ignore is not worth keeping.</summary>
+    /// <summary>启用译后术语校正。</summary>
     public bool EnforceTerms { get; set; } = true;
 
     // Fully qualified: this property's own name shadows the type in this scope.
@@ -105,7 +102,7 @@ public sealed class TranslationCacheConfig
     public int MaximumEntries { get; set; } = 10000;
 }
 
-/// <summary>Where the translation panel sits relative to the captured region, which for a visual novel is the dialogue box along the bottom.</summary>
+/// <summary>悬浮层相对识别区域的位置。</summary>
 public sealed class OverlayPlacement
 {
     public const string Over = "over";
@@ -158,14 +155,10 @@ public sealed class OverlayConfig
 
     public bool ShowSource { get; set; }
 
-    /// <summary>Show the language switcher above the overlay; it is a separate window because the click-through panel can never receive a click.</summary>
+    /// <summary>在悬浮层上方显示独立的语言控制条。</summary>
     public bool ShowLanguageBar { get; set; } = true;
 
-    /// <summary>
-    /// Hide the overlay from screen capture. On by default so the tool never reads
-    /// its own translation as if it were game text; turn it off when recording or
-    /// streaming, where the translation should end up in the video.
-    /// </summary>
+    /// <summary>请求系统排除悬浮层捕获；录制译文时关闭此选项。</summary>
     public bool ExcludeFromCapture { get; set; } = true;
 
     public List<LanguagePreset> LanguagePresets { get; set; } = DefaultLanguagePresets.Create();
@@ -273,7 +266,7 @@ public static class DefaultLanguagePresets
         new() { Label = "英 → 日", From = "en", To = "ja", Ocr = "en-US" },
     ];
 
-    /// <summary>The three languages this tool translates between, and nothing else.</summary>
+    /// <summary>支持的翻译语言。</summary>
     public static readonly string[] SupportedLanguages = ["zh-Hans", "ja", "en"];
 
     /// <summary>Whether a configured language is one of the three; <c>auto</c> counts as a source.</summary>
@@ -386,39 +379,68 @@ public sealed class AppConfig
     /// 中 / 日 / 英 and nothing else.</summary>
     public void NormalizeLanguages()
     {
-        Target ??= new(); Ocr ??= new(); Translation ??= new(); Overlay ??= new();
-        RegionPicker ??= new(); Hotkeys ??= new(); Pipeline ??= new(); Debug ??= new();
-        Translation.Translator ??= new(); Translation.Cache ??= new();
-        Translation.GameProfiles ??= []; Translation.Glossary ??= [];
+        Target ??= new();
+        Ocr ??= new();
+        Translation ??= new();
+        Overlay ??= new();
+        RegionPicker ??= new();
+        Hotkeys ??= new();
+        Pipeline ??= new();
+        Debug ??= new();
+        Translation.Translator ??= new();
+        Translation.Cache ??= new();
+        Translation.GameProfiles ??= [];
+        Translation.Glossary ??= [];
         Translation.GameProfiles.RemoveAll(profile => profile is null);
-        Ocr.Fallbacks ??= []; Overlay.LanguagePresets ??= []; Overlay.Presets ??= [];
+        Ocr.Fallbacks ??= [];
+        Overlay.LanguagePresets ??= [];
+        Overlay.Presets ??= [];
         Overlay.Presets.RemoveAll(preset => preset is null);
-        Ocr.Engine ??= "rapidocr"; Ocr.RapidModelDirectory ??= "";
-        Overlay.FontFamily ??= "Microsoft YaHei UI"; Overlay.TextAlign ??= "left";
+        Ocr.Engine ??= "rapidocr";
+        Ocr.RapidModelDirectory ??= "";
+        Overlay.FontFamily ??= "Microsoft YaHei UI";
+        Overlay.TextAlign ??= "left";
         Debug.DumpDirectory ??= "";
         Translation.Translator = Translation.Translator with
         {
-            Provider = Translation.Translator.Provider ?? "mock", BaseUrl = Translation.Translator.BaseUrl ?? "",
-            Model = Translation.Translator.Model ?? "", ApiKey = Translation.Translator.ApiKey ?? "",
-            AppId = Translation.Translator.AppId ?? "", AppSecret = Translation.Translator.AppSecret ?? "",
+            Provider = Translation.Translator.Provider ?? "mock",
+            BaseUrl = Translation.Translator.BaseUrl ?? "",
+            Model = Translation.Translator.Model ?? "",
+            ApiKey = Translation.Translator.ApiKey ?? "",
+            AppId = Translation.Translator.AppId ?? "",
+            AppSecret = Translation.Translator.AppSecret ?? "",
             PromptStyle = Translation.Translator.PromptStyle ?? "galgame",
         };
-        if (!DefaultLanguagePresets.IsSupported(Translation.From, allowAuto: true)) Translation.From = "auto";
-        if (!DefaultLanguagePresets.IsSupported(Translation.To, allowAuto: false)) Translation.To = "zh-Hans";
-        if (!DefaultLanguagePresets.IsSupportedOcr(Ocr.Language)) Ocr.Language = "auto";
+        if (!DefaultLanguagePresets.IsSupported(Translation.From, allowAuto: true))
+            Translation.From = "auto";
+        if (!DefaultLanguagePresets.IsSupported(Translation.To, allowAuto: false))
+            Translation.To = "zh-Hans";
+        if (!DefaultLanguagePresets.IsSupportedOcr(Ocr.Language))
+            Ocr.Language = "auto";
         Ocr.Fallbacks = [.. Ocr.Fallbacks.Where(DefaultLanguagePresets.IsSupportedOcr)];
 
         Translation.Cache.RetentionDays = Math.Clamp(Translation.Cache.RetentionDays, 1, 365);
         Translation.Cache.MaximumEntries = Math.Clamp(Translation.Cache.MaximumEntries, 100, 100000);
         foreach (var profile in Translation.GameProfiles)
         {
-            profile.Id ??= ""; profile.Name ??= "";
-            profile.WindowHints ??= []; profile.WindowHints.RemoveAll(hint => string.IsNullOrWhiteSpace(hint));
-            profile.Terms ??= []; profile.Terms.RemoveAll(term => term is null);
-            foreach (var term in profile.Terms) { term.Source ??= ""; term.Target ??= ""; term.Forbidden ??= []; }
-            if (!string.IsNullOrEmpty(profile.From) && !DefaultLanguagePresets.IsSupported(profile.From, true)) profile.From = null;
-            if (!string.IsNullOrEmpty(profile.To) && !DefaultLanguagePresets.IsSupported(profile.To, false)) profile.To = null;
-            if (!string.IsNullOrEmpty(profile.OcrLanguage) && !DefaultLanguagePresets.IsSupportedOcr(profile.OcrLanguage)) profile.OcrLanguage = null;
+            profile.Id ??= "";
+            profile.Name ??= "";
+            profile.WindowHints ??= [];
+            profile.WindowHints.RemoveAll(hint => string.IsNullOrWhiteSpace(hint));
+            profile.Terms ??= [];
+            profile.Terms.RemoveAll(term => term is null);
+            foreach (var term in profile.Terms)
+            {
+                term.Source ??= "";
+                term.Target ??= "";
+                term.Forbidden ??= [];
+            }
+            if (!string.IsNullOrEmpty(profile.From) && !DefaultLanguagePresets.IsSupported(profile.From, true))
+                profile.From = null;
+            if (!string.IsNullOrEmpty(profile.To) && !DefaultLanguagePresets.IsSupported(profile.To, false))
+                profile.To = null;
+            if (!string.IsNullOrEmpty(profile.OcrLanguage) && !DefaultLanguagePresets.IsSupportedOcr(profile.OcrLanguage))
+                profile.OcrLanguage = null;
         }
 
         var kept = Overlay.LanguagePresets

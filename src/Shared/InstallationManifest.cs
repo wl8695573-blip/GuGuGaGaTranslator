@@ -49,7 +49,8 @@ public sealed record InstallationManifest(string Product, string Id, string[] Fi
         if (manifest.Product != ProductName || !Guid.TryParse(manifest.Id, out _) ||
             manifest.Files is null || !manifest.Files.Contains(ProductName + ".exe", StringComparer.OrdinalIgnoreCase))
             throw new InvalidOperationException("安装清单不属于此产品。");
-        foreach (var file in manifest.Files) ResolveFile(directory, file);
+        foreach (var file in manifest.Files)
+            ResolveFile(directory, file);
         return manifest;
     }
 

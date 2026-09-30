@@ -7,7 +7,10 @@ using GuGuGaGaTranslator.Core.Pipeline;
 
 namespace GuGuGaGaTranslator.Core.Diagnostics;
 
-public enum DiagnosticEventKind { Started, Pipeline, CacheUnavailable, CacheCleared }
+public enum DiagnosticEventKind
+{
+    Started, Pipeline, CacheUnavailable, CacheCleared
+}
 
 /// <summary>No field accepts screen text, keys, paths, exception messages or prompts.</summary>
 public sealed record DiagnosticEvent
@@ -32,7 +35,8 @@ public sealed class DiagnosticsService
     public bool LoggingAvailable { get; private set; } = true;
     private static readonly JsonSerializerOptions Json = new()
     {
-        WriteIndented = false, PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = false,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         Converters = { new JsonStringEnumConverter() },
     };
 
@@ -61,20 +65,26 @@ public sealed class DiagnosticsService
 
     public void Record(PipelineUpdate update)
     {
-        if (update.Status == PipelineStatus.Translating) return;
+        if (update.Status == PipelineStatus.Translating)
+            return;
         lock (_gate)
         {
             if (update.Status is PipelineStatus.Unchanged or PipelineStatus.NoText or PipelineStatus.NoRegion or PipelineStatus.Reused)
             {
-                if (update.At - _lastQuietUpdate < TimeSpan.FromSeconds(30)) return;
+                if (update.At - _lastQuietUpdate < TimeSpan.FromSeconds(30))
+                    return;
                 _lastQuietUpdate = update.At;
             }
             Record(new DiagnosticEvent
             {
-                Kind = DiagnosticEventKind.Pipeline, At = update.At, Status = update.Status, Skipped = update.Skipped,
+                Kind = DiagnosticEventKind.Pipeline,
+                At = update.At,
+                Status = update.Status,
+                Skipped = update.Skipped,
                 CaptureMs = SafeDuration(update.CaptureDuration.TotalMilliseconds),
                 OcrMs = SafeDuration(update.OcrDuration.TotalMilliseconds),
-                TranslateMs = SafeDuration(update.TranslateDuration.TotalMilliseconds), FromCache = update.FromCache,
+                TranslateMs = SafeDuration(update.TranslateDuration.TotalMilliseconds),
+                FromCache = update.FromCache,
             });
         }
     }
@@ -93,11 +103,14 @@ public sealed class DiagnosticsService
             {
                 WriteJson(archive, "environment.json", new
                 {
-                    schemaVersion = 1, at = DateTimeOffset.UtcNow,
+                    schemaVersion = 1,
+                    at = DateTimeOffset.UtcNow,
                     appVersion = typeof(AppConfig).Assembly.GetName().Version?.ToString(),
-                    os = Environment.OSVersion.VersionString, runtime = Environment.Version.ToString(),
+                    os = Environment.OSVersion.VersionString,
+                    runtime = Environment.Version.ToString(),
                     architecture = System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString(),
-                    processorCount = Environment.ProcessorCount, loggingAvailable = LoggingAvailable,
+                    processorCount = Environment.ProcessorCount,
+                    loggingAvailable = LoggingAvailable,
                 });
                 WriteJson(archive, "settings.json", new
                 {
@@ -107,16 +120,21 @@ public sealed class DiagnosticsService
                     to = Known(config.Translation.To, "ja", "en", "zh-Hans"),
                     ocrEngine = Known(config.Ocr.Engine, "rapidocr", "windows"),
                     ocrLanguage = Known(config.Ocr.Language, "auto", "ja", "en-US", "zh-Hans-CN"),
-                    config.Ocr.RapidLimitSideLen, config.Ocr.RapidUseGpu,
+                    config.Ocr.RapidLimitSideLen,
+                    config.Ocr.RapidUseGpu,
                     timeoutSeconds = Math.Clamp(config.Translation.Translator.TimeoutSeconds, 1, 600),
                     historyLines = Math.Clamp(config.Translation.HistoryLines, 0, 12),
                     persistentCache = config.Translation.Cache.Persist,
                     retentionDays = Math.Clamp(config.Translation.Cache.RetentionDays, 1, 365),
                     maximumEntries = Math.Clamp(config.Translation.Cache.MaximumEntries, 100, 100000),
-                    config.Pipeline.PollIntervalMs, config.Pipeline.MaskOwnWindows, config.Pipeline.ScriptGuard,
-                    config.Overlay.ExcludeFromCapture, config.Overlay.ClickThrough,
+                    config.Pipeline.PollIntervalMs,
+                    config.Pipeline.MaskOwnWindows,
+                    config.Pipeline.ScriptGuard,
+                    config.Overlay.ExcludeFromCapture,
+                    config.Overlay.ClickThrough,
                 });
-                if (stats is not null) WriteJson(archive, "counters.json", stats);
+                if (stats is not null)
+                    WriteJson(archive, "counters.json", stats);
                 var entry = archive.CreateEntry("events.jsonl");
                 using var writer = new StreamWriter(entry.Open());
                 foreach (var record in ReadSafeEvents())
@@ -135,7 +153,8 @@ public sealed class DiagnosticsService
             foreach (var name in new[] { "runtime.previous.jsonl", "runtime.jsonl" })
             {
                 var path = Path.Combine(_directory, name);
-                if (!File.Exists(path) || new FileInfo(path).Length > MaxLogBytes * 2) continue;
+                if (!File.Exists(path) || new FileInfo(path).Length > MaxLogBytes * 2)
+                    continue;
                 foreach (var line in File.ReadLines(path))
                 {
                     try
@@ -143,11 +162,13 @@ public sealed class DiagnosticsService
                         var item = JsonSerializer.Deserialize<DiagnosticEvent>(line, Json);
                         if (item is null || !Enum.IsDefined(item.Kind)
                             || (item.Status is { } status && !Enum.IsDefined(status))
-                            || (item.Skipped is { } skip && !Enum.IsDefined(skip))) continue;
+                            || (item.Skipped is { } skip && !Enum.IsDefined(skip)))
+                            continue;
                         // Deserialize and re-serialize a typed whitelist; even extra fields in an edited log are dropped.
                         result.Add(item with
                         {
-                            CaptureMs = SafeDuration(item.CaptureMs), OcrMs = SafeDuration(item.OcrMs),
+                            CaptureMs = SafeDuration(item.CaptureMs),
+                            OcrMs = SafeDuration(item.OcrMs),
                             TranslateMs = SafeDuration(item.TranslateMs),
                         });
                     }

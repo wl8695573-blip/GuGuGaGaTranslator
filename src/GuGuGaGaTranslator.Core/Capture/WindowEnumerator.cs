@@ -20,7 +20,8 @@ public static class WindowEnumerator
         NativeMethods.EnumWindows((hwnd, _) =>
         {
             var info = Describe(hwnd, excludeProcessId, processNames);
-            if (info is not null) found.Add(info);
+            if (info is not null)
+                found.Add(info);
             return true;
         }, 0);
 
@@ -34,7 +35,8 @@ public static class WindowEnumerator
     [SupportedOSPlatform("windows")]
     public static WindowInfo? TryDescribe(nint handle)
     {
-        if (handle == 0 || !NativeMethods.IsWindow(handle)) return null;
+        if (handle == 0 || !NativeMethods.IsWindow(handle))
+            return null;
         return Describe(handle, null, new Dictionary<uint, string>(), requireVisible: false);
     }
 
@@ -49,7 +51,8 @@ public static class WindowEnumerator
         Dictionary<uint, string> processNames,
         bool requireVisible = true)
     {
-        if (requireVisible && !NativeMethods.IsWindowVisible(hwnd)) return null;
+        if (requireVisible && !NativeMethods.IsWindowVisible(hwnd))
+            return null;
 
         // A cloaked window is on the desktop but not on screen (another virtual
         // desktop, or a suspended UWP shell window): capturing it yields black.
@@ -58,17 +61,23 @@ public static class WindowEnumerator
 
         // Tool windows are palettes and floating helpers, never translation targets.
         var exStyle = NativeMethods.GetWindowLongW(hwnd, NativeMethods.GwlExStyle);
-        if ((exStyle & NativeMethods.WsExToolWindow) != 0) return null;
+        if ((exStyle & NativeMethods.WsExToolWindow) != 0)
+            return null;
 
         var title = ReadTitle(hwnd);
-        if (string.IsNullOrWhiteSpace(title)) return null;
+        if (string.IsNullOrWhiteSpace(title))
+            return null;
 
         NativeMethods.GetWindowThreadProcessId(hwnd, out var processId);
-        if (excludeProcessId is not null && processId == excludeProcessId.Value) return null;
+        if (excludeProcessId is not null && processId == excludeProcessId.Value)
+            return null;
 
-        if (!TryReadClientRect(hwnd, out var clientRect)) return null;
-        if (!TryReadFrameRect(hwnd, out var frameRect)) return null;
-        if (clientRect.Width <= 0 || clientRect.Height <= 0) return null;
+        if (!TryReadClientRect(hwnd, out var clientRect))
+            return null;
+        if (!TryReadFrameRect(hwnd, out var frameRect))
+            return null;
+        if (clientRect.Width <= 0 || clientRect.Height <= 0)
+            return null;
 
         if (!processNames.TryGetValue(processId, out var processName))
         {
@@ -94,9 +103,11 @@ public static class WindowEnumerator
     public static bool TryReadClientRect(nint hwnd, out Int32Rect rect)
     {
         rect = default;
-        if (!NativeMethods.GetClientRect(hwnd, out var client)) return false;
+        if (!NativeMethods.GetClientRect(hwnd, out var client))
+            return false;
         var origin = new NativeMethods.POINT { X = 0, Y = 0 };
-        if (!NativeMethods.ClientToScreen(hwnd, ref origin)) return false;
+        if (!NativeMethods.ClientToScreen(hwnd, ref origin))
+            return false;
         rect = new Int32Rect(origin.X, origin.Y, client.Right - client.Left, client.Bottom - client.Top);
         return true;
     }
@@ -112,7 +123,8 @@ public static class WindowEnumerator
             return true;
         }
 
-        if (!NativeMethods.GetWindowRect(hwnd, out var window)) return false;
+        if (!NativeMethods.GetWindowRect(hwnd, out var window))
+            return false;
         rect = new Int32Rect(window.Left, window.Top, window.Right - window.Left, window.Bottom - window.Top);
         return true;
     }
@@ -120,7 +132,8 @@ public static class WindowEnumerator
     private static string ReadTitle(nint hwnd)
     {
         var length = NativeMethods.GetWindowTextLengthW(hwnd);
-        if (length <= 0) return string.Empty;
+        if (length <= 0)
+            return string.Empty;
         var buffer = new char[length + 1];
         var copied = NativeMethods.GetWindowTextW(hwnd, buffer, buffer.Length);
         return new string(buffer, 0, Math.Max(copied, 0));
@@ -154,7 +167,8 @@ public static class WindowEnumerator
     public static string ToDisplayList(IEnumerable<WindowInfo> windows)
     {
         var builder = new StringBuilder();
-        foreach (var window in windows) builder.AppendLine(window.Display);
+        foreach (var window in windows)
+            builder.AppendLine(window.Display);
         return builder.ToString();
     }
 }

@@ -6,9 +6,15 @@ namespace GuGuGaGaTranslator.Core.Ocr;
 public interface ITextRecognizer
 {
     /// <summary>A stable identifier for logs, cache keys, and dumps.</summary>
-    string Id { get; }
+    string Id
+    {
+        get;
+    }
 
-    string LanguageTag { get; }
+    string LanguageTag
+    {
+        get;
+    }
 
     Task<OcrResult> RecognizeAsync(Frame frame, CancellationToken cancellationToken = default);
 }

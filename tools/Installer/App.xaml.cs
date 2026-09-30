@@ -5,7 +5,6 @@ namespace GuGuGaGaTranslator.Installer;
 /// <summary>Entry point. Silent switches exist so the installer can be verified by script.</summary>
 public partial class App : Application
 {
-    /// <inheritdoc />
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
