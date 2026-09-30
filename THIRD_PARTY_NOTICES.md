@@ -1,6 +1,6 @@
 # Third-party notices / 第三方素材声明
 
-本仓库的**代码**和**里面的图片**是两回事,许可也分开看。下面逐项说明来源、作者与义务。
+代码、图标和第三方依赖分别适用各自的许可。以下列出素材来源、署名与分发要求。
 
 ## 应用图标 / 吉祥物:鲸鱼娘(社区二创)
 
@@ -24,12 +24,12 @@
 
 **代码不受这份 CC 协议影响**:CC BY-NC-SA 只覆盖图片本身,不传染到程序代码。
 
-## 免授权的替代图标(本仓库自己画的)
+## 仓库内绘制的替代图标
 
-`tools/GuGuGaGaTranslator.Icon` 用 WPF 的矢量 API 画了一只自己的 Q 版鲸鱼(戴女仆头带),输出 `drawn-mascot.ico` / `drawn-mascot.png`,**不涉及任何第三方权利,可以随便用(包括商用)**:
+`tools/Icon` 使用 WPF 绘制鲸鱼图标，输出 `drawn-mascot.ico` 和 `drawn-mascot.png`，作为社区图标的替代选项。工具代码适用本仓库代码许可。
 
 ```powershell
-dotnet run --project tools/GuGuGaGaTranslator.Icon
+dotnet run --project tools/Icon
 Copy-Item src\GuGuGaGaTranslator.App\Assets\drawn-mascot.ico src\GuGuGaGaTranslator.App\Assets\icon.ico -Force
 Copy-Item src\GuGuGaGaTranslator.App\Assets\drawn-mascot.png src\GuGuGaGaTranslator.App\Assets\icon.png -Force
 ```
@@ -51,6 +51,8 @@ Copy-Item src\GuGuGaGaTranslator.App\Assets\drawn-mascot.png src\GuGuGaGaTransla
 | SkiaSharp / NativeAssets.Win32 | 3.119.1 | MIT；mono/SkiaSharp，原生依赖见包内 THIRD-PARTY-NOTICES |
 | Clipper2 | 2.0.0 | 见随包 NuGet 元数据及上游许可证 |
 | System.Numerics.Tensors | 9.0.0 | MIT；dotnet/runtime |
+| Microsoft.Data.Sqlite / Core | 10.0.12 | MIT；dotnet/efcore，随包 NuGet 许可证 |
+| SQLitePCLRaw / SQLite 原生库 | 以 build-manifest.json 为准 | 随包 NuGet 元数据及许可证；SQLite 为公共领域 |
 | .NET / Windows Desktop Runtime | 发布时的 .NET 10 运行时 | 见随包 LICENSE 与 THIRD-PARTY-NOTICES |
 
 ## 其他第三方内容

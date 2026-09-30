@@ -41,13 +41,20 @@ public abstract class ClassicApiTranslator : ITranslator, IDisposable
         Http.Timeout = TimeSpan.FromSeconds(Math.Max(1, options.TimeoutSeconds));
     }
 
-    /// <inheritdoc />
-    public abstract string Id { get; }
+    public abstract string Id { get;  }
 
-    /// <inheritdoc />
     public bool RequiresNetwork => true;
 
-    public abstract string DisplayName { get; }
+    public abstract string DisplayName { get;  }
+
+    // Custom endpoints and domain-specific results must not share a persistent cache.
+    private protected string CacheId(string provider, string defaultEndpoint) => provider + ":" +
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+        {
+            endpoint = Endpoint(defaultEndpoint),
+            Options.Domain,
+            Options.AppId
+        })))).ToLowerInvariant();
 
     private protected virtual int MaxCharactersPerRequest => 1000;
 
@@ -55,7 +62,8 @@ public abstract class ClassicApiTranslator : ITranslator, IDisposable
     public async Task<string> TranslateAsync(TranslationRequest request, CancellationToken cancellationToken = default)
     {
         var text = request.Text?.Trim() ?? string.Empty;
-        if (text.Length == 0) return string.Empty;
+        if (text.Length == 0)
+            return string.Empty;
 
         var pieces = Split(text, MaxCharactersPerRequest);
         var translated = new List<string>(pieces.Count);
@@ -81,7 +89,8 @@ public abstract class ClassicApiTranslator : ITranslator, IDisposable
     /// <summary>Split a line that is longer than the provider accepts, at a sentence boundary where one exists.</summary>
     private static List<string> Split(string text, int limit)
     {
-        if (text.Length <= limit) return [text];
+        if (text.Length <= limit)
+            return [text];
 
         var pieces = new List<string>();
         var remaining = text.AsSpan();
@@ -94,7 +103,8 @@ public abstract class ClassicApiTranslator : ITranslator, IDisposable
             remaining = remaining[cut..];
         }
 
-        if (remaining.Length > 0) pieces.Add(remaining.ToString().Trim());
+        if (remaining.Length > 0)
+            pieces.Add(remaining.ToString().Trim());
         return pieces;
     }
 
@@ -134,7 +144,8 @@ public abstract class ClassicApiTranslator : ITranslator, IDisposable
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json"),
         };
-        foreach (var (name, value) in headers) message.Headers.TryAddWithoutValidation(name, value);
+        foreach (var (name, value) in headers)
+            message.Headers.TryAddWithoutValidation(name, value);
 
         using var response = await Http.SendAsync(message, cancellationToken).ConfigureAwait(false);
         var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -193,10 +204,10 @@ public abstract class ClassicApiTranslator : ITranslator, IDisposable
         return Options.AppId.Trim();
     }
 
-    /// <inheritdoc />
     public void Dispose()
     {
-        if (_ownsClient) Http.Dispose();
+        if (_ownsClient)
+            Http.Dispose();
     }
 }
 
@@ -233,13 +244,10 @@ public sealed class YoudaoTranslator : ClassicApiTranslator
     {
     }
 
-    /// <inheritdoc />
-    public override string Id => "youdao";
+    public override string Id => CacheId("youdao", Url);
 
-    /// <inheritdoc />
     public override string DisplayName => "有道翻译";
 
-    /// <inheritdoc />
     private protected override int MaxCharactersPerRequest => 4000;
 
     /// <summary>The value 有道 signs: the text itself up to twenty characters, and past that the first ten, the length,
@@ -263,7 +271,6 @@ public sealed class YoudaoTranslator : ClassicApiTranslator
         _ => tag,
     };
 
-    /// <inheritdoc />
     private protected override async Task<string> TranslateOneAsync(
         string text,
         string from,
@@ -287,12 +294,14 @@ public sealed class YoudaoTranslator : ClassicApiTranslator
             new("curtime", curtime),
         };
 
-        if (!string.IsNullOrWhiteSpace(Options.Domain)) fields.Add(new KeyValuePair<string, string>("domain", Options.Domain!.Trim()));
+        if (!string.IsNullOrWhiteSpace(Options.Domain))
+            fields.Add(new KeyValuePair<string, string>("domain", Options.Domain!.Trim()));
 
         using var document = await PostFormAsync(Endpoint(Url), fields, cancellationToken).ConfigureAwait(false);
         var root = document.RootElement;
         var errorCode = root.TryGetProperty("errorCode", out var code) ? code.GetString() ?? "0" : "0";
-        if (errorCode != "0") Fail(errorCode, null, ErrorHints);
+        if (errorCode != "0")
+            Fail(errorCode, null, ErrorHints);
 
         if (!root.TryGetProperty("translation", out var translation) || translation.ValueKind != JsonValueKind.Array)
         {
@@ -341,13 +350,10 @@ public sealed class BaiduTranslator : ClassicApiTranslator
     {
     }
 
-    /// <inheritdoc />
-    public override string Id => "baidu";
+    public override string Id => CacheId("baidu", Url);
 
-    /// <inheritdoc />
     public override string DisplayName => "百度翻译";
 
-    /// <inheritdoc />
     private protected override int MaxCharactersPerRequest => 4000;
 
     /// <summary>The signature 百度 documents: the appid, the text, the salt, the key.</summary>
@@ -370,7 +376,6 @@ public sealed class BaiduTranslator : ClassicApiTranslator
         _ => tag,
     };
 
-    /// <inheritdoc />
     private protected override async Task<string> TranslateOneAsync(
         string text,
         string from,
@@ -398,7 +403,8 @@ public sealed class BaiduTranslator : ClassicApiTranslator
         {
             var code = errorCode.GetString() ?? string.Empty;
             var message = root.TryGetProperty("error_msg", out var text0) ? text0.GetString() : null;
-            if (code.Length > 0) Fail(code, message, ErrorHints);
+            if (code.Length > 0)
+                Fail(code, message, ErrorHints);
         }
 
         if (!root.TryGetProperty("trans_result", out var results) || results.ValueKind != JsonValueKind.Array)
@@ -434,16 +440,14 @@ public sealed class CaiyunTranslator : ClassicApiTranslator
     {
     }
 
-    /// <inheritdoc />
-    public override string Id => "caiyun";
+    public override string Id => CacheId("caiyun", Url);
 
-    /// <inheritdoc />
     public override string DisplayName => "彩云小译";
 
-    /// <inheritdoc />
     private protected override string RequireAccount()
     {
-        var token = string.IsNullOrWhiteSpace(Options.Token) ? Options.AppId.Trim() : Options.Token.Trim();
+        var token = !string.IsNullOrWhiteSpace(Options.AppSecret) ? Options.AppSecret.Trim()
+            : !string.IsNullOrWhiteSpace(Options.Token) ? Options.Token.Trim() : Options.AppId.Trim();
         if (token.Length == 0)
         {
             throw new InvalidOperationException(
@@ -469,7 +473,6 @@ public sealed class CaiyunTranslator : ClassicApiTranslator
         _ => tag,
     };
 
-    /// <inheritdoc />
     private protected override async Task<string> TranslateOneAsync(
         string text,
         string from,
@@ -508,7 +511,8 @@ public sealed class CaiyunTranslator : ClassicApiTranslator
             }
         }
 
-        if (!root.TryGetProperty("target", out var target)) throw new InvalidOperationException("彩云小译没有返回 target 字段");
+        if (!root.TryGetProperty("target", out var target))
+            throw new InvalidOperationException("彩云小译没有返回 target 字段");
 
         var lines = target.ValueKind == JsonValueKind.Array
             ? target.EnumerateArray().Where(item => item.ValueKind == JsonValueKind.String).Select(item => item.GetString() ?? string.Empty)

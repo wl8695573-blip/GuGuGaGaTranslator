@@ -48,13 +48,11 @@ public sealed class RapidOcrRecognizer : ITextRecognizer, IDisposable
         ModelDirectory = modelDirectory;
     }
 
-    /// <inheritdoc />
     public string Id => "rapidocr:pp-ocrv6-small";
 
-    /// <inheritdoc />
     public string LanguageTag => "multi";
 
-    public string ModelDirectory { get; }
+    public string ModelDirectory { get;  }
 
     /// <summary>The model files one recognizer needs, all inside one directory.</summary>
     public readonly record struct ModelFiles(
@@ -70,10 +68,14 @@ public sealed class RapidOcrRecognizer : ITextRecognizer, IDisposable
         public string Missing()
         {
             var missing = new List<string>();
-            if (!File.Exists(Detector)) missing.Add(Path.GetFileName(Detector));
-            if (!File.Exists(Classifier)) missing.Add(Path.GetFileName(Classifier));
-            if (!File.Exists(Recognizer)) missing.Add(Path.GetFileName(Recognizer));
-            if (!File.Exists(Dictionary)) missing.Add(Path.GetFileName(Dictionary));
+            if (!File.Exists(Detector))
+                missing.Add(Path.GetFileName(Detector));
+            if (!File.Exists(Classifier))
+                missing.Add(Path.GetFileName(Classifier));
+            if (!File.Exists(Recognizer))
+                missing.Add(Path.GetFileName(Recognizer));
+            if (!File.Exists(Dictionary))
+                missing.Add(Path.GetFileName(Dictionary));
             return string.Join(", ", missing);
         }
     }
@@ -106,7 +108,8 @@ public sealed class RapidOcrRecognizer : ITextRecognizer, IDisposable
 
         foreach (var candidate in candidates)
         {
-            if (ResolveModels(candidate).IsComplete) return candidate;
+            if (ResolveModels(candidate).IsComplete)
+                return candidate;
         }
 
         return candidates[0];
@@ -150,8 +153,16 @@ public sealed class RapidOcrRecognizer : ITextRecognizer, IDisposable
             DoAngle = settings.DoAngle,
             ReturnWordBox = settings.ReturnWordBox,
         };
-        if (settings.LimitSideLen > 0) options = options with { LimitSideLen = settings.LimitSideLen };
-        if (settings.ImgResize > 0) options = options with { ImgResize = settings.ImgResize };
+        if (settings.LimitSideLen > 0)
+            options = options with
+            {
+                LimitSideLen = settings.LimitSideLen
+            };
+        if (settings.ImgResize > 0)
+            options = options with
+            {
+                ImgResize = settings.ImgResize
+            };
 
         return new RapidOcrRecognizer(ocr, options, directory);
     }
@@ -160,7 +171,6 @@ public sealed class RapidOcrRecognizer : ITextRecognizer, IDisposable
     public static RapidOcrRecognizer Create(string modelDirectory, bool useGpu = false) =>
         Create(new RapidOcrSettings { ModelDirectory = modelDirectory, UseGpu = useGpu });
 
-    /// <inheritdoc />
     [SupportedOSPlatform("windows")]
     public async Task<CoreOcrResult> RecognizeAsync(Frame frame, CancellationToken cancellationToken = default)
     {
@@ -212,7 +222,8 @@ public sealed class RapidOcrRecognizer : ITextRecognizer, IDisposable
     /// <summary>The axis-aligned box enclosing a detected polygon, clamped to the image.</summary>
     private static Int32Rect Bounds(SKPointI[]? points, Frame frame)
     {
-        if (points is not { Length: > 0 }) return new Int32Rect(0, 0, 0, 0);
+        if (points is not { Length: > 0 })
+            return new Int32Rect(0, 0, 0, 0);
 
         var left = points.Min(point => point.X);
         var top = points.Min(point => point.Y);
@@ -226,10 +237,10 @@ public sealed class RapidOcrRecognizer : ITextRecognizer, IDisposable
         return new Int32Rect(x, y, width, height);
     }
 
-    /// <inheritdoc />
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
         _disposed = true;
         _ocr.Dispose();
         _gate.Dispose();

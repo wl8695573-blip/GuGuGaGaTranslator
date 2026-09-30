@@ -6,8 +6,7 @@ using System.Windows.Media.Imaging;
 
 namespace GuGuGaGaTranslator.Icon;
 
-/// <summary>Draws GuGuGaGaTranslator's mascot and writes the icon set the application ships with:
-/// the whale here is repo-owned, so it can be used commercially (see THIRD_PARTY_NOTICES.md).</summary>
+/// <summary>绘制替代图标并输出 ICO 与 PNG。</summary>
 internal static class Program
 {
     private const double Canvas = 256;
@@ -32,7 +31,8 @@ internal static class Program
         File.WriteAllBytes(Path.Combine(output, "drawn-mascot-64.png"), frames.First(frame => frame.Size == 64).Bytes);
 
         Console.WriteLine($"wrote {ico} ({frames.Count} frames, {new FileInfo(ico).Length} bytes)");
-        foreach (var frame in frames) Console.WriteLine($"  {frame.Size,3}px  {frame.Bytes.Length,6} bytes");
+        foreach (var frame in frames)
+            Console.WriteLine($"  {frame.Size,3}px  {frame.Bytes.Length,6} bytes");
 
         // Printing the artwork as text is the only way to check a drawing without looking at it.
         Console.WriteLine();
@@ -189,7 +189,8 @@ internal static class Program
             offset += bytes.Length;
         }
 
-        foreach (var (_, bytes) in frames) writer.Write(bytes);
+        foreach (var (_, bytes) in frames)
+            writer.Write(bytes);
         writer.Flush();
         return stream.ToArray();
     }
@@ -243,7 +244,8 @@ internal static class Program
     {
         for (var i = 0; i < args.Length - 1; i++)
         {
-            if (args[i].Equals(name, StringComparison.OrdinalIgnoreCase)) return args[i + 1];
+            if (args[i].Equals(name, StringComparison.OrdinalIgnoreCase))
+                return args[i + 1];
         }
 
         return null;

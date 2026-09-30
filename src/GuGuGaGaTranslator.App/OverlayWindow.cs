@@ -94,13 +94,16 @@ public sealed class OverlayWindow : Window
         PositionGrip(_grips[3].Grip, HorizontalAlignment.Right, VerticalAlignment.Bottom);
 
         _dragSurface.DragDelta += OnDragMove;
-        foreach (var grip in _grips) grip.Grip.DragDelta += OnDragResize;
-        foreach (var grip in _grips) grip.Grip.DragCompleted += (_, _) => LayoutChanged?.Invoke();
+        foreach (var grip in _grips)
+            grip.Grip.DragDelta += OnDragResize;
+        foreach (var grip in _grips)
+            grip.Grip.DragCompleted += (_, _) => LayoutChanged?.Invoke();
         _dragSurface.DragCompleted += (_, _) => LayoutChanged?.Invoke();
 
         _root.Children.Add(_panel);
         _root.Children.Add(_dragSurface);
-        foreach (var grip in _grips) _root.Children.Add(grip.Grip);
+        foreach (var grip in _grips)
+            _root.Children.Add(grip.Grip);
         Content = _root;
 
         _panel.IsHitTestVisible = true;
@@ -178,21 +181,25 @@ public sealed class OverlayWindow : Window
         // 解锁 = 可拖动、可缩放;锁定 = 每次点击都交给游戏。
         var editable = !config.ClickThrough;
         _dragSurface.Visibility = editable ? Visibility.Visible : Visibility.Collapsed;
-        foreach (var grip in _grips) grip.Grip.Visibility = editable ? Visibility.Visible : Visibility.Collapsed;
+        foreach (var grip in _grips)
+            grip.Grip.Visibility = editable ? Visibility.Visible : Visibility.Collapsed;
 
-        if (_handle != 0) OverlayWindowInterop.ApplyClickThrough(_handle, config.ClickThrough);
-        if (_handle != 0) OverlayWindowInterop.ApplyDisplayAffinity(_handle, config.ExcludeFromCapture);
+        if (_handle != 0)
+            OverlayWindowInterop.ApplyClickThrough(_handle, config.ClickThrough);
+        if (_handle != 0)
+            OverlayWindowInterop.ApplyDisplayAffinity(_handle, config.ExcludeFromCapture);
         UpdateLanguageBar();
-        if (_region.Width > 0) PlaceAt(_region);
+        if (_region.Width > 0)
+            PlaceAt(_region);
     }
 
-    /// <summary>Hide the panel and its switcher while a region is being framed, the way a screenshot tool
-    /// hides itself. Reports whether the panel had been on screen, so it can be put back exactly as it was.</summary>
+    /// <summary>框选时隐藏悬浮层和控制条，并保存原可见状态。</summary>
     public bool SuspendForPicker()
     {
         var wasVisible = IsVisible && !_suspended;
         _suspended = true;
-        if (IsVisible) Hide();
+        if (IsVisible)
+            Hide();
         _bar?.Hide();
         return wasVisible;
     }
@@ -206,10 +213,12 @@ public sealed class OverlayWindow : Window
             ShowActivated = false;
             Show();
             // 框选期间记住的位置现在才生效(见 PlaceAt 里的说明)。
-            if (_region.Width > 0) PlaceAt(_region);
+            if (_region.Width > 0)
+                PlaceAt(_region);
         }
 
-        if (_config is not null) UpdateLanguageBar();
+        if (_config is not null)
+            UpdateLanguageBar();
     }
 
     /// <summary>Move the panel with the mouse; the drag delta arrives in device-independent units and is converted to physical pixels here.</summary>
@@ -224,23 +233,29 @@ public sealed class OverlayWindow : Window
     /// <summary>Resize the panel from a corner; width and height become explicit because an auto-sized panel has nothing to add to.</summary>
     private void OnDragResize(object sender, DragDeltaEventArgs e)
     {
-        if (sender is not Thumb grip) return;
+        if (sender is not Thumb grip)
+            return;
         var entry = _grips.FirstOrDefault(candidate => ReferenceEquals(candidate.Grip, grip));
-        if (entry.Grip is null) return;
+        if (entry.Grip is null)
+            return;
 
         var dpi = VisualTreeHelper.GetDpi(this);
         var dx = (int)Math.Round(e.HorizontalChange * dpi.DpiScaleX);
         var dy = (int)Math.Round(e.VerticalChange * dpi.DpiScaleY);
 
-        if (_config.Width <= 0) _config.Width = Math.Max(120, _region.Width);
-        if (_config.Height <= 0) _config.Height = Math.Max(32, (int)Math.Ceiling(ActualHeight * dpi.DpiScaleY));
+        if (_config.Width <= 0)
+            _config.Width = Math.Max(120, _region.Width);
+        if (_config.Height <= 0)
+            _config.Height = Math.Max(32, (int)Math.Ceiling(ActualHeight * dpi.DpiScaleY));
 
         _config.Width = Math.Max(120, _config.Width + (entry.SignX * dx));
         _config.Height = Math.Max(32, _config.Height + (entry.SignY * dy));
 
         // 拖左上角时,面板移动的量和缩放它的量一样多。
-        if (entry.SignX < 0) _config.OffsetX += dx;
-        if (entry.SignY < 0) _config.OffsetY += dy;
+        if (entry.SignX < 0)
+            _config.OffsetX += dx;
+        if (entry.SignY < 0)
+            _config.OffsetY += dy;
 
         PlaceAt(_region);
     }
@@ -289,13 +304,15 @@ public sealed class OverlayWindow : Window
             _config.ShowSource,
             _config.ShowPanel,
             _profileLabel);
-        if (!_bar.IsVisible) _bar.Show();
+        if (!_bar.IsVisible)
+            _bar.Show();
         PlaceLanguageBar();
     }
 
     private void PlaceLanguageBar()
     {
-        if (_bar is null || !_bar.IsVisible || _region.Width <= 0) return;
+        if (_bar is null || !_bar.IsVisible || _region.Width <= 0)
+            return;
 
         _bar.PlaceAbove(_region, _panelTopPhysical);
     }
@@ -314,18 +331,21 @@ public sealed class OverlayWindow : Window
 
         PlaceAt(region);
         // 框选期间保持隐藏:这时循环还在跑,新译文照样算,但面板不能弹回屏幕挡住要框的东西。
-        if (!IsVisible && !_suspended) Show();
+        if (!IsVisible && !_suspended)
+            Show();
     }
 
     /// <summary>Reposition the overlay for a region in physical screen pixels, following the target window.</summary>
     public void PlaceAt(Int32Rect region)
     {
         _region = region;
-        if (_handle == 0) return;
+        if (_handle == 0)
+            return;
 
         // 框选期间面板是收起来的:移动窗口用的 SetWindowPos 带 SWP_SHOWWINDOW,一动就会把它重新露出来,
         // 所以这时候只记住位置,等恢复时再摆。
-        if (_suspended) return;
+        if (_suspended)
+            return;
 
         // WPF 的尺寸是设备无关单位、位置是物理像素:混用会让悬浮层在缩放显示器上漂移,
         // 所以转换只在这里做。
@@ -359,7 +379,8 @@ public sealed class OverlayWindow : Window
             OverlayPlacement.Above => region.Y - panelHeight - _config.OffsetY,
             _ => region.Y + region.Height + _config.OffsetY,
         };
-        if (y < 0) y = 0;
+        if (y < 0)
+            y = 0;
 
         _panelTopPhysical = y;
         OverlayWindowInterop.MoveTo(_handle, x, y, topmost: true);
@@ -372,17 +393,16 @@ public sealed class OverlayWindow : Window
         _sourceText.Text = string.Empty;
     }
 
-    /// <inheritdoc />
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
         _handle = new WindowInteropHelper(this).Handle;
         OverlayWindowInterop.ApplyDisplayAffinity(_handle, _config.ExcludeFromCapture);
         OverlayWindowInterop.ApplyClickThrough(_handle, _config.ClickThrough);
-        if (_region.Width > 0) PlaceAt(_region);
+        if (_region.Width > 0)
+            PlaceAt(_region);
     }
 
-    /// <inheritdoc />
     protected override void OnClosed(EventArgs e)
     {
         // 语言条是独立窗口,这里不关就会留下一个孤儿窗口。

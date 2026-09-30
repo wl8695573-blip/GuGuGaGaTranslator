@@ -6,7 +6,7 @@ namespace GuGuGaGaTranslator.Core.Translation;
 
 /// <summary>A bounded least-recently-used cache of finished translations. A visual novel repeats lines, and a second call
 /// would cost money and add latency for an answer already known.</summary>
-public sealed class TranslationCache
+public sealed class TranslationCache : IDisposable
 {
     private readonly int _capacity;
     private readonly Dictionary<string, string> _entries;
@@ -14,6 +14,20 @@ public sealed class TranslationCache
     private readonly object _gate = new();
     private long _hits;
     private long _misses;
+    private ITranslationCacheStore? _storage;
+
+    public event Action<Exception>? StorageFailed;
+
+    public void ConfigureStorage(ITranslationCacheStore? storage)
+    {
+        lock (_gate)
+        {
+            _storage?.Dispose();
+            _storage = storage;
+            _entries.Clear();
+            _recency.Clear();
+        }
+    }
 
     public TranslationCache(int capacity = 2000)
     {
@@ -29,7 +43,8 @@ public sealed class TranslationCache
     {
         get
         {
-            lock (_gate) return _entries.Count;
+            lock (_gate)
+                return _entries.Count;
         }
     }
 
@@ -47,6 +62,18 @@ public sealed class TranslationCache
                 translation = found;
                 return true;
             }
+
+            try
+            {
+                if (_storage?.Get(key) is { } persisted)
+                {
+                    Remember(key, persisted);
+                    Interlocked.Increment(ref _hits);
+                    translation = persisted;
+                    return true;
+                }
+            }
+            catch (Exception error) { DisableFailedStorage(error); }
         }
 
         Interlocked.Increment(ref _misses);
@@ -57,21 +84,43 @@ public sealed class TranslationCache
     /// <summary>Store a translation, evicting the least recently used entry when full.</summary>
     public void Set(string translatorId, TranslationRequest request, string translation)
     {
-        if (string.IsNullOrEmpty(translation)) return;
+        if (string.IsNullOrEmpty(translation))
+            return;
 
         var key = KeyFor(translatorId, request);
         lock (_gate)
         {
-            if (_entries.ContainsKey(key)) _recency.Remove(key);
-            _entries[key] = translation;
-            _recency.AddFirst(key);
-
-            while (_entries.Count > _capacity && _recency.Last is { } oldest)
+            Remember(key, translation);
+            try
             {
-                _recency.RemoveLast();
-                _entries.Remove(oldest.Value);
+                _storage?.Set(key, translation);
             }
+            catch (Exception error) { DisableFailedStorage(error); }
         }
+    }
+
+    private void Remember(string key, string translation)
+    {
+        if (_entries.ContainsKey(key))
+            _recency.Remove(key);
+        _entries[key] = translation;
+        _recency.AddFirst(key);
+        while (_entries.Count > _capacity && _recency.Last is { } oldest)
+        {
+            _recency.RemoveLast();
+            _entries.Remove(oldest.Value);
+        }
+    }
+
+    private void DisableFailedStorage(Exception error)
+    {
+        try
+        {
+            _storage?.Dispose();
+        }
+        catch { }
+        _storage = null;
+        StorageFailed?.Invoke(error);
     }
 
     /// <summary>Drop every entry, which the UI does when the engine or language pair changes.</summary>
@@ -81,8 +130,21 @@ public sealed class TranslationCache
         {
             _entries.Clear();
             _recency.Clear();
+            // A failed clear must be reported; the UI must never claim that disk data was deleted.
+            _storage?.Clear();
         }
     }
+
+    public void ClearMemory()
+    {
+        lock (_gate)
+        {
+            _entries.Clear();
+            _recency.Clear();
+        }
+    }
+
+    public void Dispose() => ConfigureStorage(null);
 
     /// <summary>
     /// The cache key for a request: engine, language pair, the glossary in force, and the normalized source text. The
@@ -90,5 +152,9 @@ public sealed class TranslationCache
     /// </summary>
     public static string KeyFor(string translatorId, TranslationRequest request) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
-            JsonSerializer.Serialize(new { translatorId, request }))));
+            JsonSerializer.Serialize(new
+            {
+                translatorId,
+                request
+            }))));
 }

@@ -50,8 +50,10 @@ public static class ImageOps
     /// two to three times before recognition.</summary>
     public static Frame Upscale(Frame source, double scale)
     {
-        if (scale <= 0) throw new ArgumentOutOfRangeException(nameof(scale), scale, "scale must be positive");
-        if (Math.Abs(scale - 1.0) < 0.0001) return source;
+        if (scale <= 0)
+            throw new ArgumentOutOfRangeException(nameof(scale), scale, "scale must be positive");
+        if (Math.Abs(scale - 1.0) < 0.0001)
+            return source;
 
         var width = Math.Max(1, (int)Math.Round(source.Width * scale));
         var height = Math.Max(1, (int)Math.Round(source.Height * scale));
@@ -104,7 +106,8 @@ public static class ImageOps
         var factor = 1 + Math.Clamp(contrast, 0, 1) * 2;
         // With no contrast stretch requested the conversion is pure cost, so it is skipped
         // rather than performed and discarded.
-        if (contrast <= 0) return source;
+        if (contrast <= 0)
+            return source;
 
         var pixels = new byte[source.Bgra.Length];
 
@@ -135,7 +138,8 @@ public static class ImageOps
     public static void SavePng(Frame frame, string path)
     {
         var directory = Path.GetDirectoryName(Path.GetFullPath(path));
-        if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+        if (!string.IsNullOrEmpty(directory))
+            Directory.CreateDirectory(directory);
 
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(frame.ToBitmapSource()));

@@ -42,7 +42,7 @@
                 SelectionChanged="OnWindowSelected" />
     </DockPanel>
 
-    <TabControl Grid.Column="1">
+    <TabControl x:Name="SettingsTabs" Grid.Column="1">
 
       <TabItem Header="运行">
         <Grid Margin="12">
@@ -148,6 +148,17 @@
             <TextBlock Text="翻译引擎" Style="{StaticResource SectionText}" />
             <TextBlock Text="翻译引擎" Style="{StaticResource FieldLabel}" />
             <ComboBox x:Name="ProviderCombo" SelectionChanged="OnProviderChanged" />
+            <TextBlock x:Name="ProviderCapabilitiesText" Style="{StaticResource HintText}" />
+            <StackPanel x:Name="ClassicCredentialsPanel" Visibility="Collapsed">
+              <StackPanel x:Name="ClassicIdPanel">
+                <TextBlock Text="应用 ID / appKey" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="ClassicIdBox" />
+              </StackPanel>
+              <TextBlock Text="应用密钥 / token（Windows 当前账户加密保存）" Style="{StaticResource FieldLabel}" />
+              <PasswordBox x:Name="ClassicSecretBox" />
+              <Button Content="打开服务商密钥页面" Click="OnGetApiKey" HorizontalAlignment="Left" />
+            </StackPanel>
+            <StackPanel x:Name="AISettingsPanel">
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                        Text="常用预设（自动填写接口地址和模型）" />
             <ComboBox x:Name="PresetCombo" SelectionChanged="OnPresetChanged" />
@@ -161,10 +172,8 @@
             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
               <Button x:Name="GetKeyButton" Content="获取 API Key" Click="OnGetApiKey" />
               <TextBlock Style="{StaticResource HintText}" VerticalAlignment="Center" Margin="6,0,0,0"
-                         Text="没有 Key 就用不了翻译(识别仍然正常)。DeepSeek 新账号通常有赠送额度。" />
+                         Text="在线服务通常需要 Key；本地模型可留空。价格和额度请以服务商页面为准。" />
             </StackPanel>
-            <TextBlock x:Name="EngineSummary" Foreground="{StaticResource HintTextBrush}"
-                       TextWrapping="Wrap" Margin="0,0,0,10" />
 
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                        Text="接口地址（程序会自动追加 /chat/completions）" />
@@ -174,6 +183,9 @@
             <TextBox x:Name="ModelBox" LostFocus="OnEngineFieldChanged" />
             <TextBlock Text="API Key（本地引擎留空）" Style="{StaticResource FieldLabel}" />
             <PasswordBox x:Name="ApiKeyBox" />
+            </StackPanel>
+            <TextBlock x:Name="EngineSummary" Foreground="{StaticResource HintTextBrush}"
+                       TextWrapping="Wrap" Margin="0,0,0,10" />
             <Button Content="清除已保存密钥" Click="OnClearApiKey" HorizontalAlignment="Left" />
             <UniformGrid Columns="2">
               <StackPanel Margin="0,0,6,0">
@@ -187,6 +199,9 @@
                 <TextBox x:Name="TemperatureBox" />
               </StackPanel>
             </UniformGrid>
+            <Button x:Name="TestProviderButton" Content="测试当前服务连接" Click="OnTestProvider"
+                    HorizontalAlignment="Left" Margin="0,6,0,0" />
+            <TextBlock Style="{StaticResource HintText}" Text="测试会把一条示例文本发给当前服务，可能产生少量用量。" />
           </StackPanel>
         </ScrollViewer>
       </TabItem>
@@ -206,6 +221,11 @@
               <Button x:Name="NewProfileButton" Content="新建档案…" Click="OnNewGameProfile" />
               <Button x:Name="GenerateSheetButton" Content="生成术语表…" Click="OnGenerateTermSheet" Style="{StaticResource PrimaryButton}" />
             </UniformGrid>
+            <UniformGrid Columns="2" Margin="0,0,0,6">
+              <Button Content="导入档案…" Click="OnImportProfile" />
+              <Button Content="导出当前档案…" Click="OnExportProfile" />
+            </UniformGrid>
+            <TextBlock Style="{StaticResource HintText}" Text="档案文件只包含作品设定、术语和来源信息；导入后可先编辑再保存。" />
             <TextBlock x:Name="GameProfileSummary" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
             <Button x:Name="PreviewPromptButton" Content="查看实际发送给 AI 的提示词…" Click="OnPreviewPrompt" Margin="0,6,0,0" />
 
@@ -224,13 +244,13 @@
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                        Text="每行一条:原文 = 译名 | 禁止: 错误译法1、错误译法2     (# 开头是注释)" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                       Text="行首可以标语言:en: / ja: / zh:。这样一张表能同时装几种原文,翻译时按当前方向自动取用 —— 译成中文就取源语言那一列,中文译成外语则反过来用,两种外语互译时以中间的中文译名为枢轴自动配对。不标语言的行按「任意外语 → 中文」处理。" />
+                       Text="行首用 en: / ja: / zh: 标记原文语言。译成中文时取源语言条目，中文译成外语时反向使用，日英互译时通过中文译名配对。不标语言时兼容旧格式。" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                        Text="en: Outis = 奥提斯 | 禁止: 奥德修斯、奥蒂斯" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                        Text="ja: ウーティス = 奥提斯 | 禁止: 奥德修斯、奥蒂斯" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                       Text="「=」两边写一样,意思是「这个词必须原样保留,不许意译」(例如日文的「良秀」就是中文的「良秀」)。「禁止」里的写法一旦出现在译文里,会被立刻改回右边的译名 —— 而且「禁止」列写的必须是**译文语言**的写法。想手改的话,直接编辑配置文件里的 translation.gameProfiles 也可以。" />
+                       Text="原文和译名相同表示保留该词。禁止译法填写目标语言中的常见错译，启用术语校正后会替换为既定译名。保存前请核对条目。" />
 
             <Separator Margin="0,10,0,10" />
 
@@ -240,7 +260,7 @@
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                        Text="2. 点击“生成 / 补全术语表”。AI 会按官方简中译名起草；游戏名留空时，会根据台词尝试识别作品。" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                       Text="3. 自己看一遍,把译错的改掉、把常见误译填进「禁止」。之后每次玩这款游戏,它都会自动按这套译名翻译。" />
+                       Text="3. 核对生成结果，修改译名并补充禁止译法，再保存档案。" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                        Text="世界观应简短说明作品和主要设定。" />
 
@@ -335,6 +355,35 @@
         </ScrollViewer>
       </TabItem>
 
+      <TabItem Header="缓存与支持">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Margin="12">
+            <TextBlock Text="翻译缓存" Style="{StaticResource SectionText}" />
+            <CheckBox x:Name="PersistentCacheCheck" Content="把翻译缓存保存在本机，重启后仍可复用（可选）" />
+            <TextBlock x:Name="CacheStatusText" Style="{StaticResource HintText}" />
+            <TextBlock Style="{StaticResource HintText}" Text="默认仅使用内存。磁盘缓存只保存请求的哈希和 Windows 当前账户加密的译文；关闭后停止读写，已有缓存可用下方按钮删除。" />
+            <UniformGrid Columns="2">
+              <StackPanel Margin="0,0,6,0">
+                <TextBlock Text="磁盘保留天数（1–365）" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="CacheRetentionBox" />
+              </StackPanel>
+              <StackPanel Margin="6,0,0,0">
+                <TextBlock Text="最大磁盘条数（100–100000）" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="CacheCapacityBox" />
+              </StackPanel>
+            </UniformGrid>
+            <WrapPanel Margin="0,6,0,0">
+              <Button Content="应用缓存设置" Click="OnSave" />
+              <Button x:Name="ClearCacheButton" Content="删除内存和磁盘缓存" Click="OnClearCache" />
+            </WrapPanel>
+            <Separator Margin="0,16,0,16" />
+            <TextBlock Text="诊断与支持" Style="{StaticResource SectionText}" />
+            <TextBlock Style="{StaticResource HintText}" Text="诊断包包含版本、系统、脱敏设置、状态和耗时日志。不包含 API Key、接口地址、窗口标题、截图、台词、译文或游戏档案；不会自动上传。" />
+            <Button Content="导出诊断包…" Click="OnExportDiagnostics" HorizontalAlignment="Left" />
+          </StackPanel>
+        </ScrollViewer>
+      </TabItem>
+
       <TabItem Header="调试">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel Margin="12">
@@ -364,7 +413,6 @@
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
               <Button x:Name="OpenDumpButton" Content="打开证据目录" Click="OnOpenDumpDirectory" />
               <Button x:Name="OpenConfigButton" Content="打开配置目录" Click="OnOpenConfigDirectory" />
-              <Button x:Name="ClearCacheButton" Content="清空翻译缓存" Click="OnClearCache" />
             </StackPanel>
             <TextBlock x:Name="HotkeyText" Style="{StaticResource FieldLabel}" Margin="0,14,0,0" TextWrapping="Wrap"
                        Text="全局热键(游戏里直接按,不用切出来):Ctrl+Alt+T 开始/停止 · Ctrl+Alt+P 暂停/继续 · Ctrl+Alt+R 重新框选 · Ctrl+Alt+O 切换原文显示 · Ctrl+Alt+H 显示/隐藏翻译框 · Ctrl+Alt+U 解锁翻译框(解锁后可拖动、拖四角缩放)" />

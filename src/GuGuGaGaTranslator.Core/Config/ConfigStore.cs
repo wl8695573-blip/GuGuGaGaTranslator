@@ -6,8 +6,7 @@ using System.Security.Cryptography;
 
 namespace GuGuGaGaTranslator.Core.Config;
 
-/// <summary>Reads and writes the single configuration file under the user's application data. A corrupt
-/// file never stops the tool: it is moved aside, the defaults are used, and the reason is reported.</summary>
+/// <summary>读写用户配置；无效 JSON 会备份后恢复默认值。</summary>
 public sealed class ConfigStore
 {
     private static readonly JsonSerializerOptions Options = new()
@@ -25,12 +24,15 @@ public sealed class ConfigStore
         FilePath = Path.Combine(Directory, "config.json");
     }
 
-    public string Directory { get; }
+    public string Directory { get;  }
 
-    public string FilePath { get; }
+    public string FilePath { get;  }
 
     /// <summary>Why the last load fell back to defaults, or null when it succeeded.</summary>
-    public string? LastLoadError { get; private set; }
+    public string? LastLoadError
+    {
+        get; private set;
+    }
 
     public static string DefaultDirectory() =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GuGuGaGaTranslator");
@@ -38,12 +40,14 @@ public sealed class ConfigStore
     public AppConfig Load()
     {
         LastLoadError = null;
-        if (!File.Exists(FilePath)) return new AppConfig();
+        if (!File.Exists(FilePath))
+            return new AppConfig();
 
         try
         {
             var json = File.ReadAllText(FilePath);
             var config = JsonSerializer.Deserialize<AppConfig>(json, Options) ?? new AppConfig();
+            config.NormalizeLanguages();
             var translator = config.Translation.Translator;
             var migrate = (!string.IsNullOrEmpty(translator.ApiKey) && !translator.ApiKey.StartsWith(SecretProtection.Prefix))
                 || (!string.IsNullOrEmpty(translator.AppSecret) && !translator.AppSecret.StartsWith(SecretProtection.Prefix));
@@ -58,10 +62,15 @@ public sealed class ConfigStore
             catch (Exception exception) when (exception is CryptographicException or FormatException)
             {
                 LastLoadError = "密钥无法在当前 Windows 账户中解密，请重新填写 API Key。";
-                config.Translation.Translator = translator with { ApiKey = "", AppSecret = "" };
+                config.Translation.Translator = translator with
+                {
+                    ApiKey = "",
+                    AppSecret = ""
+                };
                 migrate = false;
             }
-            if (migrate) Save(config);
+            if (migrate)
+                Save(config);
             return config;
         }
         catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
@@ -73,7 +82,7 @@ public sealed class ConfigStore
         }
     }
 
-    /// <summary>Save the configuration; it is written to a temporary file first so an interrupted write cannot leave a half-written file.</summary>
+    /// <summary>通过临时文件写入配置，完成后原子替换。</summary>
     public void Save(AppConfig config)
     {
         // Fully qualified: this class's own Directory property shadows the type.
@@ -90,7 +99,8 @@ public sealed class ConfigStore
         }
         finally
         {
-            if (File.Exists(temporary)) File.Delete(temporary);
+            if (File.Exists(temporary))
+                File.Delete(temporary);
         }
     }
 

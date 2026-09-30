@@ -29,6 +29,20 @@
         <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                    Text="窗口标题关键字（用逗号分隔）" />
         <TextBox x:Name="HintsBox" />
+        <UniformGrid Columns="2">
+          <StackPanel Margin="0,0,6,0">
+            <TextBlock Text="作者（可选，随档案分享）" Style="{StaticResource FieldLabel}" />
+            <TextBox x:Name="AuthorBox" />
+            <TextBlock Text="来源网址（可选）" Style="{StaticResource FieldLabel}" />
+            <TextBox x:Name="SourceUrlBox" />
+          </StackPanel>
+          <StackPanel Margin="6,0,0,0">
+            <TextBlock Text="档案版本（可选）" Style="{StaticResource FieldLabel}" />
+            <TextBox x:Name="ProfileVersionBox" />
+            <TextBlock Text="分享许可（可选，例如 CC BY 4.0）" Style="{StaticResource FieldLabel}" />
+            <TextBox x:Name="LicenseBox" />
+          </StackPanel>
+        </UniformGrid>
 
         <UniformGrid Columns="3" Margin="0,6,0,0">
           <StackPanel Margin="0,0,6,0">
@@ -62,7 +76,7 @@
         <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                    Text="每行一条:原文 = 译名 | 禁止: 错误译法1、错误译法2   (# 开头是注释)" />
         <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                   Text="示例：新九人会 = 新九人会 | 禁止：新九人联盟、新九人协会。等号两侧相同时表示原样保留。" />
+                   Text="示例：en: League of Nine = 九人会 | 禁止：九人联盟。等号两侧相同时表示原样保留。" />
         <TextBox x:Name="TermsBox" AcceptsReturn="True" TextWrapping="NoWrap" Height="220"
                  FontFamily="Consolas, Microsoft YaHei UI" VerticalScrollBarVisibility="Auto"
                  HorizontalScrollBarVisibility="Auto" />
@@ -93,6 +107,7 @@
 
     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
       <TextBlock x:Name="SaveStatus" VerticalAlignment="Center" Margin="0,0,12,0"
+                 MaxWidth="440" TextWrapping="Wrap"
                  Foreground="{StaticResource MutedTextBrush}" />
       <Button x:Name="CancelButton" Content="取消" Click="OnCancel" />
       <Button x:Name="SaveButton" Content="保存" Click="OnSave" Style="{StaticResource PrimaryButton}" />

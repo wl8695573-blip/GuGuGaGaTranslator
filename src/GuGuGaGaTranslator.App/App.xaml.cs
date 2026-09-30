@@ -3,8 +3,7 @@ using System.Windows.Threading;
 
 namespace GuGuGaGaTranslator.App;
 
-/// <summary>Application entry point. The window is created in code, not through
-/// <c>StartupUri</c>, so the session exists before the first window renders.</summary>
+/// <summary>应用入口，在创建主窗口前初始化会话。</summary>
 public partial class App : Application
 {
     private Mutex? _instanceMutex;
@@ -12,10 +11,15 @@ public partial class App : Application
 
     public AppSession Session { get; private set; } = null!;
 
-    /// <inheritdoc />
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        if (e.Args.Contains("--verify-installation"))
+        {
+            Shutdown(PackageSmoke.Run(e.Args));
+            return;
+        }
 
         // 由安装程序注册的卸载入口:删快捷方式与注册表项,再安排删除自己所在的目录。
         if (e.Args.Any(arg => arg.Equals("--uninstall", StringComparison.OrdinalIgnoreCase)))
@@ -35,12 +39,15 @@ public partial class App : Application
             }
 
 
-            Shutdown();
+            Shutdown(ok ? 0 : 1);
             return;
         }
 
         _instanceMutex = new Mutex(false, @"Local\GuGuGaGaTranslator-" + System.Security.Principal.WindowsIdentity.GetCurrent().User!.Value);
-        try { _ownsMutex = _instanceMutex.WaitOne(0); }
+        try
+        {
+            _ownsMutex = _instanceMutex.WaitOne(0);
+        }
         catch (AbandonedMutexException) { _ownsMutex = true; }
         if (!_ownsMutex)
         {
@@ -75,7 +82,8 @@ public partial class App : Application
 
         // 命令行:--autostart 立即开始翻译,--exit-after 秒数后自动退出,用于计划任务或冒烟验证。
         var autoStart = e.Args.Any(arg => arg.Equals("--autostart", StringComparison.OrdinalIgnoreCase));
-        if (autoStart) window.StartAutomatically();
+        if (autoStart)
+            window.StartAutomatically();
 
         var exitAfter = ReadSeconds(e.Args, "--exit-after");
         if (exitAfter > 0)
@@ -95,19 +103,25 @@ public partial class App : Application
     {
         for (var index = 0; index < args.Length - 1; index++)
         {
-            if (!args[index].Equals(name, StringComparison.OrdinalIgnoreCase)) continue;
-            if (double.TryParse(args[index + 1], System.Globalization.CultureInfo.InvariantCulture, out var value)) return value;
+            if (!args[index].Equals(name, StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (double.TryParse(args[index + 1], System.Globalization.CultureInfo.InvariantCulture, out var value))
+                return value;
         }
 
         return 0;
     }
 
-    /// <inheritdoc />
     protected override async void OnExit(ExitEventArgs e)
     {
-        if (_ownsMutex) { _instanceMutex?.ReleaseMutex(); _ownsMutex = false; }
+        if (_ownsMutex)
+        {
+            _instanceMutex?.ReleaseMutex();
+            _ownsMutex = false;
+        }
         _instanceMutex?.Dispose();
-        if (Session is not null) await Session.DisposeAsync().ConfigureAwait(false);
+        if (Session is not null)
+            await Session.DisposeAsync().ConfigureAwait(false);
         base.OnExit(e);
     }
 }

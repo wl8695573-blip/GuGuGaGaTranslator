@@ -117,13 +117,15 @@ public sealed class RegionSelectorWindow : Window
 
     private void OnMouseMove(object sender, MouseEventArgs e)
     {
-        if (!IsMouseCaptured) return;
+        if (!IsMouseCaptured)
+            return;
         UpdateSelection(e.GetPosition(_canvas));
     }
 
     private void OnMouseUp(object sender, MouseButtonEventArgs e)
     {
-        if (!IsMouseCaptured) return;
+        if (!IsMouseCaptured)
+            return;
         ReleaseMouseCapture();
         UpdateSelection(e.GetPosition(_canvas));
     }

@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Registers the Sakura-GalTransl model with the local Ollama server.
 
@@ -9,8 +9,7 @@
     instruction line. Those are baked into the Ollama model here, so the app only
     has to send the text.
 
-    The IQ4_XS quantization is the variant the model authors recommend for 6 GB
-    of VRAM, which is what this machine has.
+    默认下载 IQ4_XS 量化文件，可指定模型目录和下载站点。
 
     Licence: CC-BY-NC-SA 4.0 — non-commercial use only.
 
@@ -22,9 +21,11 @@
 param(
     [string] $ModelName = 'sakura-galtransl:7b',
 
-    [string] $ModelDirectory = 'X:\ollama\models\sakura',
+    [string] $ModelDirectory = (Join-Path $env:USERPROFILE '.ollama\models\sakura'),
 
-    [string] $OllamaHome = 'X:\ollama',
+    [string] $OllamaHome = '',
+
+    [string] $DownloadBaseUrl = 'https://huggingface.co',
 
     [switch] $SkipDownload
 )
@@ -36,27 +37,26 @@ if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
 
 $fileName = 'Sakura-Galtransl-7B-v3.7-IQ4_XS.gguf'
 $gguf = Join-Path $ModelDirectory $fileName
-$ollama = Join-Path $OllamaHome 'ollama.exe'
-
-if (-not (Test-Path $ollama)) { throw "找不到 $ollama —— 先跑 tools\start-ollama.ps1 或确认便携版路径" }
+. (Join-Path $PSScriptRoot 'ollama-path.ps1')
+$ollama = Resolve-OllamaExecutable $OllamaHome
 
 New-Item -ItemType Directory -Force $ModelDirectory | Out-Null
 
 if (-not (Test-Path $gguf)) {
     if ($SkipDownload) { throw "找不到 $gguf,而 -SkipDownload 要求它已经存在" }
 
-    # huggingface.co is unreachable from this network; the mirror is not.
-    $url = "https://hf-mirror.com/SakuraLLM/Sakura-GalTransl-7B-v3.7/resolve/main/$fileName"
+    if (-not ([uri]$DownloadBaseUrl).IsAbsoluteUri -or ([uri]$DownloadBaseUrl).Scheme -ne 'https') { throw '下载站点必须使用 HTTPS。' }
+    $url = $DownloadBaseUrl.TrimEnd('/') + "/SakuraLLM/Sakura-GalTransl-7B-v3.7/resolve/main/$fileName"
     Write-Host "下载 Sakura-GalTransl-7B-v3.7 (IQ4_XS,约 3.96 GB) ..." -ForegroundColor Cyan
-    curl.exe -L --fail --show-error -o $gguf $url
+    $download = $gguf + '.download'
+    curl.exe -L --fail --show-error -o $download $url
     if ($LASTEXITCODE -ne 0) { throw "下载失败" }
+    Move-Item -LiteralPath $download -Destination $gguf
 }
 
 Write-Host ("模型文件: {0} ({1:N2} GB)" -f $gguf, ((Get-Item $gguf).Length / 1GB)) -ForegroundColor Green
 
-# The three pieces of Sakura's input format, verbatim from the model card.
-# Paraphrasing any of them measurably degrades output, which is why they are
-# constants in a file rather than something the app composes per request.
+# Sakura 使用模型卡规定的系统提示和输入格式。
 $systemPrompt = '你是一个视觉小说翻译模型，可以通顺地使用给定的术语表以指定的风格将日文翻译成简体中文，' +
                 '并联系上下文正确使用人称代词，注意不要混淆使役态和被动态的主语和宾语，' +
                 '不要擅自添加原文中没有的特殊符号，也不要擅自增加或减少换行。'
@@ -72,8 +72,7 @@ TEMPLATE `"`"`"{{ if .System }}{{ .System }}
 
 SYSTEM `"`"`"$systemPrompt`"`"`"
 
-# Sakura's recommended decoding settings: near-greedy, so the same line always
-# reads the same way.
+# 模型卡中的采样参数。
 PARAMETER temperature 0.1
 PARAMETER top_p 0.3
 PARAMETER repeat_penalty 1.0
@@ -94,4 +93,4 @@ Write-Host '完成。在 GuGuGaGaTranslator 里这样配:' -ForegroundColor Gree
 Write-Host "  翻译引擎 = openai-compatible"
 Write-Host "  接口地址 = http://127.0.0.1:11434/v1"
 Write-Host "  模型名   = $ModelName"
-Write-Host '  指令格式 = sakura   <- 关键,选错质量会明显下降'
+Write-Host '  指令格式 = sakura'

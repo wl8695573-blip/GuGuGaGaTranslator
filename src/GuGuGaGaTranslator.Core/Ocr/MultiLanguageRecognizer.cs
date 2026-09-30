@@ -16,10 +16,8 @@ public sealed class MultiLanguageRecognizer : ITextRecognizer
         _candidates = candidates;
     }
 
-    /// <inheritdoc />
     public string Id => $"windows-ocr:auto({string.Join(",", _candidates.Select(candidate => candidate.LanguageTag))})";
 
-    /// <inheritdoc />
     public string LanguageTag => "auto";
 
     public IReadOnlyList<ITextRecognizer> Candidates => _candidates;
@@ -38,15 +36,20 @@ public sealed class MultiLanguageRecognizer : ITextRecognizer
                 installedTag.Equals(tag, StringComparison.OrdinalIgnoreCase)
                 || installedTag.StartsWith($"{tag}-", StringComparison.OrdinalIgnoreCase));
 
-            if (match is null) continue;
-            if (candidates.Any(candidate => candidate.LanguageTag.Equals(match, StringComparison.OrdinalIgnoreCase))) continue;
+            if (match is null)
+                continue;
+            if (candidates.Any(candidate => candidate.LanguageTag.Equals(match, StringComparison.OrdinalIgnoreCase)))
+                continue;
 
             var recognizer = WindowsOcrRecognizer.TryCreate(match);
-            if (recognizer is not null) candidates.Add(recognizer);
-            if (candidates.Count >= Math.Max(1, maxCandidates)) break;
+            if (recognizer is not null)
+                candidates.Add(recognizer);
+            if (candidates.Count >= Math.Max(1, maxCandidates))
+                break;
         }
 
-        if (candidates.Count == 0) return null;
+        if (candidates.Count == 0)
+            return null;
         // With one engine there is nothing to choose between, so the plain recognizer is used instead.
         return candidates.Count == 1 ? null : new MultiLanguageRecognizer(candidates);
     }
@@ -56,7 +59,6 @@ public sealed class MultiLanguageRecognizer : ITextRecognizer
     public static WindowsOcrRecognizer? TryCreateSingle(IEnumerable<string> preferred) =>
         preferred.Select(WindowsOcrRecognizer.TryCreate).FirstOrDefault(recognizer => recognizer is not null);
 
-    /// <inheritdoc />
     [SupportedOSPlatform("windows10.0.19041.0")]
     public async Task<OcrResult> RecognizeAsync(Frame frame, CancellationToken cancellationToken = default)
     {
@@ -78,7 +80,8 @@ public sealed class MultiLanguageRecognizer : ITextRecognizer
             }
         }
 
-        if (best is null) throw new InvalidOperationException("automatic recognition has no candidate recognizer");
+        if (best is null)
+            throw new InvalidOperationException("automatic recognition has no candidate recognizer");
 
         return new OcrResult
         {
@@ -100,9 +103,12 @@ public sealed class MultiLanguageRecognizer : ITextRecognizer
 
         foreach (var character in text)
         {
-            if (char.IsLetterOrDigit(character)) meaningful++;
-            else if (char.IsWhiteSpace(character) || char.IsPunctuation(character) || char.IsSymbol(character)) continue;
-            else noise++;
+            if (char.IsLetterOrDigit(character))
+                meaningful++;
+            else if (char.IsWhiteSpace(character) || char.IsPunctuation(character) || char.IsSymbol(character))
+                continue;
+            else
+                noise++;
         }
 
         return (meaningful * 2) - (noise * 3);

@@ -32,13 +32,15 @@ public static class FrameHasher
     {
         var blocks = BlockLuminance(frame);
         double total = 0;
-        for (var i = 0; i < blocks.Length; i++) total += blocks[i];
+        for (var i = 0; i < blocks.Length; i++)
+            total += blocks[i];
         var mean = total / blocks.Length;
 
         ulong[] words = new ulong[4];
         for (var i = 0; i < blocks.Length; i++)
         {
-            if (blocks[i] <= mean) continue;
+            if (blocks[i] <= mean)
+                continue;
             var word = i / 64;
             words[word] |= 1UL << (i % 64);
         }
@@ -50,12 +52,14 @@ public static class FrameHasher
     /// distance of whole-image signatures, since a bright dialogue band in a dark region flips too few bits.</summary>
     public static int ChangedCellCount(double[] previous, double[] current, double epsilon = 4)
     {
-        if (previous.Length != current.Length) return int.MaxValue;
+        if (previous.Length != current.Length)
+            return int.MaxValue;
 
         var changed = 0;
         for (var i = 0; i < previous.Length; i++)
         {
-            if (Math.Abs(previous[i] - current[i]) > epsilon) changed++;
+            if (Math.Abs(previous[i] - current[i]) > epsilon)
+                changed++;
         }
 
         return changed;
@@ -86,7 +90,8 @@ public static class FrameHasher
 
         for (var i = 0; i < blocks.Length; i++)
         {
-            if (counts[i] > 0) blocks[i] /= counts[i];
+            if (counts[i] > 0)
+                blocks[i] /= counts[i];
         }
 
         return blocks;

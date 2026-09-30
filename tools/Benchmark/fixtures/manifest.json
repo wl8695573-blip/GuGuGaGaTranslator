@@ -1,0 +1,218 @@
+[
+  {
+    "file": "en-US-100-dark.png",
+    "text": "We will meet again tomorrow.",
+    "language": "en-US",
+    "dpiPercent": 100,
+    "appearance": "dark",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "en-US-100-light.png",
+    "text": "We will meet again tomorrow.",
+    "language": "en-US",
+    "dpiPercent": 100,
+    "appearance": "light",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "en-US-100-low-contrast.png",
+    "text": "We will meet again tomorrow.",
+    "language": "en-US",
+    "dpiPercent": 100,
+    "appearance": "low-contrast",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "en-US-125-dark.png",
+    "text": "We will meet again tomorrow.",
+    "language": "en-US",
+    "dpiPercent": 125,
+    "appearance": "dark",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "en-US-125-light.png",
+    "text": "We will meet again tomorrow.",
+    "language": "en-US",
+    "dpiPercent": 125,
+    "appearance": "light",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "en-US-125-low-contrast.png",
+    "text": "We will meet again tomorrow.",
+    "language": "en-US",
+    "dpiPercent": 125,
+    "appearance": "low-contrast",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "en-US-150-dark.png",
+    "text": "We will meet again tomorrow.",
+    "language": "en-US",
+    "dpiPercent": 150,
+    "appearance": "dark",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "en-US-150-light.png",
+    "text": "We will meet again tomorrow.",
+    "language": "en-US",
+    "dpiPercent": 150,
+    "appearance": "light",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "en-US-150-low-contrast.png",
+    "text": "We will meet again tomorrow.",
+    "language": "en-US",
+    "dpiPercent": 150,
+    "appearance": "low-contrast",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "ja-100-dark.png",
+    "text": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+    "language": "ja",
+    "dpiPercent": 100,
+    "appearance": "dark",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "ja-100-light.png",
+    "text": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+    "language": "ja",
+    "dpiPercent": 100,
+    "appearance": "light",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "ja-100-low-contrast.png",
+    "text": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+    "language": "ja",
+    "dpiPercent": 100,
+    "appearance": "low-contrast",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "ja-125-dark.png",
+    "text": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+    "language": "ja",
+    "dpiPercent": 125,
+    "appearance": "dark",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "ja-125-light.png",
+    "text": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+    "language": "ja",
+    "dpiPercent": 125,
+    "appearance": "light",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "ja-125-low-contrast.png",
+    "text": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+    "language": "ja",
+    "dpiPercent": 125,
+    "appearance": "low-contrast",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "ja-150-dark.png",
+    "text": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+    "language": "ja",
+    "dpiPercent": 150,
+    "appearance": "dark",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "ja-150-light.png",
+    "text": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+    "language": "ja",
+    "dpiPercent": 150,
+    "appearance": "light",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "ja-150-low-contrast.png",
+    "text": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+    "language": "ja",
+    "dpiPercent": 150,
+    "appearance": "low-contrast",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "zh-Hans-CN-100-dark.png",
+    "text": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+    "language": "zh-Hans-CN",
+    "dpiPercent": 100,
+    "appearance": "dark",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "zh-Hans-CN-100-light.png",
+    "text": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+    "language": "zh-Hans-CN",
+    "dpiPercent": 100,
+    "appearance": "light",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "zh-Hans-CN-100-low-contrast.png",
+    "text": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+    "language": "zh-Hans-CN",
+    "dpiPercent": 100,
+    "appearance": "low-contrast",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "zh-Hans-CN-125-dark.png",
+    "text": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+    "language": "zh-Hans-CN",
+    "dpiPercent": 125,
+    "appearance": "dark",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "zh-Hans-CN-125-light.png",
+    "text": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+    "language": "zh-Hans-CN",
+    "dpiPercent": 125,
+    "appearance": "light",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "zh-Hans-CN-125-low-contrast.png",
+    "text": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+    "language": "zh-Hans-CN",
+    "dpiPercent": 125,
+    "appearance": "low-contrast",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "zh-Hans-CN-150-dark.png",
+    "text": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+    "language": "zh-Hans-CN",
+    "dpiPercent": 150,
+    "appearance": "dark",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "zh-Hans-CN-150-light.png",
+    "text": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+    "language": "zh-Hans-CN",
+    "dpiPercent": 150,
+    "appearance": "light",
+    "maximumCer": 0.15
+  },
+  {
+    "file": "zh-Hans-CN-150-low-contrast.png",
+    "text": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+    "language": "zh-Hans-CN",
+    "dpiPercent": 150,
+    "appearance": "low-contrast",
+    "maximumCer": 0.15
+  }
+]

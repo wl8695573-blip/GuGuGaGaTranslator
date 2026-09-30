@@ -11,13 +11,15 @@ public static class TextNormalizer
     /// Chinese are not written with spaces), and lowercase.</summary>
     public static string ForComparison(string text)
     {
-        if (string.IsNullOrEmpty(text)) return string.Empty;
+        if (string.IsNullOrEmpty(text))
+            return string.Empty;
 
         var normalized = text.Normalize(NormalizationForm.FormKC);
         var builder = new StringBuilder(normalized.Length);
         foreach (var character in normalized)
         {
-            if (char.IsWhiteSpace(character)) continue;
+            if (char.IsWhiteSpace(character))
+                continue;
             builder.Append(char.ToLowerInvariant(character));
         }
 
@@ -30,9 +32,12 @@ public static class TextNormalizer
         var a = ForComparison(left);
         var b = ForComparison(right);
 
-        if (a.Length == 0 && b.Length == 0) return 1;
-        if (a.Length == 0 || b.Length == 0) return 0;
-        if (string.Equals(a, b, StringComparison.Ordinal)) return 1;
+        if (a.Length == 0 && b.Length == 0)
+            return 1;
+        if (a.Length == 0 || b.Length == 0)
+            return 0;
+        if (string.Equals(a, b, StringComparison.Ordinal))
+            return 1;
 
         var distance = Levenshtein(a, b);
         return 1.0 - (distance / (double)Math.Max(a.Length, b.Length));
@@ -41,15 +46,19 @@ public static class TextNormalizer
     /// <summary>Edit distance with a rolling row, so memory is proportional to the shorter string rather than the product of both.</summary>
     public static int Levenshtein(string left, string right)
     {
-        if (left.Length == 0) return right.Length;
-        if (right.Length == 0) return left.Length;
+        if (left.Length == 0)
+            return right.Length;
+        if (right.Length == 0)
+            return left.Length;
 
         // Iterate over the shorter string for the smaller row.
-        if (left.Length > right.Length) (left, right) = (right, left);
+        if (left.Length > right.Length)
+            (left, right) = (right, left);
 
         var previous = new int[left.Length + 1];
         var current = new int[left.Length + 1];
-        for (var i = 0; i <= left.Length; i++) previous[i] = i;
+        for (var i = 0; i <= left.Length; i++)
+            previous[i] = i;
 
         for (var j = 1; j <= right.Length; j++)
         {
@@ -71,7 +80,8 @@ public static class TextNormalizer
     /// <summary>Collapse runs of whitespace and full-width spaces into single spaces, for text that gets displayed rather than compared.</summary>
     public static string Tidy(string text)
     {
-        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        if (string.IsNullOrWhiteSpace(text))
+            return string.Empty;
 
         var builder = new StringBuilder(text.Length);
         var pendingSpace = false;

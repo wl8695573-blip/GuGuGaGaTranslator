@@ -33,7 +33,8 @@ internal static class Commands
         Console.OutputEncoding = Encoding.UTF8;
         DpiAwareness.EnablePerMonitorV2();
 
-        if (args.Length == 0) return Usage();
+        if (args.Length == 0)
+            return Usage();
         var options = Options.Parse(args.Skip(1));
 
         try
@@ -178,7 +179,8 @@ internal static class Commands
     private static int Capture(Options options)
     {
         var window = SelectWindow(options);
-        if (window is null) return 1;
+        if (window is null)
+            return 1;
 
         var region = options.Get("region") is { } text ? ParseRect(text) : (Int32Rect?)null;
         var backend = options.Get("backend")?.Equals("printwindow", StringComparison.OrdinalIgnoreCase) == true
@@ -190,12 +192,18 @@ internal static class Commands
             : ScreenCapture.CaptureWindowClient(window, backend);
 
         var outPath = options.Get("out");
-        if (outPath is not null) ImageOps.SavePng(frame, outPath);
+        if (outPath is not null)
+            ImageOps.SavePng(frame, outPath);
 
         var signature = FrameHasher.Compute(frame);
         Console.WriteLine(Serialize(new
         {
-            window = new { window.Identity, title = window.Title, handle = $"0x{window.Handle:X}" },
+            window = new
+            {
+                window.Identity,
+                title = window.Title,
+                handle = $"0x{window.Handle:X}"
+            },
             backend = backend.ToString(),
             frame = new
             {
@@ -241,8 +249,18 @@ internal static class Commands
         {
             image = imagePath,
             requestedLanguage = language,
-            recognizer = new { result.RecognizerId, result.LanguageTag },
-            transform = new { scale, gray, preparedWidth = prepared.Width, preparedHeight = prepared.Height },
+            recognizer = new
+            {
+                result.RecognizerId,
+                result.LanguageTag
+            },
+            transform = new
+            {
+                scale,
+                gray,
+                preparedWidth = prepared.Width,
+                preparedHeight = prepared.Height
+            },
             durationMs = Math.Round(result.Duration.TotalMilliseconds, 1),
             lineCount = result.Lines.Count,
             text = result.Text,
@@ -313,7 +331,8 @@ internal static class Commands
                 var deltas = 0;
                 translation = await streaming.TranslateAsync(request, partial =>
                 {
-                    if (deltas++ == 0) firstDelta = watch.Elapsed.TotalMilliseconds;
+                    if (deltas++ == 0)
+                        firstDelta = watch.Elapsed.TotalMilliseconds;
                 }).ConfigureAwait(false);
 
                 watch.Stop();
@@ -325,7 +344,11 @@ internal static class Commands
                     firstDeltaMs = Math.Round(firstDelta, 1),
                     deltaCount = deltas,
                     totalMs = Math.Round(watch.Elapsed.TotalMilliseconds, 1),
-                    languages = new { from, to },
+                    languages = new
+                    {
+                        from,
+                        to
+                    },
                     text,
                     translation,
                 }));
@@ -347,7 +370,11 @@ internal static class Commands
         {
             translator = translator.Id,
             promptStyle = options.Get("prompt-style", "galgame"),
-            languages = new { from, to },
+            languages = new
+            {
+                from,
+                to
+            },
             profile = profile?.Name,
             glossaryTerms = glossary.Count,
             elapsedMs = Math.Round(watch.Elapsed.TotalMilliseconds, 1),
@@ -511,7 +538,8 @@ internal static class Commands
         var wanted = string.IsNullOrWhiteSpace(id) ? config.Translation.ActiveProfile : id!;
         var profile = GameProfiles.FindById(wanted, profiles);
 
-        if (profile is null && string.IsNullOrWhiteSpace(id) && profiles.Count > 0) profile = profiles[0];
+        if (profile is null && string.IsNullOrWhiteSpace(id) && profiles.Count > 0)
+            profile = profiles[0];
         if (profile is null)
         {
             throw new ArgumentException(
@@ -527,7 +555,8 @@ internal static class Commands
     private static int Icon(Options options)
     {
         var exe = options.Get("exe") ?? throw new ArgumentException("--exe <path to exe> is required");
-        if (!File.Exists(exe)) throw new FileNotFoundException($"no such file: {exe}");
+        if (!File.Exists(exe))
+            throw new FileNotFoundException($"no such file: {exe}");
 
         var frames = ReadIconFrames(exe, out var format);
         var reference = options.Get("ico") is { } icoPath && File.Exists(icoPath)
@@ -598,7 +627,8 @@ internal static class Commands
         const int RtGroupIcon = 14;
 
         var module = IconNative.LoadLibraryExW(path, IntPtr.Zero, LoadLibraryAsDataFile);
-        if (module == IntPtr.Zero) throw new InvalidOperationException($"cannot open {path} as a data file");
+        if (module == IntPtr.Zero)
+            throw new InvalidOperationException($"cannot open {path} as a data file");
 
         try
         {
@@ -643,7 +673,8 @@ internal static class Commands
     private static byte[] ReadResource(IntPtr module, int type, IntPtr name)
     {
         var info = IconNative.FindResourceW(module, name, (IntPtr)type);
-        if (info == IntPtr.Zero) throw new InvalidOperationException($"resource {type}/{name} not found");
+        if (info == IntPtr.Zero)
+            throw new InvalidOperationException($"resource {type}/{name} not found");
 
         var handle = IconNative.LoadResource(module, info);
         var pointer = IconNative.LockResource(handle);
@@ -699,8 +730,16 @@ internal static class Commands
         var languages = new
         {
             note = "同一个 ja→zh-Hans 在三家各自的写法",
-            youdao = new { from = YoudaoTranslator.Language("ja"), to = YoudaoTranslator.Language("zh-Hans") },
-            baidu = new { from = BaiduTranslator.Language("ja"), to = BaiduTranslator.Language("zh-Hans") },
+            youdao = new
+            {
+                from = YoudaoTranslator.Language("ja"),
+                to = YoudaoTranslator.Language("zh-Hans")
+            },
+            baidu = new
+            {
+                from = BaiduTranslator.Language("ja"),
+                to = BaiduTranslator.Language("zh-Hans")
+            },
             caiyun = CaiyunTranslator.Direction("ja", "zh-Hans"),
         };
 
@@ -708,7 +747,13 @@ internal static class Commands
         {
             baidu = new
             {
-                example = new { appId, q = query, salt, key },
+                example = new
+                {
+                    appId,
+                    q = query,
+                    salt,
+                    key
+                },
                 documented,
                 computed = baidu,
                 matches = baiduOk,
@@ -776,7 +821,8 @@ internal static class Commands
                     foreach (var pair in body.Split('&', StringSplitOptions.RemoveEmptyEntries))
                     {
                         var at = pair.IndexOf('=');
-                        if (at < 0) continue;
+                        if (at < 0)
+                            continue;
                         form[Uri.UnescapeDataString(pair[..at])] = Uri.UnescapeDataString(pair[(at + 1)..].Replace('+', ' '));
                     }
                 }
@@ -818,10 +864,12 @@ internal static class Commands
         var curtime = form.GetValueOrDefault("curtime", string.Empty);
         var sign = form.GetValueOrDefault("sign", string.Empty);
 
-        if (form.GetValueOrDefault("signType", string.Empty) != "v3") return ("{\"errorCode\":\"105\"}", false);
+        if (form.GetValueOrDefault("signType", string.Empty) != "v3")
+            return ("{\"errorCode\":\"105\"}", false);
 
         var expected = YoudaoTranslator.Sign(appKey, q, salt, curtime, secret);
-        if (!expected.Equals(sign, StringComparison.OrdinalIgnoreCase)) return ("{\"errorCode\":\"202\"}", false);
+        if (!expected.Equals(sign, StringComparison.OrdinalIgnoreCase))
+            return ("{\"errorCode\":\"202\"}", false);
 
         var translated = $"{q}（有道:{form.GetValueOrDefault("from")}→{form.GetValueOrDefault("to")} 签名已校验）";
         return ($"{{\"errorCode\":\"0\",\"query\":\"{q}\",\"translation\":[\"{translated}\"],\"l\":\"{form.GetValueOrDefault("from")}2{form.GetValueOrDefault("to")}\"}}", true);
@@ -866,7 +914,8 @@ internal static class Commands
     private static async Task<int> RunOnceAsync(Options options)
     {
         var window = SelectWindow(options);
-        if (window is null) return 1;
+        if (window is null)
+            return 1;
 
         var setup = BuildPipelineSettings(options, window, dumpDirectory: null);
         var settings = setup.Settings;
@@ -926,20 +975,37 @@ internal static class Commands
 
         // Report the enforcer's work too: the screen shows the corrected text.
         var (enforced, fixes) = TermEnforcer.Apply(translation ?? string.Empty, request.Glossary);
-        if (translation is not null) translation = enforced;
+        if (translation is not null)
+            translation = enforced;
 
         var outPath = options.Get("out");
-        if (outPath is not null) ImageOps.SavePng(frame, outPath);
+        if (outPath is not null)
+            ImageOps.SavePng(frame, outPath);
 
         Console.WriteLine(Serialize(new
         {
-            window = new { window.Identity, title = window.Title },
+            window = new
+            {
+                window.Identity,
+                title = window.Title
+            },
             region = Rect(rect),
-            frame = new { width = frame.Width, height = frame.Height },
+            frame = new
+            {
+                width = frame.Width,
+                height = frame.Height
+            },
             recognizer = settings.Recognizer.Id,
             translator = settings.Translator.Id,
-            languages = new { from = languages.From, to = languages.To },
-            profile = new { terms = profile.Glossary.Count },
+            languages = new
+            {
+                from = languages.From,
+                to = languages.To
+            },
+            profile = new
+            {
+                terms = profile.Glossary.Count
+            },
             ocrMs = Math.Round(ocr.Duration.TotalMilliseconds, 1),
             ocrFirstCallMs = Math.Round(ocrWatch.Elapsed.TotalMilliseconds, 1),
             ocrRepeatMs = repeatDurations.Count > 0 ? repeatDurations : null,
@@ -959,7 +1025,8 @@ internal static class Commands
     private static async Task<int> WatchAsync(Options options)
     {
         var window = SelectWindow(options);
-        if (window is null) return 1;
+        if (window is null)
+            return 1;
 
         var seconds = options.GetDouble("seconds", 12);
         var dumpDirectory = options.Get("dump");
@@ -1064,7 +1131,8 @@ internal static class Commands
             recognizer = WindowsOcrRecognizer.TryCreateWithFallback(language, fallbacks);
         }
 
-        if (recognizer is null) throw new InvalidOperationException("no OCR recognizer is available on this machine");
+        if (recognizer is null)
+            throw new InvalidOperationException("no OCR recognizer is available on this machine");
 
         // Held in a local so a mid-run switch can replace it.
         var languages = new LanguagePair(options.Get("from", language), options.Get("to", "zh-Hans"));
@@ -1080,7 +1148,8 @@ internal static class Commands
             RegionProvider = () =>
             {
                 var current = WindowEnumerator.FindByIdentity(identity);
-                if (current is null || current.IsMinimized || !current.HasClientArea) return null;
+                if (current is null || current.IsMinimized || !current.HasClientArea)
+                    return null;
                 var client = current.ClientRect;
                 return offset is { } local
                     ? new Int32Rect(client.X + local.X, client.Y + local.Y, local.Width, local.Height)
@@ -1122,7 +1191,8 @@ internal static class Commands
     private static ITranslator CreateTranslator(Options options)
     {
         // --config runs against whatever engine the application is configured with, key and all.
-        if (options.Get("config") is not null) return TranslatorFactory.Create(new ConfigStore().Load().Translation.Translator);
+        if (options.Get("config") is not null)
+            return TranslatorFactory.Create(new ConfigStore().Load().Translation.Translator);
 
         return TranslatorFactory.Create(new TranslatorConfig
         {
@@ -1140,8 +1210,7 @@ internal static class Commands
         });
     }
 
-    /// <summary>Render an image as text: luminance statistics plus an ASCII map, which is how a run
-    /// gets checked when the driving model cannot view images at all.</summary>
+    /// <summary>输出图像亮度统计与 ASCII 预览，便于命令行检查。</summary>
     private static int Inspect(Options options)
     {
         Frame frame;
@@ -1154,7 +1223,8 @@ internal static class Commands
         else
         {
             var window = SelectWindow(options);
-            if (window is null) return 1;
+            if (window is null)
+                return 1;
             var region = options.Get("region") is { } text ? ParseRect(text) : window.ClientRect;
             frame = ScreenCapture.CaptureScreenRegion(region);
             origin = $"live capture of {window.Identity}";
@@ -1172,17 +1242,25 @@ internal static class Commands
         {
             var luminance = (int)((0.114 * frame.Bgra[i]) + (0.587 * frame.Bgra[i + 1]) + (0.299 * frame.Bgra[i + 2]));
             total += luminance;
-            if (luminance < min) min = luminance;
-            if (luminance > max) max = luminance;
-            if (luminance > 160) bright++;
-            if (frame.Bgra[i + 3] == 0) transparent++;
+            if (luminance < min)
+                min = luminance;
+            if (luminance > max)
+                max = luminance;
+            if (luminance > 160)
+                bright++;
+            if (frame.Bgra[i + 3] == 0)
+                transparent++;
         }
 
         var pixels = frame.PixelCount;
         Console.WriteLine(Serialize(new
         {
             origin,
-            frame = new { width = frame.Width, height = frame.Height },
+            frame = new
+            {
+                width = frame.Width,
+                height = frame.Height
+            },
             luminance = new
             {
                 min,
@@ -1195,7 +1273,8 @@ internal static class Commands
         }));
 
         Console.WriteLine($"ascii map ({columns}×{rows}, ' ' dark → '@' bright):");
-        foreach (var line in ToAscii(frame, columns, rows)) Console.WriteLine(line);
+        foreach (var line in ToAscii(frame, columns, rows))
+            Console.WriteLine(line);
         return 0;
     }
 
@@ -1249,10 +1328,12 @@ internal static class Commands
             ? windows.FirstOrDefault(candidate => candidate.Identity == identity)
             : windows.FirstOrDefault(candidate => candidate.Title.Contains(title!, StringComparison.OrdinalIgnoreCase));
 
-        if (window is not null) return window;
+        if (window is not null)
+            return window;
 
         Console.Error.WriteLine($"no window matched ({(title is null ? $"identity {identity}" : $"title ~ {title}")}); candidates:");
-        foreach (var candidate in windows.Take(25)) Console.Error.WriteLine($"  {candidate.Identity}  {candidate.Title}");
+        foreach (var candidate in windows.Take(25))
+            Console.Error.WriteLine($"  {candidate.Identity}  {candidate.Title}");
         return null;
     }
 
@@ -1263,7 +1344,8 @@ internal static class Commands
     private static Int32Rect ParseRect(string text)
     {
         var parts = text.Split(',', StringSplitOptions.TrimEntries);
-        if (parts.Length != 4) throw new ArgumentException($"--region wants x,y,w,h but got '{text}'");
+        if (parts.Length != 4)
+            throw new ArgumentException($"--region wants x,y,w,h but got '{text}'");
         return new Int32Rect(
             int.Parse(parts[0], CultureInfo.InvariantCulture),
             int.Parse(parts[1], CultureInfo.InvariantCulture),
@@ -1284,7 +1366,8 @@ internal static class Commands
             {
                 if (arg.StartsWith("--", StringComparison.Ordinal))
                 {
-                    if (pending is not null) options._values[pending] = "true";
+                    if (pending is not null)
+                        options._values[pending] = "true";
                     pending = arg[2..];
                 }
                 else if (pending is not null)
@@ -1294,7 +1377,8 @@ internal static class Commands
                 }
             }
 
-            if (pending is not null) options._values[pending] = "true";
+            if (pending is not null)
+                options._values[pending] = "true";
             return options;
         }
 

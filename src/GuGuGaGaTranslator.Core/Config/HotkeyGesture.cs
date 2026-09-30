@@ -22,10 +22,12 @@ public readonly record struct HotkeyGesture(uint Modifiers, uint VirtualKey)
     public static bool TryParse(string? text, out HotkeyGesture gesture)
     {
         gesture = None;
-        if (string.IsNullOrWhiteSpace(text)) return false;
+        if (string.IsNullOrWhiteSpace(text))
+            return false;
 
         var parts = text.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (parts.Length == 0) return false;
+        if (parts.Length == 0)
+            return false;
 
         uint modifiers = 0;
         var key = 0u;
@@ -48,14 +50,17 @@ public readonly record struct HotkeyGesture(uint Modifiers, uint VirtualKey)
             }
 
             var virtualKey = VirtualKeyOf(part);
-            if (virtualKey == 0) return false;
+            if (virtualKey == 0)
+                return false;
 
             // 「Ctrl+A+B」这种按不出两个主键,判为写错而不是悄悄丢掉一个。
-            if (key != 0) return false;
+            if (key != 0)
+                return false;
             key = virtualKey;
         }
 
-        if (key == 0) return false;
+        if (key == 0)
+            return false;
         gesture = new HotkeyGesture(modifiers, key);
         return true;
     }
@@ -66,13 +71,18 @@ public readonly record struct HotkeyGesture(uint Modifiers, uint VirtualKey)
     /// <summary>Render a gesture in the canonical order, so the same combination always reads the same way.</summary>
     public static string Format(uint modifiers, uint virtualKey)
     {
-        if (virtualKey == 0) return string.Empty;
+        if (virtualKey == 0)
+            return string.Empty;
 
         var builder = new StringBuilder();
-        if ((modifiers & HotkeyInterop.ModControl) != 0) builder.Append("Ctrl+");
-        if ((modifiers & HotkeyInterop.ModAlt) != 0) builder.Append("Alt+");
-        if ((modifiers & HotkeyInterop.ModShift) != 0) builder.Append("Shift+");
-        if ((modifiers & ModWin) != 0) builder.Append("Win+");
+        if ((modifiers & HotkeyInterop.ModControl) != 0)
+            builder.Append("Ctrl+");
+        if ((modifiers & HotkeyInterop.ModAlt) != 0)
+            builder.Append("Alt+");
+        if ((modifiers & HotkeyInterop.ModShift) != 0)
+            builder.Append("Shift+");
+        if ((modifiers & ModWin) != 0)
+            builder.Append("Win+");
         builder.Append(NameOfVirtualKey(virtualKey) ?? $"0x{virtualKey:X2}");
         return builder.ToString();
     }
@@ -83,12 +93,14 @@ public readonly record struct HotkeyGesture(uint Modifiers, uint VirtualKey)
     public static uint VirtualKeyOf(string name)
     {
         var trimmed = name.Trim();
-        if (trimmed.Length == 0) return 0;
+        if (trimmed.Length == 0)
+            return 0;
 
         if (trimmed.Length == 1)
         {
             var character = char.ToUpperInvariant(trimmed[0]);
-            if (character is >= 'A' and <= 'Z' or >= '0' and <= '9') return character;
+            if (character is >= 'A' and <= 'Z' or >= '0' and <= '9')
+                return character;
             return character switch
             {
                 ';' => 0xBA,
@@ -152,8 +164,10 @@ public readonly record struct HotkeyGesture(uint Modifiers, uint VirtualKey)
 
     public static string? NameOfVirtualKey(uint virtualKey)
     {
-        if (virtualKey is >= 'A' and <= 'Z' or >= '0' and <= '9') return ((char)virtualKey).ToString();
-        if (virtualKey is >= 0x70 and <= 0x87) return "F" + (virtualKey - 0x70 + 1).ToString(CultureInfo.InvariantCulture);
+        if (virtualKey is >= 'A' and <= 'Z' or >= '0' and <= '9')
+            return ((char)virtualKey).ToString();
+        if (virtualKey is >= 0x70 and <= 0x87)
+            return "F" + (virtualKey - 0x70 + 1).ToString(CultureInfo.InvariantCulture);
 
         return virtualKey switch
         {

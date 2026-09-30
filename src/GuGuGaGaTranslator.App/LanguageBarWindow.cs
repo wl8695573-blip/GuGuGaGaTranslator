@@ -22,7 +22,7 @@ public sealed class LanguageBarWindow : Window
     private readonly Border _profile;
 
     private nint _handle;
-    private Int32Rect _anchor;    private bool _editing;
+    private Int32Rect _anchor; private bool _editing;
     private bool _showSource;
     private bool _showPanel = true;
     private LanguagePreset? _primaryPreset;
@@ -35,7 +35,8 @@ public sealed class LanguageBarWindow : Window
     public void ApplyCaptureExclusion(bool exclude)
     {
         CaptureExcluded = exclude;
-        if (_handle != 0) OverlayWindowInterop.ApplyDisplayAffinity(_handle, exclude);
+        if (_handle != 0)
+            OverlayWindowInterop.ApplyDisplayAffinity(_handle, exclude);
     }
 
     public LanguageBarWindow()
@@ -76,7 +77,10 @@ public sealed class LanguageBarWindow : Window
     public event Action<string>? ToggleRequested;
 
     /// <summary>Where the bar is right now, in physical pixels, for a popup to hang from.</summary>
-    public Int32Rect ScreenBounds { get; private set; }
+    public Int32Rect ScreenBounds
+    {
+        get; private set;
+    }
 
     /// <summary>Rebuild the bar for the current direction and state.</summary>
     public void Configure(
@@ -131,7 +135,8 @@ public sealed class LanguageBarWindow : Window
     {
         var named = !string.IsNullOrWhiteSpace(profile);
         var label = named ? profile!.Trim() : "通用翻译";
-        if (label.Length > 10) label = label[..10] + "…";
+        if (label.Length > 10)
+            label = label[..10] + "…";
         ((TextBlock)_profile.Child).Text = named ? label : "通用";
     }
 
@@ -160,7 +165,8 @@ public sealed class LanguageBarWindow : Window
     public void PlaceAbove(Int32Rect region, int overlayTop)
     {
         _anchor = region;
-        if (_handle == 0) return;
+        if (_handle == 0)
+            return;
 
         UpdateLayout();
         var dpi = VisualTreeHelper.GetDpi(this);
@@ -169,7 +175,8 @@ public sealed class LanguageBarWindow : Window
 
         var x = region.X;
         var y = overlayTop - height - Gap;
-        if (y < 0) y = overlayTop + Gap;
+        if (y < 0)
+            y = overlayTop + Gap;
         OverlayWindowInterop.MoveTo(_handle, x, y, topmost: true);
         ScreenBounds = new Int32Rect(x, y, width, height);
     }
@@ -204,11 +211,13 @@ public sealed class LanguageBarWindow : Window
         };
         chrome.MouseEnter += (sender, _) =>
         {
-            if (sender is Border { Background: not SolidColorBrush } hovered) hovered.Background = Hover();
+            if (sender is Border { Background: not SolidColorBrush } hovered)
+                hovered.Background = Hover();
         };
         chrome.MouseLeave += (sender, _) =>
         {
-            if (sender is Border hovered && !ReferenceEquals(hovered, _primary)) hovered.Background = Brushes.Transparent;
+            if (sender is Border hovered && !ReferenceEquals(hovered, _primary))
+                hovered.Background = Brushes.Transparent;
         };
 
         return chrome;
@@ -240,7 +249,8 @@ public sealed class LanguageBarWindow : Window
         };
         chrome.MouseEnter += (sender, _) =>
         {
-            if (sender is Border border && !IsToggleActive(border)) border.Background = Hover();
+            if (sender is Border border && !IsToggleActive(border))
+                border.Background = Hover();
         };
         chrome.MouseLeave += (_, _) => RefreshToggles();
 
@@ -261,7 +271,6 @@ public sealed class LanguageBarWindow : Window
         Background = Theme.Brush("BorderBrush", Color.FromRgb(0x2E, 0x33, 0x46)),
     };
 
-    /// <inheritdoc />
     protected override void OnSourceInitialized(EventArgs e)
     {
         base.OnSourceInitialized(e);
@@ -270,6 +279,7 @@ public sealed class LanguageBarWindow : Window
         // The bar does not participate in capture and does not use click-through.
         OverlayWindowInterop.ApplyDisplayAffinity(_handle, CaptureExcluded);
         OverlayWindowInterop.ApplyClickThrough(_handle, enabled: false);
-        if (_anchor.Width > 0) PlaceAbove(_anchor, _anchor.Y + _anchor.Height);
+        if (_anchor.Width > 0)
+            PlaceAbove(_anchor, _anchor.Y + _anchor.Height);
     }
 }

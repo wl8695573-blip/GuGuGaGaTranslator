@@ -1,13 +1,11 @@
 <Project>
   <PropertyGroup>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <InvariantGlobalization>false</InvariantGlobalization>
-    <!-- Windows-only desktop tool. The 19041 TFM is what projects
-         Windows.Media.Ocr and Windows.Graphics.Capture in-box, with no NuGet
-         dependency of any kind. -->
+    <!-- Windows 10 2004 为最低支持版本。 -->
     <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>

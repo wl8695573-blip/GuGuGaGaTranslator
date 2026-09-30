@@ -1,0 +1,21 @@
+name: 问题反馈
+description: 报告抓屏、识别、翻译或安装问题
+body:
+  - type: input
+    id: version
+    attributes:
+      label: 应用版本与 Windows 版本
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤、预期结果与实际结果
+      description: 请说明游戏/窗口模式、缩放比例、OCR 引擎与翻译服务名称。请勿填写密钥或私人接口地址。
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: 诊断与截图
+      description: 可附上“缓存与支持 → 导出诊断包”生成的 ZIP。截图请先遮盖私人内容。不要附 config.json、缓存数据库或原始抓屏目录。

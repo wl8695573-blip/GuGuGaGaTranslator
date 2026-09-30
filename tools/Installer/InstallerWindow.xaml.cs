@@ -52,13 +52,13 @@ public partial class InstallerWindow : Window
     {
         try
         {
-            Install(directory, desktopShortcut: false, startMenuShortcut: true, message: _ => { });
+            Install(directory, desktopShortcut: false, startMenuShortcut: true, message: Console.WriteLine);
             Console.WriteLine($"installed to {directory}");
             return 0;
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine($"install failed: {exception.GetType().Name}: {exception.Message}");
+            Console.Error.WriteLine($"install failed: {exception}");
             return 1;
         }
     }
@@ -164,14 +164,14 @@ public partial class InstallerWindow : Window
         if (startMenuShortcut)
         {
             CreateShortcut(Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", ProductName + ".lnk"), exe, directory);
+                InstallationManifest.UserFolder(Environment.SpecialFolder.StartMenu), "Programs", ProductName + ".lnk"), exe, directory);
             message("已添加到开始菜单");
         }
 
         if (desktopShortcut)
         {
             CreateShortcut(Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), ProductName + ".lnk"), exe, directory);
+                InstallationManifest.UserFolder(Environment.SpecialFolder.DesktopDirectory), ProductName + ".lnk"), exe, directory);
             message("已创建桌面快捷方式");
         }
 
@@ -205,22 +205,13 @@ public partial class InstallerWindow : Window
         return root ?? string.Empty;
     }
 
-    /// <summary>Write a .lnk through the shell's own shortcut object.</summary>
+    /// <summary>Write a Unicode .lnk through the native Shell link interface.</summary>
     /// <param name="shortcutPath">Where the shortcut goes.</param>
     /// <param name="target">The executable it points at.</param>
     /// <param name="workingDirectory">Working directory for the target.</param>
     private static void CreateShortcut(string shortcutPath, string target, string workingDirectory)
     {
-        var shellType = Type.GetTypeFromProgID("WScript.Shell")
-            ?? throw new InvalidOperationException("系统里没有 WScript.Shell,无法创建快捷方式。");
-
-        dynamic shell = Activator.CreateInstance(shellType)!;
-        dynamic link = shell.CreateShortcut(shortcutPath);
-        link.TargetPath = target;
-        link.WorkingDirectory = workingDirectory;
-        link.IconLocation = target;
-        link.Description = "屏幕实时翻译";
-        link.Save();
+        WindowsShortcut.Write(shortcutPath, target, workingDirectory);
     }
 
     /// <summary>Register the Programs-and-features entry, whose uninstall command is the app itself.</summary>
@@ -254,7 +245,6 @@ public partial class InstallerWindow : Window
         Process.Start(new ProcessStartInfo(exe) { WorkingDirectory = directory, UseShellExecute = true });
     }
 
-    /// <inheritdoc />
     protected override void OnClosed(EventArgs e)
     {
         base.OnClosed(e);

@@ -26,7 +26,6 @@ public sealed class Frame
     public BitmapSource ToBitmapSource() =>
         BitmapSource.Create(Width, Height, 96, 96, PixelFormats.Bgra32, null, Bgra, Stride);
 
-    /// <inheritdoc />
     public override string ToString() =>
         $"{Width}×{Height} @ {SourceRegion.X},{SourceRegion.Y} ({CapturedAt:HH:mm:ss.fff})";
 }

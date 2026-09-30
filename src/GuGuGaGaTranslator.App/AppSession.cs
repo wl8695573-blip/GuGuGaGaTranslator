@@ -3,10 +3,12 @@ using System.Windows;
 using GuGuGaGaTranslator.Core.Imaging;
 using GuGuGaGaTranslator.Core.Capture;
 using GuGuGaGaTranslator.Core.Config;
+using GuGuGaGaTranslator.Core.Diagnostics;
 using GuGuGaGaTranslator.Core.Ocr;
 using GuGuGaGaTranslator.Core.Pipeline;
 using GuGuGaGaTranslator.Core.Translation;
 using GuGuGaGaTranslator.Ocr.Rapid;
+using GuGuGaGaTranslator.Storage.Sqlite;
 
 namespace GuGuGaGaTranslator.App;
 
@@ -21,19 +23,42 @@ public sealed class AppSession : IAsyncDisposable
     private LanguagePair _languages = new("ja", "zh-Hans");
     private readonly List<string> _recentSources = [];
 
-    public ConfigStore Store { get; }
+    public ConfigStore Store { get;  }
 
-    public AppSession(string? configDirectory = null) => Store = new ConfigStore(configDirectory);
+    public AppSession(string? configDirectory = null)
+    {
+        Store = new ConfigStore(configDirectory);
+        Diagnostics = new DiagnosticsService(Store.Directory);
+        Cache.StorageFailed += _ =>
+        {
+            PersistentCacheAvailable = false;
+            Diagnostics.Record(new DiagnosticEvent { Kind = DiagnosticEventKind.CacheUnavailable });
+            Notice?.Invoke("磁盘缓存暂不可用，已继续使用内存缓存。");
+        };
+    }
 
     public AppConfig Config { get; private set; } = new();
 
     /// <summary>The shared translation cache, kept across start/stop cycles.</summary>
     public TranslationCache Cache { get; } = new();
+    public DiagnosticsService Diagnostics { get;  }
+    public bool PersistentCacheAvailable
+    {
+        get; private set;
+    }
+    private (bool Persist, int Days, int Maximum)? _cacheSettings;
+    public string CacheDatabasePath => Path.Combine(Store.Directory, "translations.sqlite");
 
     /// <summary>The running loop, or null when stopped.</summary>
-    public TranslationPipeline? Pipeline { get; private set; }
+    public TranslationPipeline? Pipeline
+    {
+        get; private set;
+    }
 
-    public ITextRecognizer? Recognizer { get; private set; }
+    public ITextRecognizer? Recognizer
+    {
+        get; private set;
+    }
 
     /// <summary>Raised for every loop iteration; subscribers marshal to their own thread.</summary>
     public event Action<PipelineUpdate>? Updated;
@@ -48,13 +73,56 @@ public sealed class AppSession : IAsyncDisposable
         Config = Store.Load();
         // 旧版本存过韩语/繁体这类现在已经不在界面上的语言:先把配置拉回三语范围内。
         Config.NormalizeLanguages();
+        _languages = new LanguagePair(Config.Translation.From, Config.Translation.To);
+        ConfigureCache();
+        Diagnostics.Record(new DiagnosticEvent { Kind = DiagnosticEventKind.Started });
         if (Store.LastLoadError is { } error)
         {
             Notice?.Invoke($"配置文件无法读取,已回退默认值:{error}");
         }
     }
 
-    public void SaveConfig() => Store.Save(Config);
+    public void SaveConfig()
+    {
+        Store.Save(Config);
+        ConfigureCache();
+    }
+
+    private void ConfigureCache(bool force = false)
+    {
+        var options = Config.Translation.Cache;
+        var settings = (options.Persist, Math.Clamp(options.RetentionDays, 1, 365), Math.Clamp(options.MaximumEntries, 100, 100000));
+        if (!force && _cacheSettings == settings)
+            return;
+        _cacheSettings = settings;
+        PersistentCacheAvailable = false;
+        Cache.ConfigureStorage(null);
+        if (!options.Persist)
+            return;
+        try
+        {
+            Cache.ConfigureStorage(new SqliteTranslationCacheStore(CacheDatabasePath, settings.Item2, settings.Item3));
+            PersistentCacheAvailable = true;
+        }
+        catch (Exception)
+        {
+            Diagnostics.Record(new DiagnosticEvent { Kind = DiagnosticEventKind.CacheUnavailable });
+            Notice?.Invoke("磁盘缓存无法打开，继续使用内存缓存。");
+        }
+    }
+
+    public void ClearCache()
+    {
+        Cache.ConfigureStorage(null);
+        // Only this application's exact cache files are removed, including an abandoned SQLite journal.
+        File.Delete(CacheDatabasePath);
+        File.Delete(CacheDatabasePath + "-journal");
+        ConfigureCache(force: true);
+        Diagnostics.Record(new DiagnosticEvent { Kind = DiagnosticEventKind.CacheCleared });
+        Pipeline?.InvalidateTranslation();
+    }
+
+    public void ExportDiagnostics(string path) => Diagnostics.Export(path, Config, Pipeline?.Stats);
 
     /// <summary>The default directory for evidence dumps, under the user's application data.</summary>
     public static string DefaultDumpDirectory() => Path.Combine(ConfigStore.DefaultDirectory(), "dumps");
@@ -70,11 +138,13 @@ public sealed class AppSession : IAsyncDisposable
         if (!string.IsNullOrEmpty(identity))
         {
             var byIdentity = WindowEnumerator.FindByIdentity(identity, (uint)Environment.ProcessId);
-            if (byIdentity is not null) return byIdentity;
+            if (byIdentity is not null)
+                return byIdentity;
         }
 
         var hint = Config.Target.TitleHint;
-        if (string.IsNullOrWhiteSpace(hint)) return null;
+        if (string.IsNullOrWhiteSpace(hint))
+            return null;
         return ListWindows().FirstOrDefault(window =>
             window.Title.Contains(hint, StringComparison.OrdinalIgnoreCase));
     }
@@ -84,19 +154,15 @@ public sealed class AppSession : IAsyncDisposable
     /// follow a window that moves.</summary>
     public Int32Rect? ResolveRegion()
     {
-        if (Config.Target.Region is not { } local || !local.IsUsable) return null;
+        if (Config.Target.Region is not { } local || !local.IsUsable)
+            return null;
 
         var window = FindTarget();
-        if (window is null || window.IsMinimized || !window.HasClientArea) return null;
+        if (window is null || window.IsMinimized || !window.HasClientArea)
+            return null;
 
         var client = window.ClientRect;
-        var x = Math.Clamp(client.X + local.X, client.X, client.X + Math.Max(0, client.Width - 1));
-        var y = Math.Clamp(client.Y + local.Y, client.Y, client.Y + Math.Max(0, client.Height - 1));
-        var width = Math.Min(local.Width, client.X + client.Width - x);
-        var height = Math.Min(local.Height, client.Y + client.Height - y);
-        if (width <= 0 || height <= 0) return null;
-
-        return new Int32Rect(x, y, width, height);
+        return TargetRegionResolver.Resolve(local, client, Config.Target.ReferenceClientWidth, Config.Target.ReferenceClientHeight);
     }
 
     /// <summary>Adopt a window as the target without touching the region it already has; used by「一键框选并翻译」.</summary>
@@ -118,6 +184,8 @@ public sealed class AppSession : IAsyncDisposable
             screenRegion.Y - client.Y,
             screenRegion.Width,
             screenRegion.Height);
+        Config.Target.ReferenceClientWidth = client.Width;
+        Config.Target.ReferenceClientHeight = client.Height;
     }
 
     public void ClearRegion()
@@ -126,15 +194,19 @@ public sealed class AppSession : IAsyncDisposable
         Config.Target.Region = null;
         Config.Target.Identity = null;
         Config.Target.TitleHint = null;
+        Config.Target.ReferenceClientWidth = Config.Target.ReferenceClientHeight = 0;
     }
 
     /// <summary>Start the translation loop, rebuilding the recognizer, translator, and dumper from the current configuration.</summary>
     public void Start()
     {
-        if (IsRunning || _stopping) return;
-        if (Recognizer is IDisposable previous) previous.Dispose();
+        if (IsRunning || _stopping)
+            return;
+        if (Recognizer is IDisposable previous)
+            previous.Dispose();
         Recognizer = null;
-        if (_translator is IDisposable previousTranslator) previousTranslator.Dispose();
+        if (_translator is IDisposable previousTranslator)
+            previousTranslator.Dispose();
         _translator = null;
 
         if (Config.Target.Region is null)
@@ -204,6 +276,7 @@ public sealed class AppSession : IAsyncDisposable
         Pipeline = new TranslationPipeline(settings);
         Pipeline.Updated += update =>
         {
+            Diagnostics.Record(update);
             Remember(update.SourceText);
             Updated?.Invoke(update);
         };
@@ -224,7 +297,8 @@ public sealed class AppSession : IAsyncDisposable
     /// <summary>Stop the loop and release the engine.</summary>
     public Task StopAsync()
     {
-        if (_stopTask is { IsCompleted: false }) return _stopTask;
+        if (_stopTask is { IsCompleted: false })
+            return _stopTask;
         return _stopTask = StopCoreAsync();
     }
 
@@ -233,17 +307,19 @@ public sealed class AppSession : IAsyncDisposable
         _stopping = true;
         try
         {
-        if (Pipeline is not null)
-        {
-            await Pipeline.StopAsync().ConfigureAwait(false);
-            Pipeline = null;
-        }
+            if (Pipeline is not null)
+            {
+                await Pipeline.StopAsync().ConfigureAwait(false);
+                Pipeline = null;
+            }
 
-        if (_translator is IDisposable disposable) disposable.Dispose();
-        _translator = null;
-        if (Recognizer is IDisposable recognizerDisposable) recognizerDisposable.Dispose();
-        Recognizer = null;
-        _dumper = null;
+            if (_translator is IDisposable disposable)
+                disposable.Dispose();
+            _translator = null;
+            if (Recognizer is IDisposable recognizerDisposable)
+                recognizerDisposable.Dispose();
+            Recognizer = null;
+            _dumper = null;
         }
         finally { _stopping = false; }
     }
@@ -253,7 +329,7 @@ public sealed class AppSession : IAsyncDisposable
 
     public void InvalidateTranslation()
     {
-        Cache.Clear();
+        Cache.ClearMemory();
         Pipeline?.InvalidateTranslation();
     }
 
@@ -262,7 +338,8 @@ public sealed class AppSession : IAsyncDisposable
     {
         Config.Translation.From = preset.From;
         Config.Translation.To = preset.To;
-        if (!string.IsNullOrWhiteSpace(preset.Ocr)) Config.Ocr.Language = preset.Ocr;
+        if (!string.IsNullOrWhiteSpace(preset.Ocr))
+            Config.Ocr.Language = preset.Ocr;
 
         _languages = new LanguagePair(preset.From, preset.To);
         SaveConfig();
@@ -313,7 +390,8 @@ public sealed class AppSession : IAsyncDisposable
     {
         get
         {
-            lock (_recentSources) return [.. _recentSources];
+            lock (_recentSources)
+                return [.. _recentSources];
         }
     }
 
@@ -327,9 +405,12 @@ public sealed class AppSession : IAsyncDisposable
         Config.Translation.ActiveProfile = profile?.Id ?? string.Empty;
         if (profile is not null)
         {
-            if (!string.IsNullOrWhiteSpace(profile.From)) Config.Translation.From = profile.From;
-            if (!string.IsNullOrWhiteSpace(profile.To)) Config.Translation.To = profile.To;
-            if (!string.IsNullOrWhiteSpace(profile.OcrLanguage)) Config.Ocr.Language = profile.OcrLanguage;
+            if (!string.IsNullOrWhiteSpace(profile.From))
+                Config.Translation.From = profile.From;
+            if (!string.IsNullOrWhiteSpace(profile.To))
+                Config.Translation.To = profile.To;
+            if (!string.IsNullOrWhiteSpace(profile.OcrLanguage))
+                Config.Ocr.Language = profile.OcrLanguage;
             _languages = new LanguagePair(Config.Translation.From, Config.Translation.To);
         }
 
@@ -348,7 +429,8 @@ public sealed class AppSession : IAsyncDisposable
         LanguagesChanged?.Invoke(_languages);
         ProfileChanged?.Invoke(profile);
 
-        if (previousId == Config.Translation.ActiveProfile) return;
+        if (previousId == Config.Translation.ActiveProfile)
+            return;
         var bans = profile?.Terms.Sum(term => term.Forbidden.Count) ?? 0;
         Notice?.Invoke(profile is null
             ? "已关闭游戏专属模式:回到通用翻译,不做术语校正。"
@@ -360,10 +442,12 @@ public sealed class AppSession : IAsyncDisposable
     /// <summary>Pick the profile that matches a window title and switch to it.</summary>
     public async Task<GameProfile?> AutoDetectProfileAsync(string? title = null)
     {
-        if (!Config.Translation.AutoDetectProfile) return null;
+        if (!Config.Translation.AutoDetectProfile)
+            return null;
 
         var match = GameProfiles.MatchByTitle(title ?? FindTarget()?.Title, Config.Translation.GameProfiles);
-        if (match is null || match.Id == Config.Translation.ActiveProfile) return match;
+        if (match is null || match.Id == Config.Translation.ActiveProfile)
+            return match;
 
         await ApplyProfileAsync(match, because: "按窗口标题自动识别到").ConfigureAwait(true);
         return match;
@@ -378,13 +462,16 @@ public sealed class AppSession : IAsyncDisposable
     private void Remember(string source)
     {
         var line = source?.Trim() ?? string.Empty;
-        if (line.Length < 2) return;
+        if (line.Length < 2)
+            return;
 
         lock (_recentSources)
         {
-            if (_recentSources.Contains(line, StringComparer.Ordinal)) return;
+            if (_recentSources.Contains(line, StringComparer.Ordinal))
+                return;
             _recentSources.Add(line);
-            while (_recentSources.Count > 12) _recentSources.RemoveAt(0);
+            while (_recentSources.Count > 12)
+                _recentSources.RemoveAt(0);
         }
     }
 
@@ -420,7 +507,8 @@ public sealed class AppSession : IAsyncDisposable
         }
         finally
         {
-            if (translator is IDisposable disposable) disposable.Dispose();
+            if (translator is IDisposable disposable)
+                disposable.Dispose();
         }
     }
 
@@ -462,9 +550,9 @@ public sealed class AppSession : IAsyncDisposable
         return WindowsOcrRecognizer.TryCreateWithFallback(Config.Ocr.Language, fallbacks);
     }
 
-    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
         await StopAsync().ConfigureAwait(false);
+        Cache.Dispose();
     }
 }

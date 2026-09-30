@@ -21,11 +21,9 @@ public sealed class WindowsOcrRecognizer : ITextRecognizer
         Id = $"windows-ocr:{LanguageTag}";
     }
 
-    /// <inheritdoc />
-    public string Id { get; }
+    public string Id { get;  }
 
-    /// <inheritdoc />
-    public string LanguageTag { get; }
+    public string LanguageTag { get;  }
 
     public static uint MaxImageDimension => OcrEngine.MaxImageDimension;
 
@@ -41,12 +39,14 @@ public sealed class WindowsOcrRecognizer : ITextRecognizer
         // An exact tag can fail where its primary language succeeds, so both are tried.
         var candidates = new List<string> { languageTag };
         var separator = languageTag.IndexOf('-');
-        if (separator > 0) candidates.Add(languageTag[..separator]);
+        if (separator > 0)
+            candidates.Add(languageTag[..separator]);
 
         foreach (var candidate in candidates)
         {
             var engine = OcrEngine.TryCreateFromLanguage(new Language(candidate));
-            if (engine is not null) return new WindowsOcrRecognizer(engine);
+            if (engine is not null)
+                return new WindowsOcrRecognizer(engine);
         }
 
         return null;
@@ -59,13 +59,13 @@ public sealed class WindowsOcrRecognizer : ITextRecognizer
         foreach (var tag in new[] { preferred }.Concat(fallbacks))
         {
             var recognizer = TryCreate(tag);
-            if (recognizer is not null) return recognizer;
+            if (recognizer is not null)
+                return recognizer;
         }
 
         return null;
     }
 
-    /// <inheritdoc />
     [SupportedOSPlatform("windows10.0.19041.0")]
     public async Task<OcrResult> RecognizeAsync(Frame frame, CancellationToken cancellationToken = default)
     {
@@ -116,7 +116,8 @@ public sealed class WindowsOcrRecognizer : ITextRecognizer
 
     private static Int32Rect Union(IReadOnlyList<OcrWord> words)
     {
-        if (words.Count == 0) return new Int32Rect(0, 0, 0, 0);
+        if (words.Count == 0)
+            return new Int32Rect(0, 0, 0, 0);
 
         var left = words.Min(word => word.Box.X);
         var top = words.Min(word => word.Box.Y);

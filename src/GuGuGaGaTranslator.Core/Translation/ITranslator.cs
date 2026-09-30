@@ -21,14 +21,14 @@ public sealed record TranslationRequest
 
     public string? StyleHint { get; init; }
 
-    /// <summary>What the work is, so the model recognizes it instead of guessing at its terms.</summary>
+    /// <summary>作品背景，供翻译请求使用。</summary>
     public string? Worldview { get; init; }
 
     /// <summary>The lines translated before this one, oldest first.</summary>
     public IReadOnlyList<TranslationHistory> Context { get; init; } = [];
 }
 
-/// <summary>A translator that can report a translation while it is being written.</summary>
+/// <summary>支持流式译文回调的翻译器。</summary>
 public interface IStreamingTranslator : ITranslator
 {
     /// <summary>Translate, calling <paramref name="onDelta"/> with the text so far as it arrives.</summary>
@@ -39,8 +39,7 @@ public interface IStreamingTranslator : ITranslator
         CancellationToken cancellationToken = default);
 }
 
-/// <summary>An engine that can also answer a plain chat request, which building a game's term sheet needs: the answer is a
-/// term list, not a translated line.</summary>
+/// <summary>独立聊天请求接口，用于生成术语表。</summary>
 public interface IChatCompleter
 {
     /// <summary>Ask the model one question and return its reply.</summary>
@@ -51,10 +50,16 @@ public interface IChatCompleter
 public interface ITranslator
 {
     /// <summary>A stable identifier for logs, cache keys, and dumps.</summary>
-    string Id { get; }
+    string Id
+    {
+        get;
+    }
 
     /// <summary>True when this engine needs a network round trip, which the UI surfaces.</summary>
-    bool RequiresNetwork { get; }
+    bool RequiresNetwork
+    {
+        get;
+    }
 
     /// <summary>Translate one request.</summary>
     Task<string> TranslateAsync(TranslationRequest request, CancellationToken cancellationToken = default);

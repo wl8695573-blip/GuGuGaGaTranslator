@@ -12,7 +12,8 @@ public static class DpiAwareness
     [SupportedOSPlatform("windows")]
     public static void EnablePerMonitorV2()
     {
-        if (_applied) return;
+        if (_applied)
+            return;
         _applied = true;
         try
         {

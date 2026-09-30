@@ -117,7 +117,7 @@ public sealed record PipelineOptions
 
     public int MinTextLength { get; init; } = 4;
 
-    /// <summary>Skip results that cannot be the source language, which is how the game's own SAVE / LOAD / CONFIG labels stop being translated as dialogue.</summary>
+    /// <summary>按源语言字符过滤识别结果；拉丁文字语言无法用此方式区分按钮和台词。</summary>
     public bool ScriptGuard { get; init; } = true;
 
     /// <summary>Rewrite the glossary's terms into the finished translation, so the official wording holds even when the model chose another.</summary>
@@ -250,7 +250,8 @@ public sealed class TranslationPipeline : IAsyncDisposable
     /// <summary>Start the loop; a running pipeline keeps running.</summary>
     public void Start()
     {
-        if (IsRunning) return;
+        if (IsRunning)
+            return;
         _cancellation = new CancellationTokenSource();
         _forceNext = true;
         _pending = CreateQueue();
@@ -286,7 +287,8 @@ public sealed class TranslationPipeline : IAsyncDisposable
 
     public async Task StopAsync()
     {
-        if (_cancellation is null) return;
+        if (_cancellation is null)
+            return;
 
         await _cancellation.CancelAsync().ConfigureAwait(false);
         if (_loop is not null)
@@ -306,7 +308,6 @@ public sealed class TranslationPipeline : IAsyncDisposable
         _loop = null;
     }
 
-    /// <inheritdoc />
     public async ValueTask DisposeAsync() => await StopAsync().ConfigureAwait(false);
 
     private async Task LoopAsync(CancellationToken cancellationToken)
@@ -316,7 +317,8 @@ public sealed class TranslationPipeline : IAsyncDisposable
             var iteration = Stopwatch.StartNew();
             try
             {
-                if (!_paused) await IterateAsync(cancellationToken).ConfigureAwait(false);
+                if (!_paused)
+                    await IterateAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -336,7 +338,8 @@ public sealed class TranslationPipeline : IAsyncDisposable
             }
 
             var remaining = _options.PollIntervalMs - (int)iteration.ElapsedMilliseconds;
-            if (remaining > 0) await SafeDelayAsync(remaining, cancellationToken).ConfigureAwait(false);
+            if (remaining > 0)
+                await SafeDelayAsync(remaining, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -381,7 +384,8 @@ public sealed class TranslationPipeline : IAsyncDisposable
 
         if (!forced && distance < _options.ChangeThresholdBits && _options.TranslateOnlyOnChange)
         {
-            if (_pendingSource is not null) return;
+            if (_pendingSource is not null)
+                return;
             Publish(new PipelineUpdate
             {
                 Status = PipelineStatus.Unchanged,
@@ -401,7 +405,8 @@ public sealed class TranslationPipeline : IAsyncDisposable
         var prepared = ImageOps.Upscale(ImageOps.ToGrayscale(frame, _options.OcrGrayscale), _options.OcrScale);
         var ocr = await _settings.Recognizer.RecognizeAsync(prepared, cancellationToken).ConfigureAwait(false);
         Interlocked.Increment(ref _recognitions);
-        if (revision != Interlocked.Read(ref _revision) || _paused) return;
+        if (revision != Interlocked.Read(ref _revision) || _paused)
+            return;
 
         _lastSignature = signature;
         _lastCells = cells;
@@ -460,7 +465,8 @@ public sealed class TranslationPipeline : IAsyncDisposable
 
         lock (_state)
         {
-            if (revision != _revision || _paused) return;
+            if (revision != _revision || _paused)
+                return;
             if (_pendingSource is not null && TextNormalizer.Similarity(_pendingSource, sourceText) >= _options.RepeatSimilarity)
                 return;
         }
@@ -480,15 +486,22 @@ public sealed class TranslationPipeline : IAsyncDisposable
 
         lock (_state)
         {
-            if (revision != _revision || _paused) return;
+            if (revision != _revision || _paused)
+                return;
             _revision++;
             _activeTranslation?.Cancel();
             _pendingSource = sourceText;
             _pending.Writer.TryWrite(new TranslationWork(_revision, request, new PipelineUpdate
             {
-                Status = PipelineStatus.Translating, At = DateTimeOffset.Now, Frame = frame,
-                Signature = signature, SignatureDistance = distance, Ocr = ocr, SourceText = sourceText,
-                CaptureDuration = captureWatch.Elapsed, OcrDuration = ocr.Duration,
+                Status = PipelineStatus.Translating,
+                At = DateTimeOffset.Now,
+                Frame = frame,
+                Signature = signature,
+                SignatureDistance = distance,
+                Ocr = ocr,
+                SourceText = sourceText,
+                CaptureDuration = captureWatch.Elapsed,
+                OcrDuration = ocr.Duration,
                 Revision = _revision,
             }));
         }
@@ -504,9 +517,13 @@ public sealed class TranslationPipeline : IAsyncDisposable
                 TranslationRequest request;
                 lock (_state)
                 {
-                    if (work.Revision != _revision || _paused) continue;
+                    if (work.Revision != _revision || _paused)
+                        continue;
                     _activeTranslation = requestCancellation;
-                    request = work.Request with { Context = _options.HistoryLines > 0 ? [.. _recent] : [] };
+                    request = work.Request with
+                    {
+                        Context = _options.HistoryLines > 0 ? [.. _recent] : []
+                    };
                 }
                 try
                 {
@@ -520,7 +537,11 @@ public sealed class TranslationPipeline : IAsyncDisposable
                         if (work.Revision == _revision)
                         {
                             Interlocked.Increment(ref _errors);
-                            Publish(work.Update with { Status = PipelineStatus.Error, Error = exception.Message });
+                            Publish(work.Update with
+                            {
+                                Status = PipelineStatus.Error,
+                                Error = exception.Message
+                            });
                         }
                     }
                     await SafeDelayAsync(_options.ErrorBackoffMs, cancellationToken).ConfigureAwait(false);
@@ -529,8 +550,13 @@ public sealed class TranslationPipeline : IAsyncDisposable
                 {
                     lock (_state)
                     {
-                        if (ReferenceEquals(_activeTranslation, requestCancellation)) _activeTranslation = null;
-                        if (work.Revision == _revision) { _pendingSource = null; _forceNext = true; }
+                        if (ReferenceEquals(_activeTranslation, requestCancellation))
+                            _activeTranslation = null;
+                        if (work.Revision == _revision)
+                        {
+                            _pendingSource = null;
+                            _forceNext = true;
+                        }
                     }
                 }
             }
@@ -543,7 +569,8 @@ public sealed class TranslationPipeline : IAsyncDisposable
         var translateWatch = Stopwatch.StartNew();
         lock (_state)
         {
-            if (work.Revision != _revision) return;
+            if (work.Revision != _revision)
+                return;
             Publish(work.Update);
         }
         string translation;
@@ -563,8 +590,10 @@ public sealed class TranslationPipeline : IAsyncDisposable
                 {
                     lock (_state)
                     {
-                        if (work.Revision != _revision || cancellationToken.IsCancellationRequested) return;
-                        Publish(work.Update with {
+                        if (work.Revision != _revision || cancellationToken.IsCancellationRequested)
+                            return;
+                        Publish(work.Update with
+                        {
                             Translation = Enforce(partial, request, _options, out _),
                             TranslateDuration = translateWatch.Elapsed,
                         });
@@ -587,15 +616,19 @@ public sealed class TranslationPipeline : IAsyncDisposable
         translateWatch.Stop();
         lock (_state)
         {
-            if (work.Revision != _revision || cancellationToken.IsCancellationRequested) return;
+            if (work.Revision != _revision || cancellationToken.IsCancellationRequested)
+                return;
             _cache.Set(_settings.Translator.Id, request, translation);
             _lastSourceText = request.Text;
             _lastTranslation = translation;
             Remember(request.Text, translation);
             Publish(work.Update with
             {
-                Status = PipelineStatus.Translated, At = DateTimeOffset.Now,
-                Translation = translation, TermFixes = fixes, FromCache = fromCache,
+                Status = PipelineStatus.Translated,
+                At = DateTimeOffset.Now,
+                Translation = translation,
+                TermFixes = fixes,
+                FromCache = fromCache,
                 TranslateDuration = translateWatch.Elapsed,
                 TotalDuration = work.Update.CaptureDuration + work.Update.OcrDuration + translateWatch.Elapsed,
             });
@@ -626,13 +659,16 @@ public sealed class TranslationPipeline : IAsyncDisposable
     private void Remember(string source, string translation)
     {
         var capacity = Math.Max(0, _options.HistoryLines);
-        if (capacity == 0) return;
+        if (capacity == 0)
+            return;
 
         // A repeated line (a re-read, a cached repeat) should not fill the window with duplicates.
-        if (_recent.Count > 0 && _recent[^1].Source == source) return;
+        if (_recent.Count > 0 && _recent[^1].Source == source)
+            return;
 
         _recent.Add(new TranslationHistory(source, translation));
-        while (_recent.Count > capacity) _recent.RemoveAt(0);
+        while (_recent.Count > capacity)
+            _recent.RemoveAt(0);
     }
 
     /// <summary>Whether the frame is a flat colour, which points at a capture problem rather than a recognition one.</summary>
@@ -643,8 +679,10 @@ public sealed class TranslationPipeline : IAsyncDisposable
         var max = double.MinValue;
         foreach (var value in blocks)
         {
-            if (value < min) min = value;
-            if (value > max) max = value;
+            if (value < min)
+                min = value;
+            if (value > max)
+                max = value;
         }
 
         return max - min < 4;
@@ -653,12 +691,16 @@ public sealed class TranslationPipeline : IAsyncDisposable
     /// <summary>Decide whether a recognition result can be a line of dialogue in the configured source language.</summary>
     internal PipelineSkipReason SkipReason(string text, string from)
     {
-        if (!_options.ScriptGuard) return PipelineSkipReason.None;
-        if (from.Equals("auto", StringComparison.OrdinalIgnoreCase)) return PipelineSkipReason.None;
-        if (text.Length == 0) return PipelineSkipReason.TooShort;
+        if (!_options.ScriptGuard)
+            return PipelineSkipReason.None;
+        if (from.Equals("auto", StringComparison.OrdinalIgnoreCase))
+            return PipelineSkipReason.None;
+        if (text.Length == 0)
+            return PipelineSkipReason.TooShort;
 
         var expects = ExpectedScript(from);
-        if (expects is null) return PipelineSkipReason.None;
+        if (expects is null)
+            return PipelineSkipReason.None;
 
         // Two expected-script characters tell dialogue from a Latin UI label; one could be a logo glyph.
         var matches = text.Count(character => expects(character));
@@ -688,7 +730,10 @@ public sealed class TranslationPipeline : IAsyncDisposable
     {
         try
         {
-            Updated?.Invoke(update with { Revision = update.Revision == 0 ? Interlocked.Read(ref _revision) : update.Revision });
+            Updated?.Invoke(update with
+            {
+                Revision = update.Revision == 0 ? Interlocked.Read(ref _revision) : update.Revision
+            });
         }
         catch (Exception)
         {
@@ -698,7 +743,8 @@ public sealed class TranslationPipeline : IAsyncDisposable
 
     private static async Task SafeDelayAsync(int milliseconds, CancellationToken cancellationToken)
     {
-        if (milliseconds <= 0) return;
+        if (milliseconds <= 0)
+            return;
         try
         {
             await Task.Delay(milliseconds, cancellationToken).ConfigureAwait(false);

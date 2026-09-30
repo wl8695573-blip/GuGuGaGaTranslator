@@ -37,7 +37,8 @@ public sealed class DirectionChooserWindow : Window
     {
         var chooser = new DirectionChooserWindow();
         // 只在主窗口确实能当宿主时才设 Owner:被最小化的 Owner 会让模态子窗口行为异常。
-        if (owner.IsVisible && owner.WindowState != WindowState.Minimized) chooser.Owner = owner;
+        if (owner.IsVisible && owner.WindowState != WindowState.Minimized)
+            chooser.Owner = owner;
         chooser.Build(presets, current);
         chooser.Place(anchor);
         chooser.ShowDialog();
@@ -86,7 +87,8 @@ public sealed class DirectionChooserWindow : Window
             };
             row.MouseLeave += (sender, _) =>
             {
-                if (sender is Border hovered && !active) hovered.Background = Brushes.Transparent;
+                if (sender is Border hovered && !active)
+                    hovered.Background = Brushes.Transparent;
             };
 
             list.Children.Add(row);
@@ -104,14 +106,16 @@ public sealed class DirectionChooserWindow : Window
 
         KeyDown += (_, e) =>
         {
-            if (e.Key != Key.Escape) return;
+            if (e.Key != Key.Escape)
+                return;
             DialogResult = false;
             Close();
         };
 
         Deactivated += (_, _) =>
         {
-            if (IsLoaded) Close();
+            if (IsLoaded)
+                Close();
         };
     }
 
@@ -125,7 +129,8 @@ public sealed class DirectionChooserWindow : Window
 
             var x = anchor.X;
             var y = anchor.Y + anchor.Height + 4;
-            if (y + height > screen.Y + screen.Height) y = Math.Max(screen.Y, anchor.Y - height - 4);
+            if (y + height > screen.Y + screen.Height)
+                y = Math.Max(screen.Y, anchor.Y - height - 4);
 
             var handle = new WindowInteropHelper(this).Handle;
             OverlayWindowInterop.ExcludeFromCapture(handle);

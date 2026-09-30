@@ -6,20 +6,23 @@ using System.Text;
 namespace GuGuGaGaTranslator.Core.Config;
 
 /// <summary>Windows DPAPI encryption scoped to the current user.</summary>
-internal static class SecretProtection
+public static class SecretProtection
 {
-    internal const string Prefix = "dpapi:v1:";
+    public const string Prefix = "dpapi:v1:";
 
-    internal static string Protect(string value) =>
+    public static string Protect(string value) =>
         string.IsNullOrEmpty(value) ? value : Prefix + Convert.ToBase64String(Transform(Encoding.UTF8.GetBytes(value), true));
 
-    internal static string Unprotect(string value) =>
+    public static string Unprotect(string value) =>
         value.StartsWith(Prefix, StringComparison.Ordinal)
             ? Encoding.UTF8.GetString(Transform(Convert.FromBase64String(value[Prefix.Length..]), false))
             : value;
 
     [StructLayout(LayoutKind.Sequential)]
-    private struct Blob { public int Length; public nint Data; }
+    private struct Blob
+    {
+        public int Length; public nint Data;
+    }
 
     [DllImport("crypt32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -44,18 +47,21 @@ internal static class SecretProtection
             var ok = protect
                 ? CryptProtectData(ref input, null, 0, 0, 0, 1, out output)
                 : CryptUnprotectData(ref input, 0, 0, 0, 0, 1, out output);
-            if (!ok) throw new CryptographicException(new Win32Exception(Marshal.GetLastWin32Error()).Message);
+            if (!ok)
+                throw new CryptographicException(new Win32Exception(Marshal.GetLastWin32Error()).Message);
             var result = new byte[output.Length];
             Marshal.Copy(output.Data, result, 0, result.Length);
             return result;
         }
         finally
         {
-            for (var i = 0; i < input.Length; i++) Marshal.WriteByte(input.Data, i, 0);
+            for (var i = 0; i < input.Length; i++)
+                Marshal.WriteByte(input.Data, i, 0);
             Marshal.FreeHGlobal(input.Data);
             if (output.Data != 0)
             {
-                for (var i = 0; i < output.Length; i++) Marshal.WriteByte(output.Data, i, 0);
+                for (var i = 0; i < output.Length; i++)
+                    Marshal.WriteByte(output.Data, i, 0);
                 LocalFree(output.Data);
             }
             CryptographicOperations.ZeroMemory(bytes);

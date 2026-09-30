@@ -34,7 +34,7 @@ public sealed record TranslatorConfig
     /// which was trained on its own wording.</summary>
     public string PromptStyle { get; init; } = "galgame";
 
-    /// <summary>Ask the endpoint to skip its thinking phase: measured 10.9 s with it against 1.1 s without, on the same line and prompt.</summary>
+    /// <summary>关闭已知服务支持的思考模式；自定义接口不附加服务商字段。</summary>
     public bool DisableThinking { get; init; } = true;
 }
 
@@ -75,13 +75,12 @@ public static class TranslatorFactory
         TimeoutSeconds: config.TimeoutSeconds,
         EndpointOverride: config.EndpointOverride);
 
-    /// <summary>
-    /// Build the engine used to draft a game's term sheet, with a raised timeout: a
-    /// forty-term sheet measured 100+ seconds on DeepSeek, so the default 60 s would
-    /// abort it every time.
-    /// </summary>
+    /// <summary>术语表生成使用较长超时，至少 240 秒。</summary>
     public static ITranslator CreateForTermSheet(TranslatorConfig config) =>
-        Create(config with { TimeoutSeconds = Math.Max(config.TimeoutSeconds, 240) });
+        Create(config with
+        {
+            TimeoutSeconds = Math.Max(config.TimeoutSeconds, 240)
+        });
 
     /// <summary>Read the prompt style, defaulting to the general one so an unknown value degrades instead of throwing.</summary>
     private static PromptStyle ParsePromptStyle(string value) =>

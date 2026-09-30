@@ -2,8 +2,7 @@ using System.Text;
 
 namespace GuGuGaGaTranslator.Core.Translation;
 
-/// <summary>One proper noun of a work: how it is written on screen, how the work's own localization writes it, and the
-/// wordings that must never appear.</summary>
+/// <summary>术语条目，保存原文、译名和需要替换的错误译法。</summary>
 public sealed class GameTerm
 {
     /// <summary>Which language <see cref="Source"/> is written in — <c>en</c>, <c>ja</c>, or <c>zh</c>.
@@ -23,16 +22,18 @@ public sealed class GameTerm
     public override string ToString()
     {
         var builder = new StringBuilder();
-        if (!string.IsNullOrWhiteSpace(Language)) builder.Append(Language).Append(": ");
+        if (!string.IsNullOrWhiteSpace(Language))
+            builder.Append(Language).Append(": ");
         builder.Append(Source).Append(" = ").Append(Target);
-        if (Forbidden.Count > 0) builder.Append(" | 禁止: ").Append(string.Join("、", Forbidden));
-        if (!string.IsNullOrWhiteSpace(Note)) builder.Append(" | 备注: ").Append(Note);
+        if (Forbidden.Count > 0)
+            builder.Append(" | 禁止: ").Append(string.Join("、", Forbidden));
+        if (!string.IsNullOrWhiteSpace(Note))
+            builder.Append(" | 备注: ").Append(Note);
         return builder.ToString();
     }
 }
 
-/// <summary>Everything that makes the translator behave like a translator of one particular work: its terms, its setting,
-/// and its voice.</summary>
+/// <summary>游戏档案，包括术语、背景和翻译风格。</summary>
 public sealed class GameProfile
 {
     /// <summary>A stable key, so the configuration can name this profile after it is renamed.</summary>
@@ -40,6 +41,11 @@ public sealed class GameProfile
 
     /// <summary>The name shown in the picker, such as 「边狱巴士 / Limbus Company」.</summary>
     public string Name { get; set; } = string.Empty;
+
+    public string? Author { get; set; }
+    public string? SourceUrl { get; set; }
+    public string? License { get; set; }
+    public string? ProfileVersion { get; set; }
 
     /// <summary>How this profile is recognized: substrings of the game window's title.</summary>
     public List<string> WindowHints { get; set; } = [];
@@ -80,7 +86,8 @@ public static class TermSheet
         var builder = new StringBuilder();
         foreach (var term in terms)
         {
-            if (string.IsNullOrWhiteSpace(term.Source)) continue;
+            if (string.IsNullOrWhiteSpace(term.Source))
+                continue;
             builder.AppendLine(term.ToString());
         }
 
@@ -92,19 +99,23 @@ public static class TermSheet
     {
         problems = [];
         var terms = new List<GameTerm>();
-        if (string.IsNullOrWhiteSpace(text)) return terms;
+        if (string.IsNullOrWhiteSpace(text))
+            return terms;
 
         var lineNumber = 0;
         foreach (var raw in text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
         {
             lineNumber++;
             var line = raw.Trim();
-            if (line.Length == 0) continue;
-            if (line.StartsWith('#') || line.StartsWith("//") || line.StartsWith('－')) continue;
+            if (line.Length == 0)
+                continue;
+            if (line.StartsWith('#') || line.StartsWith("//") || line.StartsWith('－'))
+                continue;
 
             // 「en: Yi Sang = 李箱」这种语言标签:一条表里同时放几种原文,翻译时按当前方向取用。
             var language = SplitLanguage(ref line);
-            if (line.Length == 0) continue;
+            if (line.Length == 0)
+                continue;
 
             var split = SplitOnce(line);
             if (split is null)
@@ -171,7 +182,8 @@ public static class TermSheet
     private static string? SplitLanguage(ref string line)
     {
         var colon = line.IndexOfAny([':', '：']);
-        if (colon <= 0 || colon > 8) return null;
+        if (colon <= 0 || colon > 8)
+            return null;
 
         var tag = line[..colon].Trim().ToLowerInvariant();
         var language = tag switch
@@ -181,7 +193,8 @@ public static class TermSheet
             "zh" or "cn" or "chinese" => "zh",
             _ => null,
         };
-        if (language is null) return null;
+        if (language is null)
+            return null;
 
         line = line[(colon + 1)..].Trim();
         return language;
@@ -193,7 +206,8 @@ public static class TermSheet
         foreach (var separator in Separators)
         {
             var index = text.IndexOf(separator, StringComparison.Ordinal);
-            if (index > 0) return (text[..index], text[(index + separator.Length)..]);
+            if (index > 0)
+                return (text[..index], text[(index + separator.Length)..]);
         }
 
         return null;
@@ -258,7 +272,8 @@ public static class GameProfiles
     /// a specific game beats one that merely matches its launcher.</summary>
     public static GameProfile? MatchByTitle(string? title, IReadOnlyList<GameProfile> profiles)
     {
-        if (string.IsNullOrWhiteSpace(title)) return null;
+        if (string.IsNullOrWhiteSpace(title))
+            return null;
 
         GameProfile? best = null;
         var bestLength = 0;
@@ -266,9 +281,12 @@ public static class GameProfiles
         {
             foreach (var hint in profile.WindowHints)
             {
-                if (string.IsNullOrWhiteSpace(hint)) continue;
-                if (!title.Contains(hint, StringComparison.OrdinalIgnoreCase)) continue;
-                if (hint.Length <= bestLength) continue;
+                if (string.IsNullOrWhiteSpace(hint))
+                    continue;
+                if (!title.Contains(hint, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (hint.Length <= bestLength)
+                    continue;
                 best = profile;
                 bestLength = hint.Length;
             }
@@ -303,9 +321,11 @@ public static class GameProfiles
         {
             foreach (var term in terms)
             {
-                if (!IsUsable(term)) continue;
+                if (!IsUsable(term))
+                    continue;
                 // 没标语言的按老格式理解:它就是「游戏原文 → 中文」,任何源语言都用得上。
-                if (term.Language is { Length: > 0 } tag && !Matches(tag, from)) continue;
+                if (term.Language is { Length: > 0 } tag && !Matches(tag, from))
+                    continue;
                 result.Add(Entry(term.Source, term.Target, term.Forbidden));
             }
 
@@ -317,8 +337,10 @@ public static class GameProfiles
             // 中 → 外语:把标了目标语言的行反过来用。禁止列写的是中文侧的错误写法,反转后不适用。
             foreach (var term in terms)
             {
-                if (!IsUsable(term)) continue;
-                if (term.Language is not { Length: > 0 } tag || !Matches(tag, to)) continue;
+                if (!IsUsable(term))
+                    continue;
+                if (term.Language is not { Length: > 0 } tag || !Matches(tag, to))
+                    continue;
                 result.Add(Entry(term.Target, term.Source, null));
             }
 
@@ -329,16 +351,21 @@ public static class GameProfiles
         var pivot = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var term in terms)
         {
-            if (!IsUsable(term)) continue;
-            if (term.Language is not { Length: > 0 } toTag || !Matches(toTag, to)) continue;
+            if (!IsUsable(term))
+                continue;
+            if (term.Language is not { Length: > 0 } toTag || !Matches(toTag, to))
+                continue;
             pivot[term.Target.Trim()] = term.Source.Trim();
         }
 
         foreach (var term in terms)
         {
-            if (!IsUsable(term)) continue;
-            if (term.Language is not { Length: > 0 } fromTag || !Matches(fromTag, from)) continue;
-            if (!pivot.TryGetValue(term.Target.Trim(), out var translated)) continue;
+            if (!IsUsable(term))
+                continue;
+            if (term.Language is not { Length: > 0 } fromTag || !Matches(fromTag, from))
+                continue;
+            if (!pivot.TryGetValue(term.Target.Trim(), out var translated))
+                continue;
             result.Add(Entry(term.Source, translated, null));
         }
 
@@ -348,12 +375,16 @@ public static class GameProfiles
     /// <summary>Which of the three supported languages a tag or configuration value names, or null when it names none.</summary>
     public static string? LanguageOf(string? value)
     {
-        if (string.IsNullOrWhiteSpace(value)) return null;
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
 
         var text = value.Trim().ToLowerInvariant();
-        if (text.StartsWith("zh", StringComparison.Ordinal) || text is "cn" or "chinese") return "zh";
-        if (text.StartsWith("ja", StringComparison.Ordinal) || text is "jp" or "japanese" or "jpn") return "ja";
-        if (text.StartsWith("en", StringComparison.Ordinal) || text is "eng" or "english") return "en";
+        if (text.StartsWith("zh", StringComparison.Ordinal) || text is "cn" or "chinese")
+            return "zh";
+        if (text.StartsWith("ja", StringComparison.Ordinal) || text is "jp" or "japanese" or "jpn")
+            return "ja";
+        if (text.StartsWith("en", StringComparison.Ordinal) || text is "eng" or "english")
+            return "en";
         return null;
     }
 
@@ -379,7 +410,8 @@ public static class GameProfiles
         {
             foreach (var entry in list)
             {
-                if (string.IsNullOrWhiteSpace(entry.Source)) continue;
+                if (string.IsNullOrWhiteSpace(entry.Source))
+                    continue;
                 if (index.TryGetValue(entry.Source, out var existing))
                 {
                     merged[existing] = entry;
@@ -401,20 +433,25 @@ public static class GameProfiles
         var builder = new StringBuilder();
         foreach (var character in name.Trim().ToLowerInvariant())
         {
-            if (char.IsLetterOrDigit(character) && character < 128) builder.Append(character);
-            else if (builder.Length > 0 && builder[^1] != '-') builder.Append('-');
+            if (char.IsLetterOrDigit(character) && character < 128)
+                builder.Append(character);
+            else if (builder.Length > 0 && builder[^1] != '-')
+                builder.Append('-');
         }
 
         var slug = builder.ToString().Trim('-');
-        if (slug.Length == 0) slug = "game";
+        if (slug.Length == 0)
+            slug = "game";
 
         var taken = new HashSet<string>(existing, StringComparer.OrdinalIgnoreCase);
-        if (!taken.Contains(slug)) return slug;
+        if (!taken.Contains(slug))
+            return slug;
 
         for (var suffix = 2; ; suffix++)
         {
             var candidate = $"{slug}-{suffix}";
-            if (!taken.Contains(candidate)) return candidate;
+            if (!taken.Contains(candidate))
+                return candidate;
         }
     }
 }
