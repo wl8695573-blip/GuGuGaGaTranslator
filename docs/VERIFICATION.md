@@ -8,6 +8,7 @@ dotnet run --project tools/Regression -c Release
 dotnet run --project tools/Benchmark -c Release -- --engine rapid --iterations 3 --check
 dotnet run --project tools/Benchmark -c Release -- --engine windows --iterations 3 --check
 dotnet run --project tools/UiPreview -c Release -- .artifacts/ui
+dotnet run --project tools/InteractionChecks -c Release -- .artifacts/interactions
 ```
 
 ## OCR 样本与指标
@@ -28,6 +29,7 @@ dotnet run --project tools/UiPreview -c Release -- .artifacts/ui
 | Windows OCR | 18/18 可用样本通过，CER 0%，中位约 6–22 ms；日语 9 例 SKIP | 本机缺少日语 OCR 功能 |
 | 区域坐标 | 100/125/150/200% 比例、负坐标、边界与旧配置通过 | 纯坐标检查，不是多显示器实机验收 |
 | WPF 界面 | 主界面、设置、服务、缓存、档案与悬浮层已渲染检查；首次设置保留自定义值、切换服务清除密钥通过 | 880×520 最小内容区域及 150% 像素输出；不显示桌面窗口 |
+| 交互（1.3.1） | 45 项通过：两个真实模态菜单的选择、Esc、失焦、关闭及关闭期间再次失焦；档案切换和运行中七种语言预设 | 菜单置于屏幕外；隔离配置、mock 翻译，无实际抓屏或在线请求 |
 | 包与安装 | SHA256/模型哈希、安装、升级、卸载保留用户文件、便携包自检与拒绝卸载通过 | 中文与空格路径；验收包未签名 |
 
 真实游戏、混合 DPI 显示器移动、独占全屏、硬件加速抓屏、PrintWindow 兼容性和有凭据的在线翻译，仍需按目标环境验收。请把版本、引擎、缩放、窗口模式、实际现象和诊断 ZIP 附到反馈中。当前结论没有覆盖这些环境。
@@ -43,7 +45,7 @@ dotnet run --project tools/UiPreview -c Release -- .artifacts/ui
 
 独立自检命令：`GuGuGaGaTranslator.exe --config-dir <测试目录> --verify-installation <报告.json>`。不捕获桌面、不请求翻译服务、不显示窗口，结果通过退出码和 JSON 提供。
 
-推送/PR 的 `build.yml` 执行回归、OCR 和 WPF 预览；`package.yml` 对相关 PR 或手动触发执行完整包验收并上传证据，默认生成未签名验收包。
+推送/PR 的 `build.yml` 执行回归、OCR、WPF 预览和模态菜单交互；`package.yml` 对相关 PR 或手动触发执行完整包验收并上传证据，默认生成未签名验收包。
 
 ## 正式签名
 

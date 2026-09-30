@@ -42,8 +42,8 @@ public partial class SetupWindow : Window
 
     private static readonly (string Label, string From, string To)[] Directions =
     [
-        ("日 → 中(galgame 常用)", "ja", "zh-Hans"),
         ("自动识别 → 中文", "auto", "zh-Hans"),
+        ("日 → 中", "ja", "zh-Hans"),
         ("英 → 中", "en", "zh-Hans"),
         ("中 → 日", "zh-Hans", "ja"),
         ("中 → 英", "zh-Hans", "en"),

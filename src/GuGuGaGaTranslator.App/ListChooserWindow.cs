@@ -14,6 +14,7 @@ namespace GuGuGaGaTranslator.App;
 public sealed class ListChooserWindow : Window
 {
     private int _chosen = -1;
+    private bool _closing;
 
     private ListChooserWindow()
     {
@@ -24,6 +25,8 @@ public sealed class ListChooserWindow : Window
         Topmost = true;
         ShowInTaskbar = false;
         SizeToContent = SizeToContent.WidthAndHeight;
+        Closing += (_, _) => _closing = true;
+        Closed += (_, _) => _closing = true;
     }
 
     /// <summary>One row of the list.</summary>
@@ -83,9 +86,10 @@ public sealed class ListChooserWindow : Window
             chrome.MouseLeftButtonUp += (_, e) =>
             {
                 e.Handled = true;
+                if (_closing)
+                    return;
                 _chosen = captured;
-                DialogResult = true;
-                Close();
+                Complete(true);
             };
             chrome.MouseEnter += (sender, _) =>
             {
@@ -117,15 +121,27 @@ public sealed class ListChooserWindow : Window
         {
             if (e.Key != Key.Escape)
                 return;
-            DialogResult = false;
-            Close();
+            e.Handled = true;
+            Complete(false);
         };
 
         Deactivated += (_, _) =>
         {
-            if (IsLoaded)
+            if (IsLoaded && !_closing)
+            {
+                _closing = true;
                 Close();
+            }
         };
+    }
+
+    private void Complete(bool accepted)
+    {
+        if (_closing)
+            return;
+        // 设置 DialogResult 会关闭模态窗口；关闭引起的失焦不能再次调用 Close。
+        _closing = true;
+        DialogResult = accepted;
     }
 
     private void Place(Int32Rect anchor)

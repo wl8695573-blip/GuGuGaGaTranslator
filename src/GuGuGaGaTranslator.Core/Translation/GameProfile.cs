@@ -324,7 +324,8 @@ public static class GameProfiles
                 if (!IsUsable(term))
                     continue;
                 // 没标语言的按老格式理解:它就是「游戏原文 → 中文」,任何源语言都用得上。
-                if (term.Language is { Length: > 0 } tag && !Matches(tag, from))
+                if (term.Language is { Length: > 0 } tag
+                    && !from.Equals("auto", StringComparison.OrdinalIgnoreCase) && !Matches(tag, from))
                     continue;
                 result.Add(Entry(term.Source, term.Target, term.Forbidden));
             }

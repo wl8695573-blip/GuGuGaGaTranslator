@@ -9,6 +9,7 @@
     <Project Path="tools/Benchmark/Benchmark.csproj" />
     <Project Path="tools/Regression/Regression.csproj" />
     <Project Path="tools/UiPreview/UiPreview.csproj" />
+    <Project Path="tools/InteractionChecks/InteractionChecks.csproj" />
     <Project Path="tools/Icon/Icon.csproj" />
     <Project Path="tools/Probe/Probe.csproj" />
     <Project Path="tools/SampleWindow/SampleWindow.csproj" />

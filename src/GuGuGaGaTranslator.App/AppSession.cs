@@ -20,10 +20,10 @@ public sealed class AppSession : IAsyncDisposable
     private bool _stopping;
     private Task? _stopTask;
     private FrameDumper? _dumper;
-    private LanguagePair _languages = new("ja", "zh-Hans");
+    private LanguagePair _languages = new("auto", "zh-Hans");
     private readonly List<string> _recentSources = [];
 
-    public ConfigStore Store { get;  }
+    public ConfigStore Store { get; }
 
     public AppSession(string? configDirectory = null)
     {
@@ -41,7 +41,7 @@ public sealed class AppSession : IAsyncDisposable
 
     /// <summary>The shared translation cache, kept across start/stop cycles.</summary>
     public TranslationCache Cache { get; } = new();
-    public DiagnosticsService Diagnostics { get;  }
+    public DiagnosticsService Diagnostics { get; }
     public bool PersistentCacheAvailable
     {
         get; private set;
@@ -336,6 +336,7 @@ public sealed class AppSession : IAsyncDisposable
     /// <summary>Switch to a direction from the overlay's switcher: direction, recognition language, and configuration move together.</summary>
     public async Task ApplyLanguagePresetAsync(LanguagePreset preset)
     {
+        var ocrBefore = Config.Ocr.Language;
         Config.Translation.From = preset.From;
         Config.Translation.To = preset.To;
         if (!string.IsNullOrWhiteSpace(preset.Ocr))
@@ -343,11 +344,12 @@ public sealed class AppSession : IAsyncDisposable
 
         _languages = new LanguagePair(preset.From, preset.To);
         SaveConfig();
+        ForgetContext();
 
-        if (IsRunning)
+        if (IsRunning && !Config.Ocr.Language.Equals(ocrBefore, StringComparison.OrdinalIgnoreCase)
+            && Recognizer is not RapidOcrRecognizer)
         {
-            // Changing the recognition language changes the recognizer itself,
-            // so the loop is rebuilt; the direction alone would not need it.
+            // RapidOCR 使用同一组多语言模型；仅系统识别器需要按语言重建。
             await StopAsync().ConfigureAwait(true);
             Start();
         }
@@ -420,7 +422,8 @@ public sealed class AppSession : IAsyncDisposable
         // 它的键带着术语表,每个档案各自保留自己的答案。
         ForgetContext();
 
-        if (IsRunning && !Config.Ocr.Language.Equals(ocrBefore, StringComparison.OrdinalIgnoreCase))
+        if (IsRunning && !Config.Ocr.Language.Equals(ocrBefore, StringComparison.OrdinalIgnoreCase)
+            && Recognizer is not RapidOcrRecognizer)
         {
             await StopAsync().ConfigureAwait(true);
             Start();
@@ -446,7 +449,7 @@ public sealed class AppSession : IAsyncDisposable
             return null;
 
         var match = GameProfiles.MatchByTitle(title ?? FindTarget()?.Title, Config.Translation.GameProfiles);
-        if (match is null || match.Id == Config.Translation.ActiveProfile)
+        if ((match?.Id ?? string.Empty) == Config.Translation.ActiveProfile)
             return match;
 
         await ApplyProfileAsync(match, because: "按窗口标题自动识别到").ConfigureAwait(true);

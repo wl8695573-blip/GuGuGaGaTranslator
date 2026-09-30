@@ -43,7 +43,7 @@ public sealed class OcrConfig
     public string Engine { get; set; } = "rapidocr";
 
     /// <summary>The recognizer language tag, which must match the game's text language.</summary>
-    public string Language { get; set; } = "ja";
+    public string Language { get; set; } = "auto";
 
     /// <summary>Upscale factor applied before recognition; small game text reads far better enlarged.</summary>
     public double Scale { get; set; } = 2.0;
@@ -67,7 +67,7 @@ public sealed class OcrConfig
 /// <summary>The language pair and the engine that serves it.</summary>
 public sealed class TranslationConfig
 {
-    public string From { get; set; } = "ja";
+    public string From { get; set; } = "auto";
 
     public string To { get; set; } = "zh-Hans";
 
