@@ -24,8 +24,15 @@ public static class OverlayWindowInterop
 
     /// <summary>Exclude a window from screen capture, so the overlay's own text is not captured and re-recognized as source text.</summary>
     [SupportedOSPlatform("windows")]
-    public static bool ExcludeFromCapture(nint handle) =>
-        handle != 0 && NativeMethods.SetWindowDisplayAffinity(handle, NativeMethods.WdaExcludeFromCapture);
+    public static bool ExcludeFromCapture(nint handle) => ApplyDisplayAffinity(handle, exclude: true);
+
+    /// <summary>Put a window back into screen captures. Both directions are needed: WDA_EXCLUDEFROMCAPTURE is a
+    /// property of the window, so a window that was excluded once keeps that flag until it is cleared here.</summary>
+    [SupportedOSPlatform("windows")]
+    public static bool ApplyDisplayAffinity(nint handle, bool exclude) =>
+        handle != 0 && NativeMethods.SetWindowDisplayAffinity(
+            handle,
+            exclude ? NativeMethods.WdaExcludeFromCapture : NativeMethods.WdaNone);
 
     /// <summary>Move a window to a physical-pixel position without resizing. WPF's Left/Top are
     /// device-independent and resolve against the primary monitor's scale, which drifts from the

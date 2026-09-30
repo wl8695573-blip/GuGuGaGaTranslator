@@ -178,6 +178,7 @@ public sealed class OverlayWindow : Window
         foreach (var grip in _grips) grip.Grip.Visibility = editable ? Visibility.Visible : Visibility.Collapsed;
 
         if (_handle != 0) OverlayWindowInterop.ApplyClickThrough(_handle, config.ClickThrough);
+        if (_handle != 0) OverlayWindowInterop.ApplyDisplayAffinity(_handle, config.ExcludeFromCapture);
         UpdateLanguageBar();
         if (_region.Width > 0) PlaceAt(_region);
     }
@@ -245,6 +246,11 @@ public sealed class OverlayWindow : Window
             _bar.MoreRequested += () => DirectionsRequested?.Invoke();
             _bar.ToggleRequested += key => ToggleRequested?.Invoke(key);
             _bar.ProfileRequested += () => ProfileRequested?.Invoke();
+        }
+        else
+        {
+            // 语言条同样要跟着「不被录屏拍到」开关走,否则改设置后它会一直停在创建时的状态。
+            _bar.ApplyCaptureExclusion(_config.ExcludeFromCapture);
         }
 
         _bar.Configure(
@@ -337,7 +343,7 @@ public sealed class OverlayWindow : Window
     {
         base.OnSourceInitialized(e);
         _handle = new WindowInteropHelper(this).Handle;
-        if (_config.ExcludeFromCapture) OverlayWindowInterop.ExcludeFromCapture(_handle);
+        OverlayWindowInterop.ApplyDisplayAffinity(_handle, _config.ExcludeFromCapture);
         OverlayWindowInterop.ApplyClickThrough(_handle, _config.ClickThrough);
         if (_region.Width > 0) PlaceAt(_region);
     }

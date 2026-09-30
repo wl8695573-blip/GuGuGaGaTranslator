@@ -758,6 +758,23 @@ public partial class MainWindow : Window
             : "翻译框已解锁:拖动它移动位置、拖四角缩放大小,调好后按 Ctrl+Alt+U 锁回。");
     }
 
+    /// <summary>The capture switch, applied the moment it is clicked: recording the overlay means the pipeline may
+    /// read its own translation back, so this is toggled on and off around a recording rather than left on.</summary>
+    private void OnExcludeFromCaptureChanged(object sender, RoutedEventArgs e)
+    {
+        if (_loadingUi) return;
+
+        var exclude = ExcludeFromCaptureCheck.IsChecked == true;
+        _session.Config.Overlay.ExcludeFromCapture = exclude;
+        _session.SaveConfig();
+        _overlay?.Configure(_session.Config.Overlay, _session.Languages);
+
+        OnNotice(exclude
+            ? "翻译框已重新对录屏/截图隐藏。若它盖住了识别区域,现在起会重新读到游戏原文。"
+            : "翻译框已允许被录屏/截图拍到,现在可以连翻译一起截图了。注意:若翻译框盖住识别区域,"
+                + "程序可能把自己的译文当成原文读到 —— 录完记得勾回去。");
+    }
+
     /// <summary>The switcher's "其他" button: show the full direction list under the bar and apply whatever comes back.</summary>
     private void OnDirectionsRequested()
     {

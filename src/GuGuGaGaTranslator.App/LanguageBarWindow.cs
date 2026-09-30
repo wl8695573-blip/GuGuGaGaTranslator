@@ -31,6 +31,14 @@ public sealed class LanguageBarWindow : Window
     /// <summary>Whether this bar stays out of screen capture; set by the overlay from the configuration.</summary>
     public bool CaptureExcluded { get; set; } = true;
 
+    /// <summary>Follow the configuration's capture switch while the tool is running, so unchecking it is
+    /// enough to start recording the bar — no restart.</summary>
+    public void ApplyCaptureExclusion(bool exclude)
+    {
+        CaptureExcluded = exclude;
+        if (_handle != 0) OverlayWindowInterop.ApplyDisplayAffinity(_handle, exclude);
+    }
+
     public LanguageBarWindow()
     {
         WindowStyle = WindowStyle.None;
@@ -263,7 +271,7 @@ public sealed class LanguageBarWindow : Window
         _handle = new WindowInteropHelper(this).Handle;
 
         // 语言条不参与抓屏,也绝不穿透;它带 WS_EX_NOACTIVATE,按按钮不会把游戏切出前台。
-        if (CaptureExcluded) OverlayWindowInterop.ExcludeFromCapture(_handle);
+        OverlayWindowInterop.ApplyDisplayAffinity(_handle, CaptureExcluded);
         OverlayWindowInterop.ApplyClickThrough(_handle, enabled: false);
         if (_anchor.Width > 0) PlaceAbove(_anchor, _anchor.Y + _anchor.Height);
     }

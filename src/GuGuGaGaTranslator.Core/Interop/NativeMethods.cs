@@ -172,6 +172,9 @@ internal static class NativeMethods
     /// <summary>WDA_EXCLUDEFROMCAPTURE: the window renders normally but is absent from captures.</summary>
     internal const uint WdaExcludeFromCapture = 0x00000011;
 
+    /// <summary>WDA_NONE: back into captures, which is what recording the overlay needs.</summary>
+    internal const uint WdaNone = 0x00000000;
+
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool SetWindowDisplayAffinity(nint hwnd, uint affinity);

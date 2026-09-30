@@ -278,7 +278,8 @@
             <CheckBox x:Name="TextOutlineCheck" Content="文字描边(底框关掉后靠它保证可读)" />
             <CheckBox x:Name="ClickThroughCheck" Content="鼠标穿透(关闭后才能拖动悬浮层)" />
             <CheckBox x:Name="LanguageBarCheck" Content="在悬浮层上方显示语言切换条" />
-            <CheckBox x:Name="ExcludeFromCaptureCheck" Content="翻译框不被录屏/截图拍到(想录下翻译过程就取消勾选)" />
+            <CheckBox x:Name="ExcludeFromCaptureCheck" Content="翻译框不被录屏/截图拍到(想录下翻译过程就取消勾选)"
+                      Checked="OnExcludeFromCaptureChanged" Unchecked="OnExcludeFromCaptureChanged" />
             <Separator Margin="0,8,0,8" />
             <TextBlock Text="翻译框宽 / 高(像素;0 = 宽跟随所选区域、高随文字)" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
             <UniformGrid Columns="2">
