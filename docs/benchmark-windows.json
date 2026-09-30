@@ -1,0 +1,255 @@
+{
+  "schemaVersion": 1,
+  "engine": "windows",
+  "iterations": 3,
+  "initializationMs": 0.008,
+  "os": "Microsoft Windows NT 10.0.22631.0",
+  "runtime": "10.0.12",
+  "processorCount": 16,
+  "limitations": "Synthetic dialogue, not a real-game compatibility claim. Warmups and model initialization excluded from median/P95. Whitespace ignored; NFKC Unicode normalized. Missing Windows languages are skipped.",
+  "results": [
+    {
+      "file": "en-US-100-dark.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 9.8923,
+      "p95Ms": 24.147,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "en-US-100-light.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 7.4611,
+      "p95Ms": 7.576,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "en-US-100-low-contrast.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 7.7323,
+      "p95Ms": 7.9505,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "en-US-125-dark.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 9.3536,
+      "p95Ms": 13.929,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "en-US-125-light.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 14.9864,
+      "p95Ms": 49.266,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "en-US-125-low-contrast.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 26.7443,
+      "p95Ms": 27.9358,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "en-US-150-dark.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 17.6904,
+      "p95Ms": 17.7656,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "en-US-150-light.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 13.3168,
+      "p95Ms": 24.7481,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "en-US-150-low-contrast.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 13.9915,
+      "p95Ms": 15.9861,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-100-dark.png",
+      "status": "SKIP: language pack unavailable",
+      "actual": null,
+      "cer": null,
+      "medianMs": null,
+      "p95Ms": null,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-100-light.png",
+      "status": "SKIP: language pack unavailable",
+      "actual": null,
+      "cer": null,
+      "medianMs": null,
+      "p95Ms": null,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-100-low-contrast.png",
+      "status": "SKIP: language pack unavailable",
+      "actual": null,
+      "cer": null,
+      "medianMs": null,
+      "p95Ms": null,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-125-dark.png",
+      "status": "SKIP: language pack unavailable",
+      "actual": null,
+      "cer": null,
+      "medianMs": null,
+      "p95Ms": null,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-125-light.png",
+      "status": "SKIP: language pack unavailable",
+      "actual": null,
+      "cer": null,
+      "medianMs": null,
+      "p95Ms": null,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-125-low-contrast.png",
+      "status": "SKIP: language pack unavailable",
+      "actual": null,
+      "cer": null,
+      "medianMs": null,
+      "p95Ms": null,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-150-dark.png",
+      "status": "SKIP: language pack unavailable",
+      "actual": null,
+      "cer": null,
+      "medianMs": null,
+      "p95Ms": null,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-150-light.png",
+      "status": "SKIP: language pack unavailable",
+      "actual": null,
+      "cer": null,
+      "medianMs": null,
+      "p95Ms": null,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-150-low-contrast.png",
+      "status": "SKIP: language pack unavailable",
+      "actual": null,
+      "cer": null,
+      "medianMs": null,
+      "p95Ms": null,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-100-dark.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 20.4547,
+      "p95Ms": 21.4843,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-100-light.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 14.0857,
+      "p95Ms": 23.6686,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-100-low-contrast.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 16.0006,
+      "p95Ms": 22.9521,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-125-dark.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 16.4909,
+      "p95Ms": 19.2432,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-125-light.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 18.1439,
+      "p95Ms": 19.6504,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-125-low-contrast.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 15.5628,
+      "p95Ms": 21.049,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-150-dark.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 26.6239,
+      "p95Ms": 28.1872,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-150-light.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 18.5977,
+      "p95Ms": 20.2885,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-150-low-contrast.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 21.4333,
+      "p95Ms": 23.9001,
+      "maximumCer": 0.15
+    }
+  ]
+}

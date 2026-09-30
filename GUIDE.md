@@ -9,11 +9,15 @@
 | `src/GuGuGaGaTranslator.Core` | 抓屏、配置、OCR 接口、翻译和轮询逻辑；不依赖 NuGet。 |
 | `src/GuGuGaGaTranslator.App` | WPF 主窗口、框选窗口、悬浮层和应用生命周期。 |
 | `src/GuGuGaGaTranslator.Ocr.Rapid` | RapidOCR 适配器。 |
+| `src/GuGuGaGaTranslator.Storage.Sqlite` | 可选、加密且有限容量的磁盘缓存。 |
+| `tools/Benchmark` / `tools/UiPreview` | 固定 OCR 语料及实际 WPF 界面渲染。 |
 | `tools/Probe` | 命令行验证工具。 |
 | `tools/SampleWindow` | 用于抓屏和框选的示例窗口。 |
 | `tools/Installer` | 当前用户范围的安装程序。 |
 
 配置文件位于 `%APPDATA%\GuGuGaGaTranslator\config.json`。升级时请保留未知字段和已有用户配置。
+
+缓存、档案格式、验收及签名的维护说明见 [验证与发布](docs/VERIFICATION.md) 和 [档案格式](docs/PROFILES.md)。缓存密文不提供跨账户迁移；诊断导出必须维护字段白名单，禁止加入请求正文、异常正文或配置文件。
 
 ## 构建和运行
 

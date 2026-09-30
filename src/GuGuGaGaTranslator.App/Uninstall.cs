@@ -48,12 +48,16 @@ internal static class Uninstall
         if (_manifest is null) throw new InvalidOperationException("缺少安装清单。");
         var files = _manifest.Files.Append(InstallationManifest.FileName)
             .Select(file => InstallationManifest.ResolveFile(InstallDirectory, file)).ToArray();
-        var payload = Convert.ToBase64String(Encoding.UTF8.GetBytes(
-            JsonSerializer.Serialize(new { root = InstallDirectory, files, process = Environment.ProcessId })));
-        // Data is base64 JSON, never interpolated as PowerShell source.
+        // Keep the file list out of the Windows command line (limited to 32,767 characters).
+        // The helper reads JSON data; only a bounded, encoded path enters its command line.
+        var payloadPath = Path.Combine(Path.GetTempPath(), "gggt-uninstall-" + Guid.NewGuid().ToString("N") + ".json");
+        File.WriteAllText(payloadPath, JsonSerializer.Serialize(new { root = InstallDirectory, files, process = Environment.ProcessId }));
+        var payload = Convert.ToBase64String(Encoding.UTF8.GetBytes(payloadPath));
         var script = """
             $ErrorActionPreference = 'Stop'
-            $data = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('PAYLOAD')) | ConvertFrom-Json
+            $payloadPath = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('PAYLOAD'))
+            try {
+            $data = [IO.File]::ReadAllText($payloadPath) | ConvertFrom-Json
             Wait-Process -Id $data.process -ErrorAction SilentlyContinue
             $root = [IO.Path]::GetFullPath($data.root).TrimEnd('\')
             if ($root -eq [IO.Path]::GetPathRoot($root).TrimEnd('\')) { exit 1 }
@@ -82,13 +86,18 @@ internal static class Uninstall
                     [IO.Directory]::Delete($dir, $false)
                 }
             }
+            } finally { Remove-Item -LiteralPath $payloadPath -Force -ErrorAction SilentlyContinue }
             """.Replace("PAYLOAD", payload);
         var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
         var powershell = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"WindowsPowerShell\v1.0\powershell.exe");
-        _ = Process.Start(new ProcessStartInfo(powershell, "-NoProfile -NonInteractive -EncodedCommand " + encoded)
+        try
         {
-            WorkingDirectory = Path.GetTempPath(), CreateNoWindow = true,
-            UseShellExecute = false, WindowStyle = ProcessWindowStyle.Hidden,
-        }) ?? throw new InvalidOperationException("无法启动卸载清理进程。");
+            using var process = Process.Start(new ProcessStartInfo(powershell, "-NoProfile -NonInteractive -EncodedCommand " + encoded)
+            {
+                WorkingDirectory = Path.GetTempPath(), CreateNoWindow = true,
+                UseShellExecute = false, WindowStyle = ProcessWindowStyle.Hidden,
+            }) ?? throw new InvalidOperationException("无法启动卸载清理进程。");
+        }
+        catch { File.Delete(payloadPath); throw; }
     }
 }

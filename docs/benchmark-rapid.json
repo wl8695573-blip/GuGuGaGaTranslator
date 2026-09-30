@@ -1,0 +1,255 @@
+{
+  "schemaVersion": 1,
+  "engine": "rapid",
+  "iterations": 3,
+  "initializationMs": 499.1365,
+  "os": "Microsoft Windows NT 10.0.22631.0",
+  "runtime": "10.0.12",
+  "processorCount": 16,
+  "limitations": "Synthetic dialogue, not a real-game compatibility claim. Warmups and model initialization excluded from median/P95. Whitespace ignored; NFKC Unicode normalized. Missing Windows languages are skipped.",
+  "results": [
+    {
+      "file": "en-US-100-dark.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 405.9129,
+      "p95Ms": 416.0917,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "en-US-100-light.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 398.6786,
+      "p95Ms": 443.0022,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "en-US-100-low-contrast.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 378.2235,
+      "p95Ms": 379.552,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "en-US-125-dark.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 368.901,
+      "p95Ms": 438.1472,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "en-US-125-light.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 365.0149,
+      "p95Ms": 427.6647,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "en-US-125-low-contrast.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 385.3168,
+      "p95Ms": 412.4924,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "en-US-150-dark.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 388.4809,
+      "p95Ms": 393.5874,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "en-US-150-light.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 389.969,
+      "p95Ms": 415.7203,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "en-US-150-low-contrast.png",
+      "status": "PASS",
+      "actual": "We will meet again tomorrow.",
+      "cer": 0,
+      "medianMs": 398.3284,
+      "p95Ms": 409.7505,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-100-dark.png",
+      "status": "PASS",
+      "actual": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+      "cer": 0,
+      "medianMs": 378.8657,
+      "p95Ms": 389.6197,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-100-light.png",
+      "status": "PASS",
+      "actual": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+      "cer": 0,
+      "medianMs": 357.505,
+      "p95Ms": 440.4638,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-100-low-contrast.png",
+      "status": "PASS",
+      "actual": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+      "cer": 0,
+      "medianMs": 395.8946,
+      "p95Ms": 418.9183,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-125-dark.png",
+      "status": "PASS",
+      "actual": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+      "cer": 0,
+      "medianMs": 358.3419,
+      "p95Ms": 429.8424,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-125-light.png",
+      "status": "PASS",
+      "actual": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+      "cer": 0,
+      "medianMs": 358.2921,
+      "p95Ms": 390.2036,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-125-low-contrast.png",
+      "status": "PASS",
+      "actual": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+      "cer": 0,
+      "medianMs": 388.0744,
+      "p95Ms": 411.8445,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-150-dark.png",
+      "status": "PASS",
+      "actual": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+      "cer": 0,
+      "medianMs": 380.9293,
+      "p95Ms": 433.4877,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-150-light.png",
+      "status": "PASS",
+      "actual": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+      "cer": 0,
+      "medianMs": 358.8279,
+      "p95Ms": 379.6664,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ja-150-low-contrast.png",
+      "status": "PASS",
+      "actual": "\u660E\u65E5\u3082\u3053\u3053\u3067\u4F1A\u3044\u307E\u3057\u3087\u3046\u3002",
+      "cer": 0,
+      "medianMs": 356.5682,
+      "p95Ms": 409.0627,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-100-dark.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 366.5747,
+      "p95Ms": 429.3202,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-100-light.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 357.8483,
+      "p95Ms": 383.3294,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-100-low-contrast.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 387.1124,
+      "p95Ms": 421.3497,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-125-dark.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 348.2434,
+      "p95Ms": 427.5326,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-125-light.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 354.0497,
+      "p95Ms": 404.6147,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-125-low-contrast.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 356.3213,
+      "p95Ms": 419.9922,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-150-dark.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 393.7148,
+      "p95Ms": 406.5846,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-150-light.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 359.9142,
+      "p95Ms": 397.6632,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "zh-Hans-CN-150-low-contrast.png",
+      "status": "PASS",
+      "actual": "\u660E\u5929\u6211\u4EEC\u8FD8\u4F1A\u5728\u8FD9\u91CC\u89C1\u9762\u3002",
+      "cer": 0,
+      "medianMs": 354.0703,
+      "p95Ms": 414.5953,
+      "maximumCer": 0.15
+    }
+  ]
+}

@@ -49,6 +49,11 @@ public abstract class ClassicApiTranslator : ITranslator, IDisposable
 
     public abstract string DisplayName { get; }
 
+    // Custom endpoints and domain-specific results must not share a persistent cache.
+    private protected string CacheId(string provider, string defaultEndpoint) => provider + ":" +
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+            { endpoint = Endpoint(defaultEndpoint), Options.Domain, Options.AppId })))).ToLowerInvariant();
+
     private protected virtual int MaxCharactersPerRequest => 1000;
 
     /// <summary>Translate one line, splitting it if the provider caps the request length.</summary>
@@ -234,7 +239,7 @@ public sealed class YoudaoTranslator : ClassicApiTranslator
     }
 
     /// <inheritdoc />
-    public override string Id => "youdao";
+    public override string Id => CacheId("youdao", Url);
 
     /// <inheritdoc />
     public override string DisplayName => "有道翻译";
@@ -342,7 +347,7 @@ public sealed class BaiduTranslator : ClassicApiTranslator
     }
 
     /// <inheritdoc />
-    public override string Id => "baidu";
+    public override string Id => CacheId("baidu", Url);
 
     /// <inheritdoc />
     public override string DisplayName => "百度翻译";
@@ -435,7 +440,7 @@ public sealed class CaiyunTranslator : ClassicApiTranslator
     }
 
     /// <inheritdoc />
-    public override string Id => "caiyun";
+    public override string Id => CacheId("caiyun", Url);
 
     /// <inheritdoc />
     public override string DisplayName => "彩云小译";
@@ -443,7 +448,8 @@ public sealed class CaiyunTranslator : ClassicApiTranslator
     /// <inheritdoc />
     private protected override string RequireAccount()
     {
-        var token = string.IsNullOrWhiteSpace(Options.Token) ? Options.AppId.Trim() : Options.Token.Trim();
+        var token = !string.IsNullOrWhiteSpace(Options.AppSecret) ? Options.AppSecret.Trim()
+            : !string.IsNullOrWhiteSpace(Options.Token) ? Options.Token.Trim() : Options.AppId.Trim();
         if (token.Length == 0)
         {
             throw new InvalidOperationException(

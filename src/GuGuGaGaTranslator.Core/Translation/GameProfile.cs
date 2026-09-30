@@ -41,6 +41,11 @@ public sealed class GameProfile
     /// <summary>The name shown in the picker, such as 「边狱巴士 / Limbus Company」.</summary>
     public string Name { get; set; } = string.Empty;
 
+    public string? Author { get; set; }
+    public string? SourceUrl { get; set; }
+    public string? License { get; set; }
+    public string? ProfileVersion { get; set; }
+
     /// <summary>How this profile is recognized: substrings of the game window's title.</summary>
     public List<string> WindowHints { get; set; } = [];
 

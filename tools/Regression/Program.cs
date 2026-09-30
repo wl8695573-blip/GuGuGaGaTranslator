@@ -17,7 +17,7 @@ using GuGuGaGaTranslator.Installation;
 internal static class Program
 {
     private static int _passed;
-    private static void Check(bool condition, string name)
+    internal static void Check(bool condition, string name)
     {
         if (!condition) throw new Exception(name);
         Console.WriteLine("PASS " + name);
@@ -40,6 +40,7 @@ internal static class Program
         Directory.CreateDirectory(scratch);
         try
         {
+            Improvements.CheckAll(scratch);
             var config = new AppConfig();
             config.Translation.Translator = config.Translation.Translator with { ApiKey = "TEST-KEY-ONLY", AppSecret = "TEST-SECRET-ONLY" };
             var store = new ConfigStore(scratch);
@@ -65,7 +66,7 @@ internal static class Program
         SelfWindowMask.Apply(frame, [new Int32Rect(-105, -105, 10, 10)]);
         Check(frame.Bgra[0] == 0 && frame.Bgra[(10 * 32 + 10) * 4] == 255, "mask clips negative-screen coordinates");
         var recognizer = new FakeRecognizer();
-        var session = new AppSession();
+        var session = new AppSession(Path.Combine(Path.GetTempPath(), "gggt-session-" + Guid.NewGuid().ToString("N")));
         typeof(AppSession).GetProperty(nameof(AppSession.Recognizer))!.SetValue(session, recognizer);
         await session.StopAsync();
         Check(recognizer.Disposed, "session disposes OCR");
@@ -73,6 +74,7 @@ internal static class Program
         await LatestWins();
         await TimeoutRecovery();
         await StreamTimeout();
+        await Improvements.CheckApi();
         Console.WriteLine("Passed " + _passed + " regression checks.");
     }
 

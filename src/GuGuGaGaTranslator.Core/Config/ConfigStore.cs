@@ -44,6 +44,7 @@ public sealed class ConfigStore
         {
             var json = File.ReadAllText(FilePath);
             var config = JsonSerializer.Deserialize<AppConfig>(json, Options) ?? new AppConfig();
+            config.NormalizeLanguages();
             var translator = config.Translation.Translator;
             var migrate = (!string.IsNullOrEmpty(translator.ApiKey) && !translator.ApiKey.StartsWith(SecretProtection.Prefix))
                 || (!string.IsNullOrEmpty(translator.AppSecret) && !translator.AppSecret.StartsWith(SecretProtection.Prefix));

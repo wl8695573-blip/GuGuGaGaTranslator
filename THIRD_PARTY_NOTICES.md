@@ -51,6 +51,8 @@ Copy-Item src\GuGuGaGaTranslator.App\Assets\drawn-mascot.png src\GuGuGaGaTransla
 | SkiaSharp / NativeAssets.Win32 | 3.119.1 | MIT；mono/SkiaSharp，原生依赖见包内 THIRD-PARTY-NOTICES |
 | Clipper2 | 2.0.0 | 见随包 NuGet 元数据及上游许可证 |
 | System.Numerics.Tensors | 9.0.0 | MIT；dotnet/runtime |
+| Microsoft.Data.Sqlite / Core | 10.0.12 | MIT；dotnet/efcore，随包 NuGet 许可证 |
+| SQLitePCLRaw / SQLite 原生库 | 以 build-manifest.json 为准 | 随包 NuGet 元数据及许可证；SQLite 为公共领域 |
 | .NET / Windows Desktop Runtime | 发布时的 .NET 10 运行时 | 见随包 LICENSE 与 THIRD-PARTY-NOTICES |
 
 ## 其他第三方内容

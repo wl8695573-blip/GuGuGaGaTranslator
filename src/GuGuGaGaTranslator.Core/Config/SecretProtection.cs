@@ -6,14 +6,14 @@ using System.Text;
 namespace GuGuGaGaTranslator.Core.Config;
 
 /// <summary>Windows DPAPI encryption scoped to the current user.</summary>
-internal static class SecretProtection
+public static class SecretProtection
 {
-    internal const string Prefix = "dpapi:v1:";
+    public const string Prefix = "dpapi:v1:";
 
-    internal static string Protect(string value) =>
+    public static string Protect(string value) =>
         string.IsNullOrEmpty(value) ? value : Prefix + Convert.ToBase64String(Transform(Encoding.UTF8.GetBytes(value), true));
 
-    internal static string Unprotect(string value) =>
+    public static string Unprotect(string value) =>
         value.StartsWith(Prefix, StringComparison.Ordinal)
             ? Encoding.UTF8.GetString(Transform(Convert.FromBase64String(value[Prefix.Length..]), false))
             : value;

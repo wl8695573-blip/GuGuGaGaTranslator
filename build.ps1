@@ -6,10 +6,14 @@ param(
     [switch] $SelfContained,
     [switch] $SingleFile,
     [switch] $Zip,
-    [switch] $Installer
+    [switch] $Installer,
+    [string] $SignCertificateThumbprint = $env:GGGT_SIGN_CERTIFICATE_THUMBPRINT,
+    [string] $TimestampServer = 'https://timestamp.digicert.com',
+    [switch] $RequireSigning
 )
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
+if ($RequireSigning -and -not $SignCertificateThumbprint) { throw 'Signing required, but no certificate configured.' }
 [xml]$props = Get-Content -LiteralPath (Join-Path $root 'Directory.Build.props') -Encoding UTF8
 $version = [string]$props.Project.PropertyGroup.Version
 if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid release version' }
@@ -32,6 +36,11 @@ foreach ($name in @('PP-OCRv6_det_small.onnx','PP-OCRv6_rec_small.onnx','ch_PP-L
 Copy-Item -LiteralPath (Join-Path $root 'models') -Destination (Join-Path $app 'models') -Recurse
 foreach ($document in @('LICENSE','THIRD_PARTY_NOTICES.md','README.md','CHANGELOG.md')) {
     Copy-Item -LiteralPath (Join-Path $root $document) -Destination $app
+}
+Copy-Item -LiteralPath (Join-Path $root 'docs') -Destination $app -Recurse
+New-Item -ItemType Directory -Path (Join-Path $app 'assets') -Force | Out-Null
+foreach ($screenshot in Get-ChildItem -LiteralPath (Join-Path $root 'assets') -Filter 'screenshot-*.png' -File) {
+    Copy-Item -LiteralPath $screenshot.FullName -Destination (Join-Path $app 'assets')
 }
 $licenses = Join-Path $root 'licenses'
 if (Test-Path -LiteralPath $licenses) { Copy-Item -LiteralPath $licenses -Destination $app -Recurse }
@@ -64,6 +73,18 @@ foreach ($packageRoot in $assetData.packageFolders.PSObject.Properties.Name) {
     }
 }
 Write-Host "Published $app"
+& (Join-Path $root 'tools\sign-release.ps1') -Path (Join-Path $app 'GuGuGaGaTranslator.exe') -CertificateThumbprint $SignCertificateThumbprint -TimestampServer $TimestampServer -RequireSigning:$RequireSigning
+$packageList = foreach ($library in $assetData.libraries.PSObject.Properties) {
+    if ($library.Value.type -eq 'package') { [ordered]@{ name = $library.Name; sha512 = $library.Value.sha512 } }
+}
+$modelHashes = foreach ($name in @('PP-OCRv6_det_small.onnx','PP-OCRv6_rec_small.onnx','ch_PP-LCNet_x0_25_textline_ori_cls_mobile.onnx','ppocrv6_small_dict.txt')) {
+    [ordered]@{ file = $name; sha256 = (Get-FileHash -LiteralPath (Join-Path $app "models\v6\$name") -Algorithm SHA256).Hash.ToLowerInvariant() }
+}
+[ordered]@{ schemaVersion = 1; version = $version; runtime = $Runtime; builtAtUtc = [DateTime]::UtcNow.ToString('o');
+    appSha256 = (Get-FileHash -LiteralPath (Join-Path $app 'GuGuGaGaTranslator.exe') -Algorithm SHA256).Hash.ToLowerInvariant();
+    appSignature = [string](Get-AuthenticodeSignature -LiteralPath (Join-Path $app 'GuGuGaGaTranslator.exe')).Status;
+    models = @($modelHashes); packages = @($packageList)
+} | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $app 'build-manifest.json') -Encoding utf8
 if (-not ($Zip -or $Installer)) { return }
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -89,6 +110,7 @@ if ($Installer) {
     $setup = Join-Path $dist "GuGuGaGaTranslator-Setup-$version.exe"
     if (Test-Path -LiteralPath $setup) { throw "Installer already exists: $setup" }
     Copy-Item -LiteralPath (Join-Path $setupOutput 'GuGuGaGaTranslator-Setup.exe') -Destination $setup
+    & (Join-Path $root 'tools\sign-release.ps1') -Path $setup -CertificateThumbprint $SignCertificateThumbprint -TimestampServer $TimestampServer -RequireSigning:$RequireSigning
     $assets += $setup
 }
 $checksums = foreach ($file in $assets) { "{0}  {1}" -f (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant(), [IO.Path]::GetFileName($file) }

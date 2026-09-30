@@ -27,6 +27,7 @@
   <ItemGroup>
     <ProjectReference Include="..\GuGuGaGaTranslator.Core\GuGuGaGaTranslator.Core.csproj" />
     <ProjectReference Include="..\GuGuGaGaTranslator.Ocr.Rapid\GuGuGaGaTranslator.Ocr.Rapid.csproj" />
+    <ProjectReference Include="..\GuGuGaGaTranslator.Storage.Sqlite\GuGuGaGaTranslator.Storage.Sqlite.csproj" />
   </ItemGroup>
 
   <ItemGroup><Compile Include="..\Shared\InstallationManifest.cs" Link="InstallationManifest.cs" /></ItemGroup>

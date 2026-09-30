@@ -3,10 +3,12 @@ using System.Windows;
 using GuGuGaGaTranslator.Core.Imaging;
 using GuGuGaGaTranslator.Core.Capture;
 using GuGuGaGaTranslator.Core.Config;
+using GuGuGaGaTranslator.Core.Diagnostics;
 using GuGuGaGaTranslator.Core.Ocr;
 using GuGuGaGaTranslator.Core.Pipeline;
 using GuGuGaGaTranslator.Core.Translation;
 using GuGuGaGaTranslator.Ocr.Rapid;
+using GuGuGaGaTranslator.Storage.Sqlite;
 
 namespace GuGuGaGaTranslator.App;
 
@@ -23,12 +25,26 @@ public sealed class AppSession : IAsyncDisposable
 
     public ConfigStore Store { get; }
 
-    public AppSession(string? configDirectory = null) => Store = new ConfigStore(configDirectory);
+    public AppSession(string? configDirectory = null)
+    {
+        Store = new ConfigStore(configDirectory);
+        Diagnostics = new DiagnosticsService(Store.Directory);
+        Cache.StorageFailed += _ =>
+        {
+            PersistentCacheAvailable = false;
+            Diagnostics.Record(new DiagnosticEvent { Kind = DiagnosticEventKind.CacheUnavailable });
+            Notice?.Invoke("磁盘缓存暂不可用，已继续使用内存缓存。");
+        };
+    }
 
     public AppConfig Config { get; private set; } = new();
 
     /// <summary>The shared translation cache, kept across start/stop cycles.</summary>
     public TranslationCache Cache { get; } = new();
+    public DiagnosticsService Diagnostics { get; }
+    public bool PersistentCacheAvailable { get; private set; }
+    private (bool Persist, int Days, int Maximum)? _cacheSettings;
+    public string CacheDatabasePath => Path.Combine(Store.Directory, "translations.sqlite");
 
     /// <summary>The running loop, or null when stopped.</summary>
     public TranslationPipeline? Pipeline { get; private set; }
@@ -48,13 +64,54 @@ public sealed class AppSession : IAsyncDisposable
         Config = Store.Load();
         // 旧版本存过韩语/繁体这类现在已经不在界面上的语言:先把配置拉回三语范围内。
         Config.NormalizeLanguages();
+        _languages = new LanguagePair(Config.Translation.From, Config.Translation.To);
+        ConfigureCache();
+        Diagnostics.Record(new DiagnosticEvent { Kind = DiagnosticEventKind.Started });
         if (Store.LastLoadError is { } error)
         {
             Notice?.Invoke($"配置文件无法读取,已回退默认值:{error}");
         }
     }
 
-    public void SaveConfig() => Store.Save(Config);
+    public void SaveConfig()
+    {
+        Store.Save(Config);
+        ConfigureCache();
+    }
+
+    private void ConfigureCache(bool force = false)
+    {
+        var options = Config.Translation.Cache;
+        var settings = (options.Persist, Math.Clamp(options.RetentionDays, 1, 365), Math.Clamp(options.MaximumEntries, 100, 100000));
+        if (!force && _cacheSettings == settings) return;
+        _cacheSettings = settings;
+        PersistentCacheAvailable = false;
+        Cache.ConfigureStorage(null);
+        if (!options.Persist) return;
+        try
+        {
+            Cache.ConfigureStorage(new SqliteTranslationCacheStore(CacheDatabasePath, settings.Item2, settings.Item3));
+            PersistentCacheAvailable = true;
+        }
+        catch (Exception)
+        {
+            Diagnostics.Record(new DiagnosticEvent { Kind = DiagnosticEventKind.CacheUnavailable });
+            Notice?.Invoke("磁盘缓存无法打开，继续使用内存缓存。");
+        }
+    }
+
+    public void ClearCache()
+    {
+        Cache.ConfigureStorage(null);
+        // Only this application's exact cache files are removed, including an abandoned SQLite journal.
+        File.Delete(CacheDatabasePath);
+        File.Delete(CacheDatabasePath + "-journal");
+        ConfigureCache(force: true);
+        Diagnostics.Record(new DiagnosticEvent { Kind = DiagnosticEventKind.CacheCleared });
+        Pipeline?.InvalidateTranslation();
+    }
+
+    public void ExportDiagnostics(string path) => Diagnostics.Export(path, Config, Pipeline?.Stats);
 
     /// <summary>The default directory for evidence dumps, under the user's application data.</summary>
     public static string DefaultDumpDirectory() => Path.Combine(ConfigStore.DefaultDirectory(), "dumps");
@@ -90,13 +147,7 @@ public sealed class AppSession : IAsyncDisposable
         if (window is null || window.IsMinimized || !window.HasClientArea) return null;
 
         var client = window.ClientRect;
-        var x = Math.Clamp(client.X + local.X, client.X, client.X + Math.Max(0, client.Width - 1));
-        var y = Math.Clamp(client.Y + local.Y, client.Y, client.Y + Math.Max(0, client.Height - 1));
-        var width = Math.Min(local.Width, client.X + client.Width - x);
-        var height = Math.Min(local.Height, client.Y + client.Height - y);
-        if (width <= 0 || height <= 0) return null;
-
-        return new Int32Rect(x, y, width, height);
+        return TargetRegionResolver.Resolve(local, client, Config.Target.ReferenceClientWidth, Config.Target.ReferenceClientHeight);
     }
 
     /// <summary>Adopt a window as the target without touching the region it already has; used by「一键框选并翻译」.</summary>
@@ -118,6 +169,8 @@ public sealed class AppSession : IAsyncDisposable
             screenRegion.Y - client.Y,
             screenRegion.Width,
             screenRegion.Height);
+        Config.Target.ReferenceClientWidth = client.Width;
+        Config.Target.ReferenceClientHeight = client.Height;
     }
 
     public void ClearRegion()
@@ -126,6 +179,7 @@ public sealed class AppSession : IAsyncDisposable
         Config.Target.Region = null;
         Config.Target.Identity = null;
         Config.Target.TitleHint = null;
+        Config.Target.ReferenceClientWidth = Config.Target.ReferenceClientHeight = 0;
     }
 
     /// <summary>Start the translation loop, rebuilding the recognizer, translator, and dumper from the current configuration.</summary>
@@ -204,6 +258,7 @@ public sealed class AppSession : IAsyncDisposable
         Pipeline = new TranslationPipeline(settings);
         Pipeline.Updated += update =>
         {
+            Diagnostics.Record(update);
             Remember(update.SourceText);
             Updated?.Invoke(update);
         };
@@ -253,7 +308,7 @@ public sealed class AppSession : IAsyncDisposable
 
     public void InvalidateTranslation()
     {
-        Cache.Clear();
+        Cache.ClearMemory();
         Pipeline?.InvalidateTranslation();
     }
 
@@ -466,5 +521,6 @@ public sealed class AppSession : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         await StopAsync().ConfigureAwait(false);
+        Cache.Dispose();
     }
 }

@@ -17,6 +17,12 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        if (e.Args.Contains("--verify-installation"))
+        {
+            Shutdown(PackageSmoke.Run(e.Args));
+            return;
+        }
+
         // 由安装程序注册的卸载入口:删快捷方式与注册表项,再安排删除自己所在的目录。
         if (e.Args.Any(arg => arg.Equals("--uninstall", StringComparison.OrdinalIgnoreCase)))
         {
@@ -35,7 +41,7 @@ public partial class App : Application
             }
 
 
-            Shutdown();
+            Shutdown(ok ? 0 : 1);
             return;
         }
 

@@ -30,6 +30,10 @@ public sealed class TargetConfig
     /// <summary>The translation region as an offset inside the target's client area, in physical pixels.</summary>
     public RegionRect? Region { get; set; }
 
+    /// <summary>Client size when the region was selected, used to follow window resizing and DPI changes.</summary>
+    public int ReferenceClientWidth { get; set; }
+    public int ReferenceClientHeight { get; set; }
+
     /// <summary><c>screen</c> copies what is visible; <c>printwindow</c> also works while covered.</summary>
     public string CaptureBackend { get; set; } = "screen";
 }
@@ -89,6 +93,16 @@ public sealed class TranslationConfig
 
     /// <summary>How many previous lines travel with each request as context; 0 disables context.</summary>
     public int HistoryLines { get; set; } = 3;
+
+    public TranslationCacheConfig Cache { get; set; } = new();
+}
+
+/// <summary>Disk caching is optional; values are encrypted for the current Windows account.</summary>
+public sealed class TranslationCacheConfig
+{
+    public bool Persist { get; set; }
+    public int RetentionDays { get; set; } = 30;
+    public int MaximumEntries { get; set; } = 10000;
 }
 
 /// <summary>Where the translation panel sits relative to the captured region, which for a visual novel is the dialogue box along the bottom.</summary>
@@ -272,10 +286,8 @@ public static class DefaultLanguagePresets
     /// matched by prefix rather than against the translation list.</summary>
     public static bool IsSupportedOcr(string? language) =>
         !string.IsNullOrWhiteSpace(language)
-        && (language.Equals("auto", StringComparison.OrdinalIgnoreCase)
-            || language.StartsWith("ja", StringComparison.OrdinalIgnoreCase)
-            || language.StartsWith("en", StringComparison.OrdinalIgnoreCase)
-            || language.StartsWith("zh", StringComparison.OrdinalIgnoreCase));
+        && new[] { "auto", "ja", "ja-JP", "en", "en-US", "en-GB", "zh", "zh-CN", "zh-Hans", "zh-Hans-CN", "zh-Hans-SG" }
+            .Contains(language, StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>How often to look, and when a look is worth recognizing.</summary>
@@ -374,13 +386,43 @@ public sealed class AppConfig
     /// 中 / 日 / 英 and nothing else.</summary>
     public void NormalizeLanguages()
     {
+        Target ??= new(); Ocr ??= new(); Translation ??= new(); Overlay ??= new();
+        RegionPicker ??= new(); Hotkeys ??= new(); Pipeline ??= new(); Debug ??= new();
+        Translation.Translator ??= new(); Translation.Cache ??= new();
+        Translation.GameProfiles ??= []; Translation.Glossary ??= [];
+        Translation.GameProfiles.RemoveAll(profile => profile is null);
+        Ocr.Fallbacks ??= []; Overlay.LanguagePresets ??= []; Overlay.Presets ??= [];
+        Overlay.Presets.RemoveAll(preset => preset is null);
+        Ocr.Engine ??= "rapidocr"; Ocr.RapidModelDirectory ??= "";
+        Overlay.FontFamily ??= "Microsoft YaHei UI"; Overlay.TextAlign ??= "left";
+        Debug.DumpDirectory ??= "";
+        Translation.Translator = Translation.Translator with
+        {
+            Provider = Translation.Translator.Provider ?? "mock", BaseUrl = Translation.Translator.BaseUrl ?? "",
+            Model = Translation.Translator.Model ?? "", ApiKey = Translation.Translator.ApiKey ?? "",
+            AppId = Translation.Translator.AppId ?? "", AppSecret = Translation.Translator.AppSecret ?? "",
+            PromptStyle = Translation.Translator.PromptStyle ?? "galgame",
+        };
         if (!DefaultLanguagePresets.IsSupported(Translation.From, allowAuto: true)) Translation.From = "auto";
         if (!DefaultLanguagePresets.IsSupported(Translation.To, allowAuto: false)) Translation.To = "zh-Hans";
         if (!DefaultLanguagePresets.IsSupportedOcr(Ocr.Language)) Ocr.Language = "auto";
         Ocr.Fallbacks = [.. Ocr.Fallbacks.Where(DefaultLanguagePresets.IsSupportedOcr)];
 
+        Translation.Cache.RetentionDays = Math.Clamp(Translation.Cache.RetentionDays, 1, 365);
+        Translation.Cache.MaximumEntries = Math.Clamp(Translation.Cache.MaximumEntries, 100, 100000);
+        foreach (var profile in Translation.GameProfiles)
+        {
+            profile.Id ??= ""; profile.Name ??= "";
+            profile.WindowHints ??= []; profile.WindowHints.RemoveAll(hint => string.IsNullOrWhiteSpace(hint));
+            profile.Terms ??= []; profile.Terms.RemoveAll(term => term is null);
+            foreach (var term in profile.Terms) { term.Source ??= ""; term.Target ??= ""; term.Forbidden ??= []; }
+            if (!string.IsNullOrEmpty(profile.From) && !DefaultLanguagePresets.IsSupported(profile.From, true)) profile.From = null;
+            if (!string.IsNullOrEmpty(profile.To) && !DefaultLanguagePresets.IsSupported(profile.To, false)) profile.To = null;
+            if (!string.IsNullOrEmpty(profile.OcrLanguage) && !DefaultLanguagePresets.IsSupportedOcr(profile.OcrLanguage)) profile.OcrLanguage = null;
+        }
+
         var kept = Overlay.LanguagePresets
-            .Where(preset => DefaultLanguagePresets.IsSupported(preset.From, allowAuto: true)
+            .Where(preset => preset is not null && DefaultLanguagePresets.IsSupported(preset.From, allowAuto: true)
                 && DefaultLanguagePresets.IsSupported(preset.To, allowAuto: false))
             .ToList();
 

@@ -20,10 +20,8 @@ public partial class GameProfileWindow : Window
         new(string.Empty, "跟随主界面 —— 沿用「识别与翻译」里的语言设置"),
         new("auto", LanguageNames.Label("auto")),
         new("ja", LanguageNames.Label("ja")),
-        new("ko", LanguageNames.Label("ko")),
         new("en", LanguageNames.Label("en")),
         new("zh-Hans", LanguageNames.Label("zh-Hans")),
-        new("zh-Hant", LanguageNames.Label("zh-Hant")),
     ];
 
     private static readonly LanguageChoice[] OcrLanguages =
@@ -31,10 +29,8 @@ public partial class GameProfileWindow : Window
         new(string.Empty, "跟随主界面 —— 沿用「识别与翻译」里的识别语言"),
         new("auto", LanguageNames.Label("auto")),
         new("zh-Hans-CN", LanguageNames.Label("zh-Hans-CN")),
-        new("zh-Hant-TW", LanguageNames.Label("zh-Hant-TW")),
         new("ja", LanguageNames.Label("ja")),
         new("en-US", LanguageNames.Label("en-US")),
-        new("ko", LanguageNames.Label("ko")),
     ];
 
     private readonly AppSession _session;
@@ -49,30 +45,12 @@ public partial class GameProfileWindow : Window
         var creating = profile is null;
         _profile = profile is null
             ? new GameProfile { Id = string.Empty }
-            : new GameProfile
-            {
-                Id = profile.Id,
-                Name = profile.Name,
-                Note = profile.Note,
-                WindowHints = [.. profile.WindowHints],
-                From = profile.From,
-                To = profile.To,
-                OcrLanguage = profile.OcrLanguage,
-                Worldview = profile.Worldview,
-                StyleHint = profile.StyleHint,
-                Terms = profile.Terms.Select(term => new GameTerm
-                {
-                    Source = term.Source,
-                    Target = term.Target,
-                    Forbidden = [.. term.Forbidden],
-                    Note = term.Note,
-                }).ToList(),
-            };
+            : GameProfileArchive.Clone(profile);
 
         Title = creating ? "新建游戏档案" : $"游戏档案 · {profile!.Name}";
 
         FromCombo.ItemsSource = Languages;
-        ToCombo.ItemsSource = Languages;
+        ToCombo.ItemsSource = Languages.Where(choice => choice.Value != "auto").ToArray();
         OcrCombo.ItemsSource = OcrLanguages;
 
         NameBox.Text = _profile.Name;
@@ -80,6 +58,12 @@ public partial class GameProfileWindow : Window
         WorldviewBox.Text = _profile.Worldview ?? string.Empty;
         StyleBox.Text = _profile.StyleHint ?? string.Empty;
         TermsBox.Text = _profile.TermsAsText();
+        AuthorBox.Text = _profile.Author ?? "";
+        SourceUrlBox.Text = _profile.SourceUrl ?? "";
+        LicenseBox.Text = _profile.License ?? "";
+        ProfileVersionBox.Text = _profile.ProfileVersion ?? "";
+        GenerateButton.IsEnabled = _session.Config.Translation.Translator.Provider is "openai-compatible" or "openai" or "local";
+        if (!GenerateButton.IsEnabled) GenerateStatus.Text = "当前翻译服务不支持生成术语表；可手动编辑或导入现有档案。";
         GameNameBox.Text = _profile.Name;
         Select(FromCombo, _profile.From);
         Select(ToCombo, _profile.To);
@@ -131,13 +115,9 @@ public partial class GameProfileWindow : Window
         var terms = TermSheet.Parse(TermsBox.Text, out var problems);
         if (problems.Count > 0)
         {
-            var proceed = MessageBox.Show(
-                this,
-                $"术语表里有 {problems.Count} 行读不出来:\n\n{string.Join("\n", problems.Take(6))}\n\n其余 {terms.Count} 条仍然要保存吗?",
-                "术语表",
-                MessageBoxButton.OKCancel,
-                MessageBoxImage.Warning);
-            if (proceed != MessageBoxResult.OK) return false;
+            SaveStatus.Text = $"术语格式有误：{problems[0]}";
+            SaveStatus.ToolTip = string.Join("\n", problems);
+            return false;
         }
 
         _profile.Name = name;
@@ -151,12 +131,23 @@ public partial class GameProfileWindow : Window
         _profile.OcrLanguage = NullIfEmpty(ValueOf(OcrCombo));
         _profile.Worldview = NullIfEmpty(WorldviewBox.Text);
         _profile.StyleHint = NullIfEmpty(StyleBox.Text);
+        _profile.Author = NullIfEmpty(AuthorBox.Text);
+        _profile.SourceUrl = NullIfEmpty(SourceUrlBox.Text);
+        _profile.License = NullIfEmpty(LicenseBox.Text);
+        _profile.ProfileVersion = NullIfEmpty(ProfileVersionBox.Text);
 
         // 改过译名的术语不再保留旧写法作为禁用译法:那会把编辑器上一次的答案判成错误,
         // 把每一句正确的译文都改回去。
         foreach (var term in terms) term.Forbidden.RemoveAll(variant => variant.Equals(term.Target, StringComparison.OrdinalIgnoreCase));
         _profile.Terms = terms;
-
+        var validation = GameProfileArchive.Validate(_profile);
+        if (validation.Count > 0)
+        {
+            SaveStatus.Text = validation[0];
+            SaveStatus.ToolTip = string.Join("\n", validation);
+            return false;
+        }
+        SaveStatus.ToolTip = null;
         return true;
     }
 

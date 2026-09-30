@@ -12,6 +12,7 @@ using GuGuGaGaTranslator.Core.Interop;
 using GuGuGaGaTranslator.Core.Ocr;
 using GuGuGaGaTranslator.Core.Pipeline;
 using GuGuGaGaTranslator.Core.Translation;
+using Microsoft.Win32;
 
 namespace GuGuGaGaTranslator.App;
 
@@ -69,6 +70,9 @@ public partial class MainWindow : Window
     [
         new("mock", "mock —— 只验证链路:不翻译,原样回显原文"),
         new("openai-compatible", "openai-compatible —— AI 模型(DeepSeek / GLM / 本地模型都走这一项)"),
+        new("caiyun", "彩云小译 —— 基础翻译，支持译后术语校正"),
+        new("youdao", "有道翻译 —— 基础翻译，支持译后术语校正"),
+        new("baidu", "百度翻译 —— 基础翻译，支持译后术语校正"),
     ];
 
     /// <summary>Where the translation panel sits relative to the dialogue box.</summary>
@@ -83,7 +87,7 @@ public partial class MainWindow : Window
     private static readonly Choice[] OcrEngines =
     [
         new("rapidocr", "RapidOCR 离线(推荐)—— 自带多语言模型,日/英/中通吃,不用装任何语言包,解压即用;比系统引擎慢一点"),
-        new("windows", "Windows OCR —— 系统自带,快 3–4 倍;但画面上的文字语言必须先装好对应的系统语言包"),
+        new("windows", "Windows OCR —— 系统自带，需对应语言包；耗时取决于区域与语言"),
     ];
 
     /// <summary>Endpoint presets; they only fill the three fields below.</summary>
@@ -91,9 +95,9 @@ public partial class MainWindow : Window
     [
         ("本地 Ollama · 通用模型(离线免费,但口语日译中一般)", "http://127.0.0.1:11434/v1", "qwen2.5:7b-instruct", "galgame"),
         ("本地 Sakura · galgame 专用(离线免费,推荐)", "http://127.0.0.1:11434/v1", "sakura-galtransl:7b", "sakura"),
-        ("DeepSeek 官方 API(付费,极便宜;质量好)", "https://api.deepseek.com", "deepseek-flash", "galgame"),
-        ("智谱 GLM(有免费模型,需自备 Key)", "https://open.bigmodel.cn/api/paas/v4", "glm-4-flash", "galgame"),
-        ("硅基流动 SiliconFlow(部分模型免费,需自备 Key)", "https://api.siliconflow.cn/v1", "Qwen/Qwen2.5-7B-Instruct", "galgame"),
+        ("DeepSeek 官方 API(按量计费)", "https://api.deepseek.com", "deepseek-flash", "galgame"),
+        ("智谱 GLM(需自备 Key)", "https://open.bigmodel.cn/api/paas/v4", "glm-4-flash", "galgame"),
+        ("硅基流动 SiliconFlow(需自备 Key)", "https://api.siliconflow.cn/v1", "Qwen/Qwen2.5-7B-Instruct", "galgame"),
     ];
 
     /// <summary>The instruction formats the translator can speak.</summary>
@@ -107,6 +111,7 @@ public partial class MainWindow : Window
     private OverlayWindow? _overlay;
     private nint _handle;
     private bool _loadingUi;
+    private CancellationTokenSource? _providerTestCancellation;
     private List<HotkeyAction> _actions = [];
     private readonly List<int> _registeredHotkeys = [];
     private readonly List<string> _hotkeyFailures = [];
@@ -143,6 +148,7 @@ public partial class MainWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        _providerTestCancellation?.Cancel();
         // 窗口可能在加载之前就被关掉:那时没有句柄,而 HwndSource.FromHwnd(0) 会抛异常而不是
         // 返回 null —— 启动途中关掉曾因此变成未处理异常(首次运行时设置卡片一度是最后一个窗口)。
         if (_handle != 0)
@@ -465,6 +471,19 @@ public partial class MainWindow : Window
     private void UpdateEngineSummary()
     {
         var provider = ValueOf(ProviderCombo, "mock");
+        var classicProvider = ClassicEngines.ContainsKey(provider);
+        AISettingsPanel.Visibility = classicProvider ? Visibility.Collapsed : Visibility.Visible;
+        ClassicCredentialsPanel.Visibility = classicProvider ? Visibility.Visible : Visibility.Collapsed;
+        ClassicIdPanel.Visibility = provider == "caiyun" ? Visibility.Collapsed : Visibility.Visible;
+        var chatProvider = provider is "openai-compatible" or "openai" or "local";
+        HistoryLinesBox.IsEnabled = chatProvider;
+        TemperatureBox.IsEnabled = chatProvider;
+        GenerateSheetButton.IsEnabled = chatProvider;
+        PreviewPromptButton.IsEnabled = chatProvider;
+        ProviderCapabilitiesText.Text = classicProvider
+            ? "支持：基础翻译、译后术语校正。上下文、世界观、风格提示和 AI 术语生成不适用。"
+            : chatProvider ? "支持：上下文、术语提示、世界观、风格、流式译文和 AI 术语生成。"
+            : "仅回显识别到的原文，用于验证框选与 OCR；不会调用翻译服务。";
         if (provider.Equals("mock", StringComparison.OrdinalIgnoreCase))
         {
             EngineSummary.Text = "当前:不会真正翻译。识别到的原文会被原样加上 [mock …] 前缀显示,用来确认抓屏和识别是否正常。";
@@ -473,16 +492,13 @@ public partial class MainWindow : Window
 
         if (ClassicEngines.TryGetValue(provider, out var classic))
         {
-            // 只有手改配置文件才到得了这里:下拉里已经不再提供这些引擎,因为它们收不到术语表
-            // 和世界观设定;适配器留着给想要快而免费的引擎、并接受这一代价的人。
-            var translator = _session.Config.Translation.Translator;
-            var appId = translator.AppId;
-            var secret = translator.AppSecret;
+            var appId = ClassicIdBox.Text.Trim();
+            var secret = ClassicSecretBox.Password;
 
-            EngineSummary.Text = $"当前:{classic.Name} —— 每句话直接发给它的官方接口,配置来自 config.json:"
+            EngineSummary.Text = $"当前:{classic.Name} —— 每句话直接发给它的官方接口："
                 + (classic.NeedsAppId
                     ? $"应用 ID {Mask(appId)} / 密钥 {Mask(secret)}"
-                    : $"令牌 {Mask(string.IsNullOrWhiteSpace(secret) ? appId : secret)}")
+                    : $"令牌 {Mask(secret)}")
                 + "。这类接口收不到术语表和世界观(协议里没有提示词这一层),译名只能靠「游戏模式」的「禁止译法」在译文落地前改回。";
             return;
         }
@@ -552,6 +568,11 @@ public partial class MainWindow : Window
         BaseUrlBox.Text = config.Translation.Translator.BaseUrl;
         ModelBox.Text = config.Translation.Translator.Model;
         ApiKeyBox.Password = config.Translation.Translator.ApiKey;
+        ClassicIdBox.Text = config.Translation.Translator.AppId;
+        ClassicSecretBox.Password = config.Translation.Translator.AppSecret;
+        if (config.Translation.Translator.Provider == "caiyun" && string.IsNullOrEmpty(ClassicSecretBox.Password))
+            ClassicSecretBox.Password = string.IsNullOrEmpty(config.Translation.Translator.ApiKey)
+                ? config.Translation.Translator.AppId : config.Translation.Translator.ApiKey;
         TimeoutBox.Text = Text(config.Translation.Translator.TimeoutSeconds);
         TemperatureBox.Text = Text(config.Translation.Translator.Temperature);
         SelectByValue(PromptStyleCombo, config.Translation.Translator.PromptStyle);
@@ -587,6 +608,10 @@ public partial class MainWindow : Window
         PollIntervalBox.Text = Text(config.Pipeline.PollIntervalMs);
         ChangeThresholdBox.Text = Text(config.Pipeline.ChangeThresholdBits);
         ForceRefreshBox.Text = Text(config.Pipeline.ForceRefreshMs);
+        PersistentCacheCheck.IsChecked = config.Translation.Cache.Persist;
+        UpdateCacheStatus();
+        CacheRetentionBox.Text = Text(config.Translation.Cache.RetentionDays);
+        CacheCapacityBox.Text = Text(config.Translation.Cache.MaximumEntries);
 
         GameProfileCombo.ItemsSource = ProfileChoices();
         SelectByValue(GameProfileCombo, config.Translation.ActiveProfile);
@@ -611,12 +636,16 @@ public partial class MainWindow : Window
 
         config.Translation.From = ValueOf(FromCombo, "ja");
         config.Translation.To = ValueOf(ToCombo, "zh-Hans");
+        var provider = ValueOf(ProviderCombo, "mock");
+        var classic = ClassicEngines.ContainsKey(provider);
         config.Translation.Translator = config.Translation.Translator with
         {
-            Provider = ValueOf(ProviderCombo, "mock"),
+            Provider = provider,
             BaseUrl = BaseUrlBox.Text.Trim(),
             Model = ModelBox.Text.Trim(),
-            ApiKey = ApiKeyBox.Password,
+            ApiKey = classic ? "" : ApiKeyBox.Password,
+            AppId = ClassicIdBox.Text.Trim(),
+            AppSecret = ClassicSecretBox.Password,
             TimeoutSeconds = (int)Number(TimeoutBox.Text, config.Translation.Translator.TimeoutSeconds),
             Temperature = Number(TemperatureBox.Text, config.Translation.Translator.Temperature),
             PromptStyle = ValueOf(PromptStyleCombo, "galgame"),
@@ -624,6 +653,9 @@ public partial class MainWindow : Window
         config.Translation.HistoryLines = Math.Clamp((int)Number(HistoryLinesBox.Text, config.Translation.HistoryLines), 0, 12);
         config.Translation.AutoDetectProfile = AutoProfileCheck.IsChecked == true;
         config.Translation.EnforceTerms = EnforceTermsCheck.IsChecked == true;
+        config.Translation.Cache.Persist = PersistentCacheCheck.IsChecked == true;
+        config.Translation.Cache.RetentionDays = Math.Clamp((int)Number(CacheRetentionBox.Text, config.Translation.Cache.RetentionDays), 1, 365);
+        config.Translation.Cache.MaximumEntries = Math.Clamp((int)Number(CacheCapacityBox.Text, config.Translation.Cache.MaximumEntries), 100, 100000);
 
         config.Overlay.Placement = ValueOf(PlacementCombo, OverlayPlacement.Below);
         config.Overlay.ShowPanel = ShowPanelCheck.IsChecked == true;
@@ -1032,8 +1064,7 @@ public partial class MainWindow : Window
 
         OnNotice(exclude
             ? "翻译框已重新对录屏/截图隐藏。若它盖住了识别区域,现在起会重新读到游戏原文。"
-            : "翻译框已允许被录屏/截图拍到,现在可以连翻译一起截图了。注意:若翻译框盖住识别区域,"
-                + "程序可能把自己的译文当成原文读到 —— 录完记得勾回去。");
+            : "翻译框已允许被录屏/截图拍到。屏幕抓取时会在 OCR 前遮罩自身窗口；请保持调试配置中的 maskOwnWindows 开启。");
     }
 
     /// <summary>Remember whether framing hides this tool's own windows; the picker has the same switch, so the
@@ -1122,6 +1153,42 @@ public partial class MainWindow : Window
     }
 
     private void OnNewGameProfile(object sender, RoutedEventArgs e) => OpenProfileEditor(null);
+
+    private void OnImportProfile(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog { Filter = "GuGuGaGa 游戏档案 (*.ggprofile.json)|*.ggprofile.json|JSON 文件 (*.json)|*.json" };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            var profile = GameProfileArchive.Read(dialog.FileName);
+            profile.Id = ""; // Open as a new copy; never silently replace an existing profile.
+            OpenProfileEditor(profile);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        { OnNotice("档案导入失败：" + error.Message); }
+    }
+
+    private void OnExportProfile(object sender, RoutedEventArgs e)
+    {
+        if (_session.ActiveProfile is not { } profile) { OnNotice("请先选择要导出的游戏档案。"); return; }
+        var dialog = new SaveFileDialog
+        {
+            Filter = "GuGuGaGa 游戏档案 (*.ggprofile.json)|*.ggprofile.json", DefaultExt = ".ggprofile.json",
+            FileName = GameProfiles.MakeId(profile.Name, []) + ".ggprofile.json",
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try
+        {
+            var path = Path.GetFullPath(dialog.FileName);
+            var configRoot = Path.GetFullPath(_session.Store.Directory) + Path.DirectorySeparatorChar;
+            if (path.StartsWith(configRoot, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("请把档案导出到配置目录之外。");
+            GameProfileArchive.Write(path, profile);
+            OnNotice("档案已导出（仅作品设定和术语，不含密钥）。");
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException)
+        { OnNotice("档案导出失败：" + error.Message); }
+    }
 
     /// <summary>Open a new profile and start term-sheet generation.</summary>
     private void OnGenerateTermSheet(object sender, RoutedEventArgs e) => OpenProfileEditor(null, generate: true);
@@ -1280,6 +1347,7 @@ public partial class MainWindow : Window
     private void OnClearApiKey(object sender, RoutedEventArgs e)
     {
         ApiKeyBox.Password = "";
+        ClassicSecretBox.Password = "";
         _session.Config.Translation.Translator = _session.Config.Translation.Translator with { ApiKey = "", AppSecret = "" };
         _session.SaveConfig();
         OnNotice("已删除保存的密钥。停止并重新开始翻译后生效。");
@@ -1287,6 +1355,15 @@ public partial class MainWindow : Window
 
     private void OnGetApiKey(object sender, RoutedEventArgs e)
     {
+        var provider = ValueOf(ProviderCombo, "mock");
+        var classicUrl = provider switch
+        {
+            "caiyun" => "https://platform.caiyunapp.com/",
+            "youdao" => "https://ai.youdao.com/",
+            "baidu" => "https://fanyi-api.baidu.com/",
+            _ => "",
+        };
+        if (classicUrl.Length > 0) { OpenExternal(classicUrl, "获取 API Key"); return; }
         var baseUrl = BaseUrlBox.Text.Trim();
         var url = baseUrl.Contains("api.deepseek.com", StringComparison.OrdinalIgnoreCase) ? "https://platform.deepseek.com/"
             : baseUrl.Contains("bigmodel.cn", StringComparison.OrdinalIgnoreCase) ? "https://open.bigmodel.cn/"
@@ -1331,6 +1408,8 @@ public partial class MainWindow : Window
         var provider = ValueOf(ProviderCombo, "mock");
         if (ClassicEngines.ContainsKey(provider))
         {
+            ClassicIdBox.Clear();
+            ClassicSecretBox.Clear();
             UpdateEngineSummary();
             return;
         }
@@ -1350,8 +1429,47 @@ public partial class MainWindow : Window
 
     private void OnClearCache(object sender, RoutedEventArgs e)
     {
-        _session.InvalidateTranslation();
-        OnNotice($"翻译缓存已清空(命中 {_session.Cache.Hits} 次 / 未命中 {_session.Cache.Misses} 次)。");
+        try { _session.ClearCache(); OnNotice("已删除内存和磁盘翻译缓存。"); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+        { OnNotice("缓存删除未完成：" + error.Message); }
+    }
+
+    private void OnExportDiagnostics(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SaveFileDialog
+        {
+            Filter = "诊断 ZIP (*.zip)|*.zip", DefaultExt = ".zip",
+            FileName = "GuGuGaGaTranslator-diagnostics-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".zip",
+        };
+        if (dialog.ShowDialog(this) != true) return;
+        try { _session.ExportDiagnostics(dialog.FileName); OnNotice("诊断包已导出。你可以自行查看并附到问题反馈中。"); }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException)
+        { OnNotice("诊断包导出失败：" + error.Message); }
+    }
+
+    private async void OnTestProvider(object sender, RoutedEventArgs e)
+    {
+        ReadUiIntoConfig();
+        TestProviderButton.IsEnabled = false;
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(Math.Clamp(_session.Config.Translation.Translator.TimeoutSeconds, 1, 120)));
+        _providerTestCancellation = cancellation;
+        ITranslator? translator = null;
+        try
+        {
+            translator = TranslatorFactory.Create(_session.Config.Translation.Translator);
+            var language = _session.Config.Translation.From;
+            var text = GameProfiles.LanguageOf(language) switch { "ja" => "こんにちは。", "zh" => "你好。", _ => "Hello." };
+            await translator.TranslateAsync(new() { Text = text, From = language, To = _session.Config.Translation.To }, cancellation.Token);
+            if (IsLoaded) OnNotice(translator is MockTranslator ? "预览引擎正常；未调用翻译服务。" : "服务连接测试成功。");
+        }
+        catch (OperationCanceledException) { if (IsLoaded) OnNotice("连接测试已取消或超时。"); }
+        catch (Exception error) { if (IsLoaded) OnNotice("连接测试失败：" + error.Message); }
+        finally
+        {
+            if (translator is IDisposable disposable) disposable.Dispose();
+            _providerTestCancellation = null;
+            TestProviderButton.IsEnabled = true;
+        }
     }
 
     private void OnOpenDumpDirectory(object sender, RoutedEventArgs e) =>
@@ -1430,8 +1548,17 @@ public partial class MainWindow : Window
         _ => update.Status.ToString(),
     };
 
-    private void OnNotice(string message) =>
-        Dispatcher.Invoke(() => StatusText.Text = message);
+    private void OnNotice(string message)
+    {
+        if (Dispatcher.HasShutdownStarted) return;
+        void Apply() { StatusText.Text = message; UpdateCacheStatus(); }
+        if (Dispatcher.CheckAccess()) Apply();
+        else Dispatcher.BeginInvoke(Apply);
+    }
+
+    private void UpdateCacheStatus() => CacheStatusText.Text = _session.PersistentCacheAvailable
+        ? "当前：磁盘缓存可用（Windows 当前账户加密）。"
+        : _session.Config.Translation.Cache.Persist ? "当前：磁盘缓存不可用，已回退内存缓存。" : "当前：仅使用内存缓存。";
 
     private static string Text(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 

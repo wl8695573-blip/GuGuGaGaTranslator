@@ -3,8 +3,12 @@
     <Project Path="src/GuGuGaGaTranslator.App/GuGuGaGaTranslator.App.csproj" />
     <Project Path="src/GuGuGaGaTranslator.Core/GuGuGaGaTranslator.Core.csproj" />
     <Project Path="src/GuGuGaGaTranslator.Ocr.Rapid/GuGuGaGaTranslator.Ocr.Rapid.csproj" />
+    <Project Path="src/GuGuGaGaTranslator.Storage.Sqlite/GuGuGaGaTranslator.Storage.Sqlite.csproj" />
   </Folder>
   <Folder Name="/tools/">
+    <Project Path="tools/Benchmark/Benchmark.csproj" />
+    <Project Path="tools/Regression/Regression.csproj" />
+    <Project Path="tools/UiPreview/UiPreview.csproj" />
     <Project Path="tools/Icon/Icon.csproj" />
     <Project Path="tools/Probe/Probe.csproj" />
     <Project Path="tools/SampleWindow/SampleWindow.csproj" />
