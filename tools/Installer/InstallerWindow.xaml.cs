@@ -205,24 +205,13 @@ public partial class InstallerWindow : Window
         return root ?? string.Empty;
     }
 
-    /// <summary>Write a .lnk through the shell's own shortcut object.</summary>
+    /// <summary>Write a Unicode .lnk through the native Shell link interface.</summary>
     /// <param name="shortcutPath">Where the shortcut goes.</param>
     /// <param name="target">The executable it points at.</param>
     /// <param name="workingDirectory">Working directory for the target.</param>
     private static void CreateShortcut(string shortcutPath, string target, string workingDirectory)
     {
-        // Fresh Windows accounts and CI images may not have a per-user Programs folder yet.
-        Directory.CreateDirectory(Path.GetDirectoryName(shortcutPath)!);
-        var shellType = Type.GetTypeFromProgID("WScript.Shell")
-            ?? throw new InvalidOperationException("系统里没有 WScript.Shell,无法创建快捷方式。");
-
-        dynamic shell = Activator.CreateInstance(shellType)!;
-        dynamic link = shell.CreateShortcut(shortcutPath);
-        link.TargetPath = target;
-        link.WorkingDirectory = workingDirectory;
-        link.IconLocation = target;
-        link.Description = "屏幕实时翻译";
-        link.Save();
+        WindowsShortcut.Write(shortcutPath, target, workingDirectory);
     }
 
     /// <summary>Register the Programs-and-features entry, whose uninstall command is the app itself.</summary>
