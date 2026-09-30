@@ -30,9 +30,15 @@ $savedShortcuts = @{}
 foreach ($path in $shortcutPaths) { if (Test-Path -LiteralPath $path) { $savedShortcuts[$path] = [IO.File]::ReadAllBytes($path) } }
 New-Item -ItemType Directory -Path $installDir,$configDir -Force | Out-Null
 function Run-Checked([string] $Exe, [string] $Arguments, [int] $Expected = 0) {
-    $process = Start-Process -FilePath $Exe -ArgumentList $Arguments -WindowStyle Hidden -PassThru
+    $runId = [guid]::NewGuid().ToString('N')
+    $stdout = Join-Path $sandbox ($runId + '-stdout.txt')
+    $stderr = Join-Path $sandbox ($runId + '-stderr.txt')
+    $process = Start-Process -FilePath $Exe -ArgumentList $Arguments -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     if (-not $process.WaitForExit(60000)) { $process.Kill(); throw "Process did not finish: $Exe" }
-    if ($process.ExitCode -ne $Expected) { throw "Unexpected exit code $($process.ExitCode): $Exe" }
+    if ($process.ExitCode -ne $Expected) {
+        $details = Get-Content -LiteralPath $stderr -Raw
+        throw "Unexpected exit code $($process.ExitCode): $Exe`n$details"
+    }
 }
 try {
     $blocked = Join-Path $sandbox 'occupied'

@@ -30,6 +30,8 @@ jobs:
         if: always()
         with:
           name: package-acceptance
+          include-hidden-files: true
           path: |
             dist/*
             .artifacts/verify-*/*.json
+            .artifacts/verify-*/*.txt

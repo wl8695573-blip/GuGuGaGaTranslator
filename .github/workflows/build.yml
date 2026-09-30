@@ -17,6 +17,7 @@ jobs:
         if: always()
         with:
           name: verification-evidence
+          include-hidden-files: true
           path: |
             .artifacts/benchmark-rapid
             .artifacts/ui/*.png

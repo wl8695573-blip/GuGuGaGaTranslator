@@ -211,6 +211,8 @@ public partial class InstallerWindow : Window
     /// <param name="workingDirectory">Working directory for the target.</param>
     private static void CreateShortcut(string shortcutPath, string target, string workingDirectory)
     {
+        // Fresh Windows accounts and CI images may not have a per-user Programs folder yet.
+        Directory.CreateDirectory(Path.GetDirectoryName(shortcutPath)!);
         var shellType = Type.GetTypeFromProgID("WScript.Shell")
             ?? throw new InvalidOperationException("系统里没有 WScript.Shell,无法创建快捷方式。");
 
