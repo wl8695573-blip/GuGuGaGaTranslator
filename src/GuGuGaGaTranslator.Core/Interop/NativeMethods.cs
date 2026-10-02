@@ -222,4 +222,20 @@ internal static class NativeMethods
     internal const int SmYVirtualScreen = 77;
     internal const int SmCxVirtualScreen = 78;
     internal const int SmCyVirtualScreen = 79;
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct MONITORINFO
+    {
+        public int Size;
+        public RECT Monitor;
+        public RECT Work;
+        public uint Flags;
+    }
+
+    [DllImport("user32.dll")]
+    internal static extern nint MonitorFromRect(in RECT rect, uint flags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool GetMonitorInfoW(nint monitor, ref MONITORINFO info);
 }

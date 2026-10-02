@@ -160,6 +160,7 @@ public sealed record PipelineSettings
     public required ITextRecognizer Recognizer { get; init; }
 
     public Func<Int32Rect, Frame>? Capture { get; init; }
+    public Func<Int32Rect, CancellationToken, Task<Frame>>? CaptureAsync { get; init; }
 
     public Func<nint>? TargetHandle { get; init; }
 
@@ -367,7 +368,9 @@ public sealed class TranslationPipeline : IAsyncDisposable
             _lastRegion = region;
         }
         var revision = Interlocked.Read(ref _revision);
-        var frame = _settings.Capture?.Invoke(region.Value) ?? ScreenCapture.CaptureScreenRegion(region.Value);
+        var frame = _settings.CaptureAsync is { } captureAsync
+            ? await captureAsync(region.Value, cancellationToken).ConfigureAwait(false)
+            : _settings.Capture?.Invoke(region.Value) ?? ScreenCapture.CaptureScreenRegion(region.Value);
         // 先抹掉自己的窗口再判断画面有没有变:否则语言条上的按钮高亮、翻译框里换了一句话,
         // 都会被当成「游戏画面变了」而触发一次多余的识别。
         if (_options.MaskOwnWindows && _settings.IsScreenCapture)

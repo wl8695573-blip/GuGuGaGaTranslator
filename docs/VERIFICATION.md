@@ -11,6 +11,14 @@ dotnet run --project tools/UiPreview -c Release -- .artifacts/ui
 dotnet run --project tools/InteractionChecks -c Release -- .artifacts/interactions
 ```
 
+在具有交互桌面的 Windows 本机追加窗口捕获与完整流程检查：
+
+```powershell
+dotnet run --project tools/InteractionChecks -c Release -- .artifacts/interactions --capture
+```
+
+`--capture` 会显示临时合成窗口，并使用独立配置和 mock 翻译，不读取现有配置、不调用在线服务。GitHub Actions 默认执行不抓屏的交互检查。
+
 ## OCR 样本与指标
 
 `tools/Benchmark/fixtures` 已提交 27 张固定 PNG：中、日、英 × 100%/125%/150% × 深底/浅底/低对比度。台词为项目原创合成例句，使用 Microsoft YaHei UI 渲染。重建样本使用 `--generate`，常规回归直接读取固定图片。
@@ -19,20 +27,22 @@ dotnet run --project tools/InteractionChecks -c Release -- .artifacts/interactio
 
 报告写入 `.artifacts/benchmark-rapid` 或 `.artifacts/benchmark-windows`，含 JSON、Markdown、系统/.NET/逻辑处理器数。可指定 `--fixtures`、`--models`、`--iterations`、`--output` 使用本地语料，清单字段与固定 corpus 一致。自备真实游戏样本应具有可分享的授权，并避免包含用户隐私。
 
-## 本次本机记录（2026-09-30）
+## 本次本机记录（1.3.2，2026-10-02）
 
 | 项目 | 结果 | 限制 |
 |---|---|---|
 | Release 编译 | 0 警告、0 错误 | Windows 11 / .NET 10.0.401 SDK |
 | 回归 | 54 项通过 | 包括加密、TTL/LRU、损坏数据回退、隐私、档案冲突、取消、超时和服务商扩展参数 |
-| RapidOCR | 27/27 通过，CER 0%，每例中位约 358–589 ms | CPU、短边目标 320、3 次/例；合成样本 |
-| Windows OCR | 18/18 可用样本通过，CER 0%，中位约 6–22 ms；日语 9 例 SKIP | 本机缺少日语 OCR 功能 |
+| RapidOCR | 27/27 通过，CER 0%，每例中位约 268–335 ms | CPU、短边目标 320、3 次/例；合成样本 |
+| Windows OCR | 18/18 可用样本通过，CER 0%，中位约 5–20 ms；日语 9 例 SKIP | 本机缺少日语 OCR 功能 |
 | 区域坐标 | 100/125/150/200% 比例、负坐标、边界与旧配置通过 | 纯坐标检查，不是多显示器实机验收 |
 | WPF 界面 | 主界面、设置、服务、缓存、档案与悬浮层已渲染检查；首次设置保留自定义值、切换服务清除密钥通过 | 880×520 最小内容区域及 150% 像素输出；不显示桌面窗口 |
-| 交互（1.3.1） | 45 项通过：两个真实模态菜单的选择、Esc、失焦、关闭及关闭期间再次失焦；档案切换和运行中七种语言预设 | 菜单置于屏幕外；隔离配置、mock 翻译，无实际抓屏或在线请求 |
+| 交互（1.3.2） | 86 项通过：原有菜单和语言切换、外观预设、控制条拖动与关闭、重启、长内容滚动、配置迁移、遮挡捕获、窗口移动/缩放/关闭 | 默认 69 项；额外 17 项通过 `--capture` 使用本机临时测试窗口、实际 RapidOCR 与 mock 翻译；无在线请求 |
 | 包与安装 | SHA256/模型哈希、安装、升级、卸载保留用户文件、便携包自检与拒绝卸载通过 | 中文与空格路径；验收包未签名 |
 
-真实游戏、混合 DPI 显示器移动、独占全屏、硬件加速抓屏、PrintWindow 兼容性和有凭据的在线翻译，仍需按目标环境验收。请把版本、引擎、缩放、窗口模式、实际现象和诊断 ZIP 附到反馈中。当前结论没有覆盖这些环境。
+窗口捕获检查包含完全覆盖目标窗口、译文与原文重叠、允许录屏显示译文、目标窗口移动/缩放与关闭；完整流程检查从实际窗口捕获到主界面和悬浮层更新，并测试运行中切换四种外观预设、关闭与重启。测试使用合成英文窗口，未调用收费接口。
+
+真实游戏、混合 DPI 显示器移动、独占全屏、不同显卡的硬件加速抓屏、PrintWindow 兼容性和有凭据的在线翻译，仍需按目标环境验收。请把版本、引擎、缩放、窗口模式、实际现象和诊断 ZIP 附到反馈中。当前结论没有覆盖这些环境。
 
 ## 完整包验收
 
@@ -45,7 +55,7 @@ dotnet run --project tools/InteractionChecks -c Release -- .artifacts/interactio
 
 独立自检命令：`GuGuGaGaTranslator.exe --config-dir <测试目录> --verify-installation <报告.json>`。不捕获桌面、不请求翻译服务、不显示窗口，结果通过退出码和 JSON 提供。
 
-推送/PR 的 `build.yml` 执行回归、OCR、WPF 预览和模态菜单交互；`package.yml` 对相关 PR 或手动触发执行完整包验收并上传证据，默认生成未签名验收包。
+推送/PR 的 `build.yml` 执行回归、OCR、WPF 预览和 69 项交互检查；`package.yml` 对相关 PR 或手动触发执行完整包验收并上传证据，默认生成未签名验收包。
 
 ## 正式签名
 

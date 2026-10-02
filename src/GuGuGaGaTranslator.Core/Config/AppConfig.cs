@@ -32,8 +32,9 @@ public sealed class TargetConfig
     public int ReferenceClientWidth { get; set; }
     public int ReferenceClientHeight { get; set; }
 
-    /// <summary>screen 抓取可见屏幕；printwindow 的遮挡兼容性取决于目标程序。</summary>
-    public string CaptureBackend { get; set; } = "screen";
+    /// <summary>window 读取目标窗口合成画面；screen 读取可见屏幕；printwindow 为兼容后端。</summary>
+    public string CaptureBackend { get; set; } = "window";
+    public int CaptureSettingsVersion { get; set; }
 }
 
 /// <summary>How images are prepared and read.</summary>
@@ -387,6 +388,15 @@ public sealed class AppConfig
         Hotkeys ??= new();
         Pipeline ??= new();
         Debug ??= new();
+        // 旧版默认屏幕捕获会读到遮挡物，首次升级改用窗口捕获；之后保留手动选择。
+        if (Target.CaptureSettingsVersion < 1)
+        {
+            if (Target.CaptureBackend is "screen" or null)
+                Target.CaptureBackend = "window";
+            Target.CaptureSettingsVersion = 1;
+        }
+        if (Target.CaptureBackend is not ("window" or "screen" or "printwindow"))
+            Target.CaptureBackend = "window";
         Translation.Translator ??= new();
         Translation.Cache ??= new();
         Translation.GameProfiles ??= [];

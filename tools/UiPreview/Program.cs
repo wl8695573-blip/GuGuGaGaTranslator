@@ -80,6 +80,11 @@ internal static class Program
             ((TextBlock)typeof(OverlayWindow).GetField("_sourceText", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(overlay)!).Text = "明日もここで会いましょう。";
             ((TextBlock)typeof(OverlayWindow).GetField("_translationText", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(overlay)!).Text = "明天我们还在这里见面吧。";
             Render((FrameworkElement)overlay.Content, 650, 130, Path.Combine(output, "screenshot-overlay.png"));
+            var bar = new LanguageBarWindow();
+            bar.Configure(DefaultLanguagePresets.Create(), new LanguagePair("auto", "zh-Hans"), false, false, true, "边狱巴士");
+            var barContent = (FrameworkElement)bar.Content;
+            barContent.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            Render(barContent, barContent.DesiredSize.Width, barContent.DesiredSize.Height, Path.Combine(output, "screenshot-bar.png"));
             // Exercise narrow layouts and larger pixel output using the same controls.
             Render((FrameworkElement)main.Content, 880, 520, Path.Combine(output, "screenshot-minimum.png"), 1.5);
             var editor = new GameProfileWindow(session, session.Config.Translation.GameProfiles[0]);

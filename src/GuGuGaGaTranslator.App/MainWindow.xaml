@@ -88,6 +88,9 @@
           <StackPanel Margin="12">
 
             <TextBlock Text="识别" Style="{StaticResource SectionText}" />
+            <TextBlock Text="画面捕获方式" Style="{StaticResource FieldLabel}" />
+            <ComboBox x:Name="CaptureBackendCombo" />
+            <TextBlock Style="{StaticResource HintText}" Text="窗口捕获可读取被翻译框或其他窗口遮挡的内容。兼容模式需保持选区可见；切换后点击保存。" />
             <TextBlock Text="识别引擎" Style="{StaticResource FieldLabel}" />
             <ComboBox x:Name="OcrEngineCombo" SelectionChanged="OnOcrEngineChanged" />
             <TextBlock x:Name="OcrEngineSummary" Style="{StaticResource HintText}" />
@@ -305,8 +308,9 @@
             <CheckBox x:Name="ShowPanelCheck" Content="显示翻译框底框(关掉只剩带描边的文字)" />
             <CheckBox x:Name="ShowSourceCheck" Content="同时显示识别到的原文" />
             <CheckBox x:Name="TextOutlineCheck" Content="文字描边(底框关掉后靠它保证可读)" />
-            <CheckBox x:Name="ClickThroughCheck" Content="鼠标穿透(关闭后才能拖动悬浮层)" />
+            <CheckBox x:Name="ClickThroughCheck" Content="翻译框鼠标穿透（控制条的拖动柄始终可用）" />
             <CheckBox x:Name="LanguageBarCheck" Content="在悬浮层上方显示语言切换条" />
+            <TextBlock Style="{StaticResource HintText}" Text="拖动控制条左端的柄可移动整组悬浮层；点击右端 × 关闭并停止翻译。长译文可在编辑模式下滚动查看。" />
             <CheckBox x:Name="ExcludeFromCaptureCheck" Content="翻译框不被录屏/截图拍到(想录下翻译过程就取消勾选)"
                       Checked="OnExcludeFromCaptureChanged" Unchecked="OnExcludeFromCaptureChanged" />
             <Separator Margin="0,8,0,8" />

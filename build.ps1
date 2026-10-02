@@ -34,7 +34,7 @@ foreach ($name in @('PP-OCRv6_det_small.onnx','PP-OCRv6_rec_small.onnx','ch_PP-L
     if (-not (Test-Path -LiteralPath (Join-Path $root "models\v6\$name"))) { throw "Missing OCR model: $name" }
 }
 Copy-Item -LiteralPath (Join-Path $root 'models') -Destination (Join-Path $app 'models') -Recurse
-foreach ($document in @('LICENSE','THIRD_PARTY_NOTICES.md','README.md','GUIDE.md','CHANGELOG.md')) {
+foreach ($document in @('LICENSE','THIRD_PARTY_NOTICES.md','README.md','GUIDE.md','CHANGELOG.md','CONTRIBUTING.md')) {
     Copy-Item -LiteralPath (Join-Path $root $document) -Destination $app
 }
 Copy-Item -LiteralPath (Join-Path $root 'docs') -Destination $app -Recurse
