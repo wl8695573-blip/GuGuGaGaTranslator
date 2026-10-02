@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -26,6 +27,16 @@ public sealed class LanguageBarWindow : Window
     private bool _showSource;
     private bool _showPanel = true;
     private LanguagePreset? _primaryPreset;
+    private bool _allowClose;
+    private bool _closePending;
+    private readonly Thumb _dragHandle = new()
+    {
+        Width = 24,
+        Height = 26,
+        Cursor = Cursors.SizeAll,
+        Background = Brushes.Transparent,
+        ToolTip = "拖动控制条和翻译框",
+    };
 
     /// <summary>Whether this bar stays out of screen capture; set by the overlay from the configuration.</summary>
     public bool CaptureExcluded { get; set; } = true;
@@ -64,6 +75,21 @@ public sealed class LanguageBarWindow : Window
 
         _profile = MakeButton("通用", onClick: () => ProfileRequested?.Invoke());
 
+        var gripText = new FrameworkElementFactory(typeof(TextBlock));
+        gripText.SetValue(TextBlock.TextProperty, "⠿");
+        gripText.SetValue(TextBlock.FontSizeProperty, 22.0);
+        gripText.SetValue(TextBlock.ForegroundProperty, Brushes.White);
+        gripText.SetValue(TextBlock.BackgroundProperty, Brushes.Transparent);
+        gripText.SetValue(TextBlock.TextAlignmentProperty, TextAlignment.Center);
+        _dragHandle.Template = new ControlTemplate(typeof(Thumb)) { VisualTree = gripText };
+        _dragHandle.DragDelta += (_, e) =>
+        {
+            var dpi = VisualTreeHelper.GetDpi(this);
+            DragRequested?.Invoke((int)Math.Round(e.HorizontalChange * dpi.DpiScaleX),
+                (int)Math.Round(e.VerticalChange * dpi.DpiScaleY));
+        };
+        _dragHandle.DragCompleted += (_, _) => DragFinished?.Invoke();
+
         Content = _panel;
     }
 
@@ -72,6 +98,9 @@ public sealed class LanguageBarWindow : Window
     public event Action? ProfileRequested;
 
     public event Action? MoreRequested;
+    public event Action<int, int>? DragRequested;
+    public event Action? DragFinished;
+    public event Action? CloseRequested;
 
     /// <summary>Raised when a toggle is pressed: <c>edit</c>, <c>source</c>, or <c>panel</c>.</summary>
     public event Action<string>? ToggleRequested;
@@ -97,6 +126,7 @@ public sealed class LanguageBarWindow : Window
 
         _buttons.Children.Clear();
         _toggles.Clear();
+        _buttons.Children.Add(_dragHandle);
 
         _primaryPreset = presets.FirstOrDefault(preset => Matches(preset, current)) ?? presets.FirstOrDefault();
         ((TextBlock)_primary.Child).Text = _primaryPreset?.Label ?? "语言";
@@ -116,6 +146,9 @@ public sealed class LanguageBarWindow : Window
         _buttons.Children.Add(MakeToggle("edit", editing ? "编辑中" : "编辑", editing));
         _buttons.Children.Add(MakeToggle("source", "原文", showSource));
         _buttons.Children.Add(MakeToggle("panel", "翻译框", showPanel));
+        var close = MakeButton("×", () => CloseRequested?.Invoke());
+        close.ToolTip = "关闭悬浮层并停止翻译";
+        _buttons.Children.Add(close);
 
         RefreshToggles();
     }
@@ -173,10 +206,12 @@ public sealed class LanguageBarWindow : Window
         var height = (int)Math.Ceiling((ActualHeight > 0 ? ActualHeight : 30) * Math.Max(0.1, dpi.DpiScaleY));
         var width = (int)Math.Ceiling((ActualWidth > 0 ? ActualWidth : 300) * Math.Max(0.1, dpi.DpiScaleX));
 
-        var x = region.X;
+        var area = OverlayWindowInterop.WorkAreaAt(region);
+        var x = Math.Clamp(region.X, area.X, Math.Max(area.X, area.X + area.Width - width));
         var y = overlayTop - height - Gap;
-        if (y < 0)
+        if (y < area.Y)
             y = overlayTop + Gap;
+        y = Math.Clamp(y, area.Y, Math.Max(area.Y, area.Y + area.Height - height));
         OverlayWindowInterop.MoveTo(_handle, x, y, topmost: true);
         ScreenBounds = new Int32Rect(x, y, width, height);
     }
@@ -281,5 +316,30 @@ public sealed class LanguageBarWindow : Window
         OverlayWindowInterop.ApplyClickThrough(_handle, enabled: false);
         if (_anchor.Width > 0)
             PlaceAbove(_anchor, _anchor.Y + _anchor.Height);
+    }
+
+    public void ClosePermanently()
+    {
+        _allowClose = true;
+        Close();
+    }
+
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        if (!_allowClose)
+        {
+            e.Cancel = true;
+            if (!_closePending)
+            {
+                _closePending = true;
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    _closePending = false;
+                    if (!_allowClose)
+                        CloseRequested?.Invoke();
+                }));
+            }
+        }
+        base.OnClosing(e);
     }
 }

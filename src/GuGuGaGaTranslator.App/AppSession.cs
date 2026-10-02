@@ -18,8 +18,10 @@ public sealed class AppSession : IAsyncDisposable
 {
     private ITranslator? _translator;
     private bool _stopping;
+    public bool IsStopping => _stopping;
     private Task? _stopTask;
     private FrameDumper? _dumper;
+    private WindowCapture? _windowCapture;
     private LanguagePair _languages = new("auto", "zh-Hans");
     private readonly List<string> _recentSources = [];
 
@@ -241,8 +243,8 @@ public sealed class AppSession : IAsyncDisposable
         {
             RegionProvider = ResolveRegion,
             TargetHandle = () => FindTarget()?.Handle ?? 0,
-            IsScreenCapture = !Config.Target.CaptureBackend.Equals("printwindow", StringComparison.OrdinalIgnoreCase),
-            Capture = CaptureFrame,
+            IsScreenCapture = Config.Target.CaptureBackend.Equals("screen", StringComparison.OrdinalIgnoreCase),
+            CaptureAsync = CaptureFrameAsync,
             Recognizer = recognizer,
             // 每次翻译都重新读,悬浮层的语言切换条才能不重启循环就换方向。
             Languages = () => _languages,
@@ -320,6 +322,8 @@ public sealed class AppSession : IAsyncDisposable
                 recognizerDisposable.Dispose();
             Recognizer = null;
             _dumper = null;
+            _windowCapture?.Dispose();
+            _windowCapture = null;
         }
         finally { _stopping = false; }
     }
@@ -515,12 +519,22 @@ public sealed class AppSession : IAsyncDisposable
         }
     }
 
-    /// <summary>Build the recognizer named by the configuration: the Windows one, the offline RapidOCR model, or Windows in its <c>auto</c> mode.</summary>
-    private Frame CaptureFrame(Int32Rect region)
+    /// <summary>读取目标区域；窗口捕获与屏幕捕获使用各自的坐标来源。</summary>
+    private async Task<Frame> CaptureFrameAsync(Int32Rect region, CancellationToken cancellationToken)
     {
-        if (!Config.Target.CaptureBackend.Equals("printwindow", StringComparison.OrdinalIgnoreCase))
+        if (Config.Target.CaptureBackend.Equals("screen", StringComparison.OrdinalIgnoreCase))
             return ScreenCapture.CaptureScreenRegion(region);
         var window = FindTarget() ?? throw new InvalidOperationException("目标窗口已关闭。");
+        if (Config.Target.CaptureBackend.Equals("window", StringComparison.OrdinalIgnoreCase))
+        {
+            if (_windowCapture?.Handle != window.Handle)
+            {
+                _windowCapture?.Dispose();
+                _windowCapture = null;
+                _windowCapture = new WindowCapture(window.Handle);
+            }
+            return await _windowCapture.CaptureAsync(window, region, cancellationToken).ConfigureAwait(false);
+        }
         var client = ScreenCapture.CaptureWindowClient(window, CaptureBackend.PrintWindow);
         return ImageOps.Crop(client, new Int32Rect(
             region.X - client.SourceRegion.X, region.Y - client.SourceRegion.Y, region.Width, region.Height));

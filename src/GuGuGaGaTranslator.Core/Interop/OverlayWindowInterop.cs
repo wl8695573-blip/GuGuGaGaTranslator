@@ -5,6 +5,22 @@ namespace GuGuGaGaTranslator.Core.Interop;
 /// <summary>应用鼠标穿透和窗口捕获排除标记。</summary>
 public static class OverlayWindowInterop
 {
+    public static System.Windows.Int32Rect WorkAreaAt(System.Windows.Int32Rect region)
+    {
+        var rect = new NativeMethods.RECT
+        {
+            Left = region.X,
+            Top = region.Y,
+            Right = region.X + region.Width,
+            Bottom = region.Y + region.Height,
+        };
+        var monitor = NativeMethods.MonitorFromRect(in rect, 2);
+        var info = new NativeMethods.MONITORINFO { Size = System.Runtime.InteropServices.Marshal.SizeOf<NativeMethods.MONITORINFO>() };
+        return monitor != 0 && NativeMethods.GetMonitorInfoW(monitor, ref info)
+            ? new System.Windows.Int32Rect(info.Work.Left, info.Work.Top, info.Work.Right - info.Work.Left, info.Work.Bottom - info.Work.Top)
+            : DpiAwareness.VirtualScreen();
+    }
+
     /// <summary>Toggle click-through. Windows are made layered as well, which is what lets a WPF window with a transparent background composite correctly.</summary>
     [SupportedOSPlatform("windows")]
     public static bool ApplyClickThrough(nint handle, bool enabled)

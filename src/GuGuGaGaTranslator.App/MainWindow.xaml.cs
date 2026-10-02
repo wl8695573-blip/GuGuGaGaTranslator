@@ -109,6 +109,7 @@ public partial class MainWindow : Window
     private OverlayWindow? _overlay;
     private nint _handle;
     private bool _loadingUi;
+    private bool _closing;
     private CancellationTokenSource? _providerTestCancellation;
     private List<HotkeyAction> _actions = [];
     private readonly List<int> _registeredHotkeys = [];
@@ -146,6 +147,7 @@ public partial class MainWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        _closing = true;
         _providerTestCancellation?.Cancel();
         // 加载前关闭窗口时句柄为 0，不能传给 HwndSource.FromHwnd。
         if (_handle != 0)
@@ -158,7 +160,7 @@ public partial class MainWindow : Window
         _session.Notice -= OnNotice;
         _session.LanguagesChanged -= OnLanguagesChanged;
         _session.ProfileChanged -= OnProfileChanged;
-        _overlay?.Close();
+        _overlay?.ClosePermanently();
     }
 
     /// <summary>Every configurable global hotkey: its text in the configuration, what it does, and how it reads.</summary>
@@ -448,6 +450,12 @@ public partial class MainWindow : Window
         OcrLanguageCombo.ItemsSource = ocrChoices;
 
         OcrEngineCombo.ItemsSource = OcrEngines.ToArray();
+        CaptureBackendCombo.ItemsSource = new Choice[]
+        {
+            new("window", "窗口捕获（推荐，支持遮挡）"),
+            new("screen", "屏幕捕获（兼容模式，需无遮挡）"),
+            new("printwindow", "PrintWindow（传统窗口兼容）"),
+        };
         PresetCombo.ItemsSource = EnginePresets.Select(preset => new Choice(preset.Label, preset.Label)).ToArray();
         PromptStyleCombo.ItemsSource = PromptStyles.ToArray();
         PlacementCombo.ItemsSource = OverlayPlacements.ToArray();
@@ -572,6 +580,7 @@ public partial class MainWindow : Window
     {
         _loadingUi = true;
         var config = _session.Config;
+        SelectByValue(CaptureBackendCombo, config.Target.CaptureBackend);
         SelectByValue(OcrEngineCombo, config.Ocr.Engine);
         SelectByValue(OcrLanguageCombo, config.Ocr.Language);
         OcrScaleBox.Text = Text(config.Ocr.Scale);
@@ -645,6 +654,8 @@ public partial class MainWindow : Window
     private bool ReadUiIntoConfig()
     {
         var config = _session.Config;
+        config.Target.CaptureBackend = ValueOf(CaptureBackendCombo, "window");
+        config.Target.CaptureSettingsVersion = 1;
 
         config.Ocr.Engine = ValueOf(OcrEngineCombo, "windows");
         config.Ocr.Language = ValueOf(OcrLanguageCombo, "auto");
@@ -844,8 +855,14 @@ public partial class MainWindow : Window
         OnNotice("已清除区域与目标窗口。");
     }
 
-    private void OnStart(object sender, RoutedEventArgs e)
+    private async void OnStart(object sender, RoutedEventArgs e)
     {
+        if (_session.IsStopping)
+        {
+            await _session.StopAsync().ConfigureAwait(true);
+            if (_closing)
+                return;
+        }
         ReadUiIntoConfig();
         _session.SaveConfig();
 
@@ -860,6 +877,8 @@ public partial class MainWindow : Window
         _overlay.ToggleRequested += OnOverlayToggleRequested;
         _overlay.ProfileRequested -= OnProfilesRequested;
         _overlay.ProfileRequested += OnProfilesRequested;
+        _overlay.DismissRequested -= OnOverlayDismissRequested;
+        _overlay.DismissRequested += OnOverlayDismissRequested;
         _overlay.Configure(_session.Config.Overlay, _session.Languages);
         _overlay.SetProfile(_session.ActiveProfile?.Name);
         _session.Start();
@@ -867,6 +886,7 @@ public partial class MainWindow : Window
         if (!_session.IsRunning)
             return;
 
+        _overlay.Open();
         var region = _session.ResolveRegion();
         if (region is { } rect)
             _overlay.ShowTranslated(string.Empty, "等待台词…", rect);
@@ -890,10 +910,12 @@ public partial class MainWindow : Window
 
     private async Task StopAsync()
     {
+        _overlay?.Dismiss();
         await _session.StopAsync().ConfigureAwait(true);
-        _overlay?.Hide();
         StatusText.Text = "已停止";
     }
+
+    private void OnOverlayDismissRequested() => _ = StopAsync();
 
     private async void OnSave(object sender, RoutedEventArgs e)
     {
@@ -953,6 +975,7 @@ public partial class MainWindow : Window
         if (preset is null)
             return;
 
+        ReadUiIntoConfig();
         var overlay = _session.Config.Overlay;
         overlay.Placement = preset.Placement;
         overlay.ShowSource = preset.ShowSource;
@@ -967,10 +990,16 @@ public partial class MainWindow : Window
         overlay.OffsetY = preset.OffsetY;
 
         LoadConfigIntoUi();
-        OverlayPresetCombo.SelectedItem = OverlayPresetCombo.Items
-            .OfType<Choice>()
-            .FirstOrDefault(choice => choice.Value == name);
-        OverlayPresetSummary.Text = preset.Note;
+        // 回填选项会再次触发 SelectionChanged，选中预设时仍需保持保护。
+        _loadingUi = true;
+        try
+        {
+            OverlayPresetCombo.SelectedItem = OverlayPresetCombo.Items
+                .OfType<Choice>()
+                .FirstOrDefault(choice => choice.Value == name);
+            OverlayPresetSummary.Text = preset.Note;
+        }
+        finally { _loadingUi = false; }
 
         _session.SaveConfig();
         _overlay?.Configure(overlay, _session.Languages);
@@ -1104,8 +1133,8 @@ public partial class MainWindow : Window
         _overlay?.Configure(_session.Config.Overlay, _session.Languages);
 
         OnNotice(exclude
-            ? "翻译框已重新对录屏/截图隐藏。若它盖住了识别区域,现在起会重新读到游戏原文。"
-            : "翻译框已允许被录屏/截图拍到。屏幕抓取时会在 OCR 前遮罩自身窗口；请保持调试配置中的 maskOwnWindows 开启。");
+            ? "翻译框已对录屏/截图隐藏。窗口捕获仍读取目标窗口的原文。"
+            : "翻译框已允许被录屏/截图拍到。窗口捕获不受影响；屏幕捕获模式下请把翻译框移出识别区域。");
     }
 
     /// <summary>Remember whether framing hides this tool's own windows; the picker has the same switch, so the
@@ -1672,5 +1701,5 @@ public partial class MainWindow : Window
     private static string Text(int value) => value.ToString(CultureInfo.InvariantCulture);
 
     private static double Number(string text, double fallback) =>
-        double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : fallback;
+        double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) && double.IsFinite(value) ? value : fallback;
 }

@@ -31,7 +31,7 @@ cd GuGuGaGaTranslator
 |---|---|
 | 主窗口、设置、主题 | `App/MainWindow.xaml`、`MainWindow.xaml.cs`、`SetupWindow.xaml.cs`、`App.xaml`。 |
 | 框选和悬浮层 | `App/RegionSelectorWindow.cs`、`OverlayWindow.cs`、`LanguageBarWindow.cs`。 |
-| 抓屏和区域 | `Core/Capture/ScreenCapture.cs`、`TargetRegionResolver.cs`、`SelfWindowMask.cs`。 |
+| 抓屏和区域 | `Core/Capture/WindowCapture.cs`（默认窗口捕获）、`ScreenCapture.cs`（兼容后端）、`TargetRegionResolver.cs`、`SelfWindowMask.cs`（仅屏幕捕获）。 |
 | OCR | `Core/Ocr` 定义接口和 Windows 实现；`Ocr.Rapid` 实现 RapidOCR。 |
 | 翻译 | `Core/Translation/ITranslator.cs`、`OpenAiCompatibleTranslator.cs`、`ClassicApis.cs`。 |
 | 术语与档案 | `TermSheetBuilder.cs`、`TermEnforcer.cs`、`GameProfileArchive.cs`。 |
@@ -64,7 +64,9 @@ dotnet run --project tools/InteractionChecks -c Release -- .artifacts/interactio
 
 `tools/Probe` 检查窗口、抓屏、识别和翻译；`tools/SampleWindow` 提供合成对话窗口。使用临时配置和合成台词，避免提交真实台词或密钥。报告定义和检查范围见 [验证与发布](docs/VERIFICATION.md)。
 
-`tools/InteractionChecks` 使用真实模态菜单检查选择、取消、失焦和关闭期间的事件顺序，并检查运行中语言切换。窗口位于屏幕外，不读取用户配置或抓取桌面。
+`tools/InteractionChecks` 检查真实模态菜单、运行中语言切换、全部外观预设、悬浮层拖动与关闭。模态菜单置于屏幕外，悬浮层检查会显示临时窗口；使用隔离配置，不读取用户设置、不请求在线翻译。
+
+在有交互桌面的 Windows 上，加 `--capture` 可运行遮挡、窗口缩放及完整流程检查：`dotnet run --project tools/InteractionChecks -c Release -- .artifacts/interactions --capture`。它会创建合成窗口和独立的 SampleWindow 进程，测试窗口捕获、RapidOCR、mock 翻译、主界面更新、四种实时预设及停止和重启，结束后关闭测试窗口。CI 默认不执行需要实际捕获桌面的部分。
 
 辅助脚本：`start-ollama.ps1` 启动已安装的本地服务，`setup-sakura.ps1` 注册 Sakura 模型，`compare-models.ps1` 比较本地模型处理相同文本的结果。可指定路径，使用前确认模型许可。
 

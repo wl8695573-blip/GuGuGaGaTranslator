@@ -22,6 +22,11 @@ public sealed class OverlayWindow : Window
     private readonly StackPanel _stack = new();
     private readonly Border _panel;
     private readonly Grid _root = new();
+    private readonly ScrollViewer _scroll = new()
+    {
+        VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+        HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+    };
 
     private readonly Thumb _dragSurface = new() { Background = Brushes.Transparent, Cursor = Cursors.SizeAll };
     private readonly (Thumb Grip, Cursor Cursor, int SignX, int SignY)[] _grips;
@@ -39,12 +44,16 @@ public sealed class OverlayWindow : Window
     private OverlayConfig _config = new();
     private Int32Rect _region;
     private int _panelTopPhysical;
+    private int _panelLeftPhysical;
     private LanguageBarWindow? _bar;
     private string? _profileLabel;
     private LanguagePair _languages = new("ja", "zh-Hans");
 
     /// <summary>True while the region picker is open: translations keep being computed, but the panel stays off screen.</summary>
     private bool _suspended;
+    private bool _dismissed = true;
+    private bool _allowClose;
+    private bool _closePending;
 
     public OverlayWindow()
     {
@@ -70,13 +79,14 @@ public sealed class OverlayWindow : Window
 
         _stack.Children.Add(_sourceText);
         _stack.Children.Add(_translationText);
+        _scroll.Content = _stack;
 
         _panel = new Border
         {
             CornerRadius = new CornerRadius(6),
             Padding = new Thickness(14, 10, 14, 10),
             BorderThickness = new Thickness(1),
-            Child = _stack,
+            Child = _scroll,
         };
 
         // 四角手柄:每个只沿它所在的两条边缩放。
@@ -105,6 +115,14 @@ public sealed class OverlayWindow : Window
         foreach (var grip in _grips)
             _root.Children.Add(grip.Grip);
         Content = _root;
+        _root.PreviewMouseWheel += (_, e) =>
+        {
+            if (!_config.ClickThrough)
+            {
+                _scroll.ScrollToVerticalOffset(_scroll.VerticalOffset - e.Delta);
+                e.Handled = true;
+            }
+        };
 
         _panel.IsHitTestVisible = true;
     }
@@ -119,6 +137,16 @@ public sealed class OverlayWindow : Window
     public event Action<string>? ToggleRequested;
 
     public event Action? ProfileRequested;
+    public event Action? DismissRequested;
+
+    public void Open() => _dismissed = false;
+
+    public void Dismiss()
+    {
+        _dismissed = true;
+        Hide();
+        _bar?.Hide();
+    }
 
     private static Thumb MakeGrip(Cursor cursor) => new()
     {
@@ -208,7 +236,7 @@ public sealed class OverlayWindow : Window
     public void ResumeAfterPicker(bool wasVisible)
     {
         _suspended = false;
-        if (wasVisible)
+        if (wasVisible && !_dismissed)
         {
             ShowActivated = false;
             Show();
@@ -225,8 +253,14 @@ public sealed class OverlayWindow : Window
     private void OnDragMove(object sender, DragDeltaEventArgs e)
     {
         var dpi = VisualTreeHelper.GetDpi(this);
-        _config.OffsetX += (int)Math.Round(e.HorizontalChange * dpi.DpiScaleX);
-        _config.OffsetY += (int)Math.Round(e.VerticalChange * dpi.DpiScaleY);
+        MoveBy((int)Math.Round(e.HorizontalChange * dpi.DpiScaleX),
+            (int)Math.Round(e.VerticalChange * dpi.DpiScaleY));
+    }
+
+    private void MoveBy(int dx, int dy)
+    {
+        _config.OffsetX += dx;
+        _config.OffsetY += _config.Placement == OverlayPlacement.Above ? -dy : dy;
         PlaceAt(_region);
     }
 
@@ -255,7 +289,7 @@ public sealed class OverlayWindow : Window
         if (entry.SignX < 0)
             _config.OffsetX += dx;
         if (entry.SignY < 0)
-            _config.OffsetY += dy;
+            _config.OffsetY += _config.Placement == OverlayPlacement.Above ? -dy : dy;
 
         PlaceAt(_region);
     }
@@ -277,7 +311,7 @@ public sealed class OverlayWindow : Window
 
     private void UpdateLanguageBar()
     {
-        if (!_config.ShowLanguageBar || _config.LanguagePresets.Count == 0)
+        if (_dismissed || _suspended || !IsVisible || !_config.ShowLanguageBar || _config.LanguagePresets.Count == 0)
         {
             _bar?.Hide();
             return;
@@ -290,6 +324,13 @@ public sealed class OverlayWindow : Window
             _bar.MoreRequested += () => DirectionsRequested?.Invoke();
             _bar.ToggleRequested += key => ToggleRequested?.Invoke(key);
             _bar.ProfileRequested += () => ProfileRequested?.Invoke();
+            _bar.DragRequested += MoveBy;
+            _bar.DragFinished += () => LayoutChanged?.Invoke();
+            _bar.CloseRequested += () =>
+            {
+                Dismiss();
+                DismissRequested?.Invoke();
+            };
         }
         else
         {
@@ -314,7 +355,7 @@ public sealed class OverlayWindow : Window
         if (_bar is null || !_bar.IsVisible || _region.Width <= 0)
             return;
 
-        _bar.PlaceAbove(_region, _panelTopPhysical);
+        _bar.PlaceAbove(new Int32Rect(_panelLeftPhysical, _region.Y, _region.Width, _region.Height), _panelTopPhysical);
     }
 
     /// <summary>Show a translation anchored to a screen region (<paramref name="region"/> in physical pixels), placed as configured.</summary>
@@ -331,8 +372,9 @@ public sealed class OverlayWindow : Window
 
         PlaceAt(region);
         // 框选期间保持隐藏:这时循环还在跑,新译文照样算,但面板不能弹回屏幕挡住要框的东西。
-        if (!IsVisible && !_suspended)
+        if (!IsVisible && !_suspended && !_dismissed)
             Show();
+        UpdateLanguageBar();
     }
 
     /// <summary>Reposition the overlay for a region in physical screen pixels, following the target window.</summary>
@@ -344,7 +386,7 @@ public sealed class OverlayWindow : Window
 
         // 框选期间面板是收起来的:移动窗口用的 SetWindowPos 带 SWP_SHOWWINDOW,一动就会把它重新露出来,
         // 所以这时候只记住位置,等恢复时再摆。
-        if (_suspended)
+        if (_suspended || _dismissed)
             return;
 
         // WPF 的尺寸是设备无关单位、位置是物理像素:混用会让悬浮层在缩放显示器上漂移,
@@ -353,24 +395,26 @@ public sealed class OverlayWindow : Window
         var scaleX = Math.Max(0.1, dpi.DpiScaleX);
         var scaleY = Math.Max(0.1, dpi.DpiScaleY);
 
-        var widthPhysical = _config.Width > 0 ? _config.Width : region.Width;
+        var area = OverlayWindowInterop.WorkAreaAt(region);
+        var widthPhysical = Math.Min(area.Width, Math.Max(120, _config.Width > 0 ? _config.Width : region.Width));
         Width = Math.Max(MinWidth, widthPhysical / scaleX);
+        _panel.MaxHeight = Math.Max(24, (area.Height - 52) / scaleY);
 
         if (_config.Height > 0)
         {
             SizeToContent = SizeToContent.Manual;
-            Height = Math.Max(24, _config.Height / scaleY);
+            Height = Math.Max(24, Math.Min(_config.Height, area.Height - 52) / scaleY);
         }
         else
         {
             SizeToContent = SizeToContent.Height;
         }
+        UpdateLayout();
 
         // Height 为 0 时面板自适应:ActualHeight 是设备无关单位,要先乘 DPI 缩放;
         // 尚未布局过(ActualHeight 为 0)就按字号的 2.4 倍估一个高度。
-        var panelHeight = _config.Height > 0
-            ? _config.Height
-            : (int)Math.Ceiling((ActualHeight > 0 ? ActualHeight : _config.FontSize * 2.4) * scaleY);
+        var panelHeight = Math.Min(area.Height - 52, (int)Math.Ceiling(
+            (ActualHeight > 0 ? ActualHeight : _config.FontSize * 2.4) * scaleY));
 
         var x = region.X + _config.OffsetX;
         var y = _config.Placement.ToLowerInvariant() switch
@@ -379,9 +423,10 @@ public sealed class OverlayWindow : Window
             OverlayPlacement.Above => region.Y - panelHeight - _config.OffsetY,
             _ => region.Y + region.Height + _config.OffsetY,
         };
-        if (y < 0)
-            y = 0;
+        x = Math.Clamp(x, area.X, Math.Max(area.X, area.X + area.Width - widthPhysical));
+        y = Math.Clamp(y, area.Y, Math.Max(area.Y, area.Y + area.Height - panelHeight));
 
+        _panelLeftPhysical = x;
         _panelTopPhysical = y;
         OverlayWindowInterop.MoveTo(_handle, x, y, topmost: true);
         PlaceLanguageBar();
@@ -406,8 +451,36 @@ public sealed class OverlayWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         // 语言条是独立窗口,这里不关就会留下一个孤儿窗口。
-        _bar?.Close();
+        _bar?.ClosePermanently();
         _bar = null;
         base.OnClosed(e);
+    }
+
+    public void ClosePermanently()
+    {
+        _allowClose = true;
+        Close();
+    }
+
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        if (!_allowClose)
+        {
+            e.Cancel = true;
+            if (!_closePending)
+            {
+                _closePending = true;
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    _closePending = false;
+                    if (!_allowClose)
+                    {
+                        Dismiss();
+                        DismissRequested?.Invoke();
+                    }
+                }));
+            }
+        }
+        base.OnClosing(e);
     }
 }

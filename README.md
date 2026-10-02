@@ -4,7 +4,7 @@ Windows 屏幕翻译工具。选择游戏窗口和文字区域后，程序会识
 
 目前内置的游戏术语档案只有《边狱巴士》。其他游戏可使用通用翻译，也可自行添加术语表。
 
-**当前版本：1.3.1** · [下载](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/latest) · [使用说明](docs/USAGE.md) · [更新记录](CHANGELOG.md) · [问题反馈](https://github.com/wl8695573-blip/GuGuGaGaTranslator/issues/new/choose)
+**当前版本：1.3.2** · [下载](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/latest) · [使用说明](docs/USAGE.md) · [更新记录](CHANGELOG.md) · [问题反馈](https://github.com/wl8695573-blip/GuGuGaGaTranslator/issues/new/choose)
 
 ![主界面](assets/screenshot-main.png)
 
@@ -34,16 +34,16 @@ Windows 屏幕翻译工具。选择游戏窗口和文字区域后，程序会识
 
 | 下载文件 | 使用方式 |
 |---|---|
-| [GuGuGaGaTranslator-Setup-1.3.1.exe](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.3.1/GuGuGaGaTranslator-Setup-1.3.1.exe) | 安装版。运行后选择目录；创建快捷方式，并登记到 Windows 应用列表。 |
-| [GuGuGaGaTranslator-win-x64-1.3.1.zip](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.3.1/GuGuGaGaTranslator-win-x64-1.3.1.zip) | 便携版。完整解压后运行 `GuGuGaGaTranslator.exe`，保留同目录的 `models` 和其他文件。 |
-| [SHA256SUMS-1.3.1.txt](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.3.1/SHA256SUMS-1.3.1.txt) | 上述两个文件的 SHA256 校验值。 |
+| [GuGuGaGaTranslator-Setup-1.3.2.exe](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.3.2/GuGuGaGaTranslator-Setup-1.3.2.exe) | 安装版。运行后选择目录；创建快捷方式，并登记到 Windows 应用列表。 |
+| [GuGuGaGaTranslator-win-x64-1.3.2.zip](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.3.2/GuGuGaGaTranslator-win-x64-1.3.2.zip) | 便携版。完整解压后运行 `GuGuGaGaTranslator.exe`，保留同目录的 `models` 和其他文件。 |
+| [SHA256SUMS-1.3.2.txt](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.3.2/SHA256SUMS-1.3.2.txt) | 上述两个文件的 SHA256 校验值。 |
 
 安装到当前用户有写入权限的目录时不需要管理员权限。新安装请选择空目录；升级时先退出旧程序，再安装到原来已登记的目录。便携版建议解压到新目录，避免混用不同版本的文件。用户设置位于 `%APPDATA%\GuGuGaGaTranslator`，升级和正常卸载会保留这些设置。
 
-1.3.1 发行文件未进行代码签名，Windows 可能显示发布者无法验证的提示。请从本仓库 Release 下载并核对校验值：
+1.3.2 发行文件未进行代码签名，Windows 可能显示发布者无法验证的提示。请从本仓库 Release 下载并核对校验值：
 
 ```powershell
-Get-FileHash .\GuGuGaGaTranslator-Setup-1.3.1.exe -Algorithm SHA256
+Get-FileHash .\GuGuGaGaTranslator-Setup-1.3.2.exe -Algorithm SHA256
 ```
 
 GitHub 自动生成的 “Source code” 压缩包只包含源码，不能直接运行。
@@ -55,6 +55,8 @@ GitHub 自动生成的 “Source code” 压缩包只包含源码，不能直接
 3. **选择文字区域。** 点击“框选区域”，拖出对话框范围，按 `Enter` 确认、`Esc` 取消。也可用“底部对话框”预设，再根据游戏布局调整。
 4. **开始翻译。** 检查翻译方向后点击“开始翻译”。主界面显示识别原文和译文，悬浮层显示当前译文。
 5. **调整悬浮层。** 点击控制条的“编辑”，拖动或缩放翻译框；再次点击恢复鼠标穿透。
+
+控制条左端的拖动柄可直接移动控制条和翻译框，右端 `×` 关闭两者并停止翻译。再次点击主界面“开始翻译”即可重新显示。长译文会限制在当前屏幕内；进入编辑模式后可用鼠标滚轮查看。
 
 新配置默认使用“自动识别 → 中文”和通用翻译。框选只确定位置；已有配置会保留原来的翻译方向。翻译英文报纸等普通内容时，在“游戏模式”选择通用翻译，在悬浮栏选择“英 → 中”或“自动识别 → 中文”。
 
@@ -80,11 +82,11 @@ GitHub 自动生成的 “Source code” 压缩包只包含源码，不能直接
 
 - **识别无需联网。** 在线翻译会把识别文字、所选术语和上下文发送给配置的服务；使用本地服务时由本地模型处理。
 - **优先使用窗口模式或无边框窗口。** 独占全屏、最小化窗口、受保护画面和部分硬件加速程序可能无法捕获。
-- **默认抓取可见屏幕。** 目标区域被其他程序遮挡时，识别可能不正确。`PrintWindow` 可作为替代后端，但兼容性取决于目标程序。
+- **默认读取目标窗口画面。** 使用 Windows Graphics Capture，翻译框和其他窗口遮挡选区时仍可读取目标内容。在“识别与翻译 → 画面捕获方式”可切换兼容后端；屏幕捕获需保持选区无遮挡。目标程序停止绘制时不会产生新画面。
 - **布局变化后重新框选。** 程序按客户区尺寸调整区域；游戏改变对话框位置时仍需重新选择。
 - **出现 `[mock …]` 表示预览模式。** 在“识别与翻译”中选择实际翻译引擎，配置并测试后保存。
 - **识别不准确时先检查原文。** 缩小选区、增大识别前放大倍数，或调整对比度；Windows OCR 还需检查语言及系统 OCR 功能。
-- **译文显示不全时**，将悬浮层“最大行数”设为 `0`，并检查字体、宽度和高度。
+- **译文显示不全时**，将悬浮层“最大行数”设为 `0`，在编辑模式下滚动查看，并检查字体、宽度和高度。
 
 问题排查和反馈步骤见 [使用说明](docs/USAGE.md#问题排查)。
 
