@@ -2,26 +2,48 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Icon="Assets/icon.png"
-        Title="GuGuGaGaTranslator · 屏幕实时翻译"
+        Title="LCTA · 边狱巴士翻译助手"
         Height="780" Width="1140"
-        MinHeight="560" MinWidth="900"
+        MinHeight="660" MinWidth="900"
         Background="{StaticResource WindowBackgroundBrush}"
         Foreground="{StaticResource TextBrush}"
         FontFamily="{StaticResource UiFont}"
         WindowStartupLocation="CenterScreen">
-  <Grid Margin="14">
+  <Grid Margin="18">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="380" MinWidth="300" />
+      <ColumnDefinition Width="300" MinWidth="270" />
       <ColumnDefinition Width="*" />
     </Grid.ColumnDefinitions>
 
+    <Border Grid.ColumnSpan="2" Margin="0,0,0,16" Padding="14,10"
+            Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource AccentBrush}" BorderThickness="4,0,0,1">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+          <Button x:Name="UpdateBadgeButton" Content="有更新" Click="OnShowUpdates" Visibility="Collapsed"
+                  Style="{StaticResource PrimaryButton}" />
+          <Button Content="服务设置" Click="OnOpenSetup" />
+          <Button Content="术语反馈" Click="OnTermFeedback" />
+          <CheckBox x:Name="FloatingBallCheck" Content="悬浮球" Click="OnFloatingBallToggle" Margin="8,0,0,0" VerticalAlignment="Center" />
+        </StackPanel>
+        <Image DockPanel.Dock="Left" Source="Assets/lcta-wordmark.png" Width="138" Height="62"
+               Stretch="Uniform" Margin="0,0,18,0" RenderOptions.BitmapScalingMode="HighQuality" />
+        <StackPanel VerticalAlignment="Center">
+          <TextBlock Text="LCTA" FontFamily="{StaticResource DisplayFont}" FontSize="27" FontWeight="Bold"
+                     Foreground="{StaticResource AccentBrush}" />
+          <TextBlock Text="边狱巴士翻译助手 · 剧情阅读与屏幕翻译" Foreground="{StaticResource MutedTextBrush}" />
+        </StackPanel>
+      </DockPanel>
+    </Border>
+
     <!-- 目标窗口 -->
-    <DockPanel Grid.Column="0" Margin="0,0,14,0">
+    <DockPanel Grid.Row="1" Grid.Column="0" Margin="0,0,16,0">
       <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,4">
-        <Image Source="Assets/icon.png" Width="30" Height="30" VerticalAlignment="Center"
-               RenderOptions.BitmapScalingMode="HighQuality" />
-        <TextBlock Text="1 · 选择要翻译的窗口" Style="{StaticResource TitleText}" VerticalAlignment="Center"
-                   Margin="8,0,0,0" />
+        <TextBlock Text="01 / 选择窗口与字幕区域" Style="{StaticResource TitleText}" VerticalAlignment="Center"
+                   Margin="0,0,0,0" />
       </StackPanel>
       <TextBlock DockPanel.Dock="Top" x:Name="TargetSummary" Style="{StaticResource FieldLabel}"
                  TextWrapping="Wrap" Text="尚未选择窗口" />
@@ -30,8 +52,8 @@
         <Button x:Name="RegionButton" Content="框选区域" Click="OnPickRegion" />
       </UniformGrid>
       <UniformGrid DockPanel.Dock="Top" Columns="2" Margin="0,0,0,8">
-        <Button x:Name="BottomStripButton" Content="底部对话框(一键)" Click="OnPickBottomStrip"
-                ToolTip="按 galgame 的常见布局,自动把区域设在窗口底部约 30% 的横条上,之后可再用「框选区域」微调" />
+        <Button x:Name="BottomStripButton" Content="底部字幕 ▾" Click="OnBottomOptions"
+                ToolTip="选择手动框选或自动预设。手动选区会保存并用于后续翻译" />
         <Button x:Name="ClearRegionButton" Content="清除区域" Click="OnClearRegion" />
       </UniformGrid>
       <CheckBox x:Name="HideOwnWindowsCheck" DockPanel.Dock="Top" Margin="0,0,0,8"
@@ -42,48 +64,65 @@
                 SelectionChanged="OnWindowSelected" />
     </DockPanel>
 
-    <TabControl x:Name="SettingsTabs" Grid.Column="1">
+    <TabControl x:Name="SettingsTabs" Grid.Row="1" Grid.Column="1">
 
-      <TabItem Header="运行">
+      <TabItem Header="翻译">
         <Grid Margin="12">
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="*" />
           </Grid.RowDefinitions>
 
-          <StackPanel Orientation="Horizontal">
-            <Button x:Name="StartButton" Content="开始翻译" Click="OnStart" Style="{StaticResource PrimaryButton}" />
+          <Border Padding="10" Margin="0,0,0,12" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                  Background="{StaticResource FieldBrush}">
+            <StackPanel>
+              <TextBlock x:Name="RunModeText" Text="通用翻译 · 自动识别 → 中文" FontWeight="SemiBold" TextWrapping="Wrap" />
+              <WrapPanel Margin="0,8,0,0">
+                <Button Content="自动 → 中" Click="OnQuickAuto" MinWidth="78" />
+                <Button Content="英 → 中" Click="OnQuickEnglish" MinWidth="78" />
+                <Button Content="日 → 中" Click="OnQuickJapanese" MinWidth="78" />
+                <Button Content="韩 → 中" Click="OnQuickKorean" MinWidth="78" />
+                <Button Content="切换方向…" Click="OnMainDirections" />
+                <Button Content="选择档案" Click="OnOpenProfilesTab" MinWidth="78" />
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+
+          <WrapPanel Grid.Row="1">
+            <Button x:Name="StartButton" Content="02 / 开始翻译" Click="OnStart" Style="{StaticResource PrimaryButton}" />
             <Button x:Name="PauseButton" Content="暂停" Click="OnPause" />
             <Button x:Name="StopButton" Content="停止" Click="OnStop" />
             <Button x:Name="SaveButton" Content="保存配置" Click="OnSave" />
-          </StackPanel>
+            <Button Content="重新尝试" Click="OnRetryCurrent" MinWidth="76" />
+          </WrapPanel>
 
-          <TextBlock Grid.Row="1" x:Name="StatusText" Text="就绪" Margin="0,10,0,0"
+          <TextBlock Grid.Row="2" x:Name="StatusText" Text="就绪" Margin="0,10,0,0"
                      TextWrapping="Wrap" Foreground="{StaticResource MutedTextBrush}" />
 
-          <TextBlock Grid.Row="2" Text="识别到的原文" Style="{StaticResource FieldLabel}" Margin="0,12,0,2" />
+          <TextBlock Grid.Row="3" Text="识别到的原文" Style="{StaticResource FieldLabel}" Margin="0,12,0,2" />
 
-          <TextBox Grid.Row="3" x:Name="SourceBox" IsReadOnly="True" AcceptsReturn="True"
+          <TextBox Grid.Row="4" x:Name="SourceBox" IsReadOnly="True" AcceptsReturn="True"
                    TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
                    Foreground="{StaticResource SourceTextBrush}"
                    FontFamily="Consolas, Microsoft YaHei UI" />
 
-          <StackPanel Grid.Row="4" Margin="0,10,0,0">
-            <TextBlock Text="译文(悬浮层显示的内容)" Style="{StaticResource FieldLabel}" />
-            <TextBox x:Name="TranslationBox" IsReadOnly="True" AcceptsReturn="True" Height="150"
+          <DockPanel Grid.Row="5" Margin="0,10,0,0">
+            <TextBlock DockPanel.Dock="Top" Text="译文 · 同步显示在悬浮层" Style="{StaticResource FieldLabel}" />
+            <TextBlock DockPanel.Dock="Bottom" x:Name="StatsText" Margin="0,8,0,0" Foreground="{StaticResource HintTextBrush}"
+                       TextWrapping="Wrap" Text="帧 0 · 识别 0 · 翻译 0 · 缓存 0 · 去重 0 · 错误 0" />
+            <TextBox x:Name="TranslationBox" IsReadOnly="True" AcceptsReturn="True"
                      TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" FontSize="18"
                      Foreground="{StaticResource TextBrush}"
                      FontFamily="Microsoft YaHei UI, Meiryo, Yu Gothic" />
-            <TextBlock x:Name="StatsText" Margin="0,8,0,0" Foreground="{StaticResource HintTextBrush}"
-                       TextWrapping="Wrap" Text="帧 0 · 识别 0 · 翻译 0 · 缓存 0 · 去重 0 · 错误 0" />
-          </StackPanel>
+          </DockPanel>
         </Grid>
       </TabItem>
 
-      <TabItem Header="识别与翻译">
+      <TabItem Header="识别">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel Margin="12">
 
@@ -97,7 +136,7 @@
             <TextBlock Text="识别语言" Style="{StaticResource FieldLabel}" />
             <ComboBox x:Name="OcrLanguageCombo" />
             <TextBlock Style="{StaticResource HintText}"
-                       Text="Windows OCR 请优先选择画面文字对应的语言；auto 会依次尝试多种语言，耗时更长。RapidOCR 不使用此设置。" />
+                       Text="原文为韩语时选择韩语模型；自动识别会比较通用与韩语模型，耗时更长。Windows OCR 需要对应系统语言包。" />
             <UniformGrid Columns="2">
               <StackPanel Margin="0,0,6,0">
                 <TextBlock Style="{StaticResource FieldLabel}"
@@ -131,6 +170,10 @@
             </UniformGrid>
 
             <Separator Margin="0,10,0,10" />
+
+            <TextBlock Text="字幕稳定等待（毫秒，0 为立即翻译）" Style="{StaticResource FieldLabel}" />
+            <TextBox x:Name="TextSettleBox" />
+            <TextBlock Style="{StaticResource HintText}" Text="默认等待 450 毫秒，减少逐字字幕的碎片请求；静态文章也可设为 0。修改后保存生效。" />
 
             <TextBlock Text="翻译方向" Style="{StaticResource SectionText}" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
@@ -169,7 +212,7 @@
                        Text="指令格式（通用模型使用 galgame；Sakura-GalTransl 使用 sakura）" />
             <ComboBox x:Name="PromptStyleCombo" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                       Text="上下文句数（0 表示关闭）" />
+                       Text="上下文句数（0–8；0 表示关闭）" />
             <TextBox x:Name="HistoryLinesBox" />
             <Button x:Name="SetupButton" Content="API 设置…（填写 Key / 测试连接）" Click="OnOpenSetup" Margin="0,6,0,6" Style="{StaticResource PrimaryButton}" />
             <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
@@ -209,11 +252,11 @@
         </ScrollViewer>
       </TabItem>
 
-      <TabItem Header="游戏模式">
+      <TabItem Header="术语与游戏">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel Margin="12">
 
-            <TextBlock Text="游戏专属模式" Style="{StaticResource SectionText}" />
+            <TextBlock Text="剧情档案与术语" Style="{StaticResource SectionText}" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                        Text="游戏档案可提供术语表、世界观和风格要求。启用术语校正后，已列出的错误译法会在译后替换。" />
 
@@ -229,15 +272,33 @@
               <Button Content="导出当前档案…" Click="OnExportProfile" />
             </UniformGrid>
             <TextBlock Style="{StaticResource HintText}" Text="档案文件只包含作品设定、术语和来源信息；导入后可先编辑再保存。" />
+            <Border Padding="10" Margin="0,8" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Background="{StaticResource FieldBrush}">
+              <StackPanel>
+                <TextBlock Text="即时术语 · 保存后重译当前句" FontWeight="SemiBold" />
+                <TextBlock Text="原文与译名" Style="{StaticResource FieldLabel}" />
+                <Grid><Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition /></Grid.ColumnDefinitions>
+                  <TextBox x:Name="QuickTermSource" ToolTip="例如 Outis。按当前翻译方向保存" Margin="0,0,6,0" />
+                  <TextBox x:Name="QuickTermTarget" Grid.Column="1" ToolTip="例如 奥提斯" />
+                </Grid>
+                <TextBlock Text="需要纠正的旧译名（可选，用逗号分隔）" Style="{StaticResource FieldLabel}" />
+                <TextBox x:Name="QuickTermWrong" />
+                <WrapPanel><Button Content="添加并立即应用" Click="OnAddQuickTerm" Style="{StaticResource PrimaryButton}" />
+                  <Button Content="管理个人术语…" Click="OnManagePersonalTerms" /></WrapPanel>
+                <TextBlock Text="个人术语优先，公共词库更新会保留这些修改。四种语言分别保存，不混用译名。" Style="{StaticResource HintText}" />
+                <TextBlock Text="普通翻译接口不接收术语提示；若译名仍未改变，请在上方填写它给出的旧译名，用于本机校正。" Style="{StaticResource HintText}" />
+              </StackPanel>
+            </Border>
             <TextBlock x:Name="GameProfileSummary" Style="{StaticResource FieldLabel}" TextWrapping="Wrap" />
+            <Button Content="从内置边狱档案新建副本…" Click="OnRestoreLimbus" HorizontalAlignment="Left"
+                    ToolTip="打开内置术语的副本供核对和保存；不会覆盖个人档案" />
             <Button x:Name="PreviewPromptButton" Content="查看实际发送给 AI 的提示词…" Click="OnPreviewPrompt" Margin="0,6,0,0" />
 
             <Separator Margin="0,10,0,10" />
 
-            <CheckBox x:Name="AutoProfileCheck" Content="按游戏窗口标题自动切换档案" Click="OnProfileOptionChanged" />
+            <CheckBox x:Name="AutoProfileCheck" Content="按窗口标题或进程自动匹配档案" Click="OnProfileOptionChanged" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
-                       Text="在下面「目标窗口」里选中游戏之后,只要窗口标题里含某个档案的关键字,就自动切到那份档案。" />
-            <CheckBox x:Name="EnforceTermsCheck" Content="术语强制校正(推荐开着)" Click="OnProfileOptionChanged" />
+                       Text="选择目标窗口时自动匹配档案；手动选择优先。不同目标分别记住选区、档案和语言方向。" />
+            <CheckBox x:Name="EnforceTermsCheck" Content="已匹配术语的译后校正" Click="OnProfileOptionChanged" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                        Text="将已列出的禁止译法替换为既定译名，并补齐未翻译术语。" />
 
@@ -359,7 +420,7 @@
         </ScrollViewer>
       </TabItem>
 
-      <TabItem Header="缓存与支持">
+      <TabItem Header="支持">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel Margin="12">
             <TextBlock Text="翻译缓存" Style="{StaticResource SectionText}" />
@@ -381,6 +442,17 @@
               <Button x:Name="ClearCacheButton" Content="删除内存和磁盘缓存" Click="OnClearCache" />
             </WrapPanel>
             <Separator Margin="0,16,0,16" />
+            <TextBlock Text="程序与公共词库更新" Style="{StaticResource SectionText}" />
+            <TextBlock x:Name="UpdateStatusText" Text="点击检查更新获取正式版本与公共词库信息" TextWrapping="Wrap" Style="{StaticResource HintText}" />
+            <CheckBox x:Name="StartupUpdateCheck" Content="启动时检查更新（每天最多一次）" Click="OnUpdateOptionsChanged" />
+            <CheckBox x:Name="AutoTermsCheck" Content="自动应用已校验的公共词库更新，保留个人修改" Click="OnUpdateOptionsChanged" />
+            <WrapPanel>
+              <Button x:Name="CheckUpdatesButton" Content="检查更新" Click="OnCheckUpdates" />
+              <Button x:Name="ApplyTermsButton" Content="更新公共词库" Click="OnApplyTermsUpdate" IsEnabled="False" />
+              <Button x:Name="InstallUpdateButton" Content="下载并安装新版" Click="OnInstallAppUpdate" IsEnabled="False" />
+            </WrapPanel>
+            <TextBlock Text="程序安装需手动启动；公共词库可自动或手动更新。更新只访问维护者 GitHub 仓库，不发送台词、截图或密钥。" Style="{StaticResource HintText}" />
+            <Separator Margin="0,14" />
             <TextBlock Text="诊断与支持" Style="{StaticResource SectionText}" />
             <TextBlock Style="{StaticResource HintText}" Text="诊断包包含版本、系统、脱敏设置、状态和耗时日志。不包含 API Key、接口地址、窗口标题、截图、台词、译文或游戏档案；不会自动上传。" />
             <Button Content="导出诊断包…" Click="OnExportDiagnostics" HorizontalAlignment="Left" />

@@ -29,6 +29,8 @@
         <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                    Text="窗口标题关键字（用逗号分隔）" />
         <TextBox x:Name="HintsBox" />
+        <TextBlock Style="{StaticResource FieldLabel}" Text="进程名称（可选，逗号分隔，不含 .exe）" />
+        <TextBox x:Name="ProcessHintsBox" />
         <UniformGrid Columns="2">
           <StackPanel Margin="0,0,6,0">
             <TextBlock Text="作者（可选，随档案分享）" Style="{StaticResource FieldLabel}" />
@@ -77,6 +79,8 @@
                    Text="每行一条:原文 = 译名 | 禁止: 错误译法1、错误译法2   (# 开头是注释)" />
         <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                    Text="示例：en: League of Nine = 九人会 | 禁止：九人联盟。等号两侧相同时表示原样保留。" />
+        <TextBlock Style="{StaticResource HintText}" TextWrapping="Wrap"
+                   Text="可附 | 出处: https://… | 核对: 待核对 | 启用: 否。待核对或禁用的条目不会用于翻译；核实后修改状态再启用。" />
         <TextBox x:Name="TermsBox" AcceptsReturn="True" TextWrapping="NoWrap" Height="220"
                  FontFamily="Consolas, Microsoft YaHei UI" VerticalScrollBarVisibility="Auto"
                  HorizontalScrollBarVisibility="Auto" />

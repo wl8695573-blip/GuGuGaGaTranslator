@@ -9,7 +9,8 @@ param(
     [switch] $Installer,
     [string] $SignCertificateThumbprint = $env:GGGT_SIGN_CERTIFICATE_THUMBPRINT,
     [string] $TimestampServer = 'https://timestamp.digicert.com',
-    [switch] $RequireSigning
+    [switch] $RequireSigning,
+    [string] $PackageSource = ''
 )
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
@@ -17,29 +18,39 @@ if ($RequireSigning -and -not $SignCertificateThumbprint) { throw 'Signing requi
 [xml]$props = Get-Content -LiteralPath (Join-Path $root 'Directory.Build.props') -Encoding UTF8
 $version = [string]$props.Project.PropertyGroup.Version
 if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid release version' }
-dotnet build (Join-Path $root 'GuGuGaGaTranslator.slnx') -c $Configuration --nologo
+$restoreProperties = @()
+if ($PackageSource) {
+    $restoreProperties = @("-p:RestoreSources=$PackageSource", '-p:NuGetAudit=false')
+}
+dotnet build (Join-Path $root 'GuGuGaGaTranslator.slnx') -c $Configuration --nologo @restoreProperties
 if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
+dotnet run --project (Join-Path $root 'tools\TermLibrary') -c $Configuration --no-build --no-restore -- (Join-Path $root 'terminology') --check
+if ($LASTEXITCODE -ne 0) { throw 'Term library validation failed' }
 if (-not ($Publish -or $Zip -or $Installer)) { return }
 if ($SingleFile -or $Installer) { $SelfContained = $true; $SingleFile = $true }
 $staging = Join-Path $root ('.artifacts\release-' + $version + '-' + [guid]::NewGuid().ToString('N'))
-$app = Join-Path $staging 'GuGuGaGaTranslator'
+$app = Join-Path $staging 'LCTA'
 $dist = Join-Path $root 'dist'
 New-Item -ItemType Directory -Path $app, $dist -Force | Out-Null
 $arguments = @('publish', (Join-Path $root 'src\GuGuGaGaTranslator.App\GuGuGaGaTranslator.App.csproj'),
     '-c', $Configuration, '-r', $Runtime, '-o', $app, '--self-contained', $SelfContained.IsPresent.ToString().ToLowerInvariant(), '--nologo')
 if ($SingleFile) { $arguments += @('-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:EnableCompressionInSingleFile=true') }
-dotnet @arguments
+dotnet @arguments @restoreProperties
 if ($LASTEXITCODE -ne 0) { throw 'App publish failed' }
 foreach ($name in @('PP-OCRv6_det_small.onnx','PP-OCRv6_rec_small.onnx','ch_PP-LCNet_x0_25_textline_ori_cls_mobile.onnx','ppocrv6_small_dict.txt')) {
     if (-not (Test-Path -LiteralPath (Join-Path $root "models\v6\$name"))) { throw "Missing OCR model: $name" }
 }
 Copy-Item -LiteralPath (Join-Path $root 'models') -Destination (Join-Path $app 'models') -Recurse
+foreach ($name in @('korean_PP-OCRv5_rec_mobile.onnx','ppocrv5_korean_dict.txt')) {
+    if (-not (Test-Path -LiteralPath (Join-Path $app "models\korean\$name"))) { throw "Missing Korean OCR model: $name" }
+}
 foreach ($document in @('LICENSE','THIRD_PARTY_NOTICES.md','README.md','GUIDE.md','CHANGELOG.md','CONTRIBUTING.md')) {
     Copy-Item -LiteralPath (Join-Path $root $document) -Destination $app
 }
 Copy-Item -LiteralPath (Join-Path $root 'docs') -Destination $app -Recurse
 New-Item -ItemType Directory -Path (Join-Path $app 'assets') -Force | Out-Null
-foreach ($screenshot in Get-ChildItem -LiteralPath (Join-Path $root 'assets') -Filter 'screenshot-*.png' -File) {
+foreach ($screenshot in Get-ChildItem -LiteralPath (Join-Path $root 'assets') -File |
+    Where-Object { $_.Name -like 'screenshot-*.png' -or $_.Name -eq 'lcta-wordmark.png' }) {
     Copy-Item -LiteralPath $screenshot.FullName -Destination (Join-Path $app 'assets')
 }
 $licenses = Join-Path $root 'licenses'
@@ -73,22 +84,25 @@ foreach ($packageRoot in $assetData.packageFolders.PSObject.Properties.Name) {
     }
 }
 Write-Host "Published $app"
-& (Join-Path $root 'tools\sign-release.ps1') -Path (Join-Path $app 'GuGuGaGaTranslator.exe') -CertificateThumbprint $SignCertificateThumbprint -TimestampServer $TimestampServer -RequireSigning:$RequireSigning
+& (Join-Path $root 'tools\sign-release.ps1') -Path (Join-Path $app 'LCTA.exe') -CertificateThumbprint $SignCertificateThumbprint -TimestampServer $TimestampServer -RequireSigning:$RequireSigning
 $packageList = foreach ($library in $assetData.libraries.PSObject.Properties) {
     if ($library.Value.type -eq 'package') { [ordered]@{ name = $library.Name; sha512 = $library.Value.sha512 } }
 }
 $modelHashes = foreach ($name in @('PP-OCRv6_det_small.onnx','PP-OCRv6_rec_small.onnx','ch_PP-LCNet_x0_25_textline_ori_cls_mobile.onnx','ppocrv6_small_dict.txt')) {
     [ordered]@{ file = $name; sha256 = (Get-FileHash -LiteralPath (Join-Path $app "models\v6\$name") -Algorithm SHA256).Hash.ToLowerInvariant() }
 }
+$extraModels = foreach ($name in @('korean_PP-OCRv5_rec_mobile.onnx','ppocrv5_korean_dict.txt')) {
+    [ordered]@{ directory = 'korean'; file = $name; sha256 = (Get-FileHash -LiteralPath (Join-Path $app "models\korean\$name") -Algorithm SHA256).Hash.ToLowerInvariant() }
+}
 [ordered]@{ schemaVersion = 1; version = $version; runtime = $Runtime; builtAtUtc = [DateTime]::UtcNow.ToString('o');
-    appSha256 = (Get-FileHash -LiteralPath (Join-Path $app 'GuGuGaGaTranslator.exe') -Algorithm SHA256).Hash.ToLowerInvariant();
-    appSignature = [string](Get-AuthenticodeSignature -LiteralPath (Join-Path $app 'GuGuGaGaTranslator.exe')).Status;
-    models = @($modelHashes); packages = @($packageList)
+    appSha256 = (Get-FileHash -LiteralPath (Join-Path $app 'LCTA.exe') -Algorithm SHA256).Hash.ToLowerInvariant();
+    appSignature = [string](Get-AuthenticodeSignature -LiteralPath (Join-Path $app 'LCTA.exe')).Status;
+    models = @($modelHashes); extraModels = @($extraModels); packages = @($packageList)
 } | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $app 'build-manifest.json') -Encoding utf8
 if (-not ($Zip -or $Installer)) { return }
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-$archive = Join-Path $dist "GuGuGaGaTranslator-$Runtime-$version.zip"
+$archive = Join-Path $dist "LCTA-$Runtime-$version.zip"
 if (Test-Path -LiteralPath $archive) { throw "Release archive already exists: $archive. Move this exact artifact aside before rebuilding." }
 $zipFile = [IO.Compression.ZipFile]::Open($archive, [IO.Compression.ZipArchiveMode]::Create)
 try {
@@ -96,7 +110,7 @@ try {
         if ($file.Extension -in '.pdb','.lib') { continue }
         $relative = $file.FullName.Substring($app.Length).TrimStart('\','/').Replace('\','/')
         [void][IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zipFile, $file.FullName,
-            "GuGuGaGaTranslator/$relative", [IO.Compression.CompressionLevel]::Optimal)
+            "LCTA/$relative", [IO.Compression.CompressionLevel]::Optimal)
     }
 } finally { $zipFile.Dispose() }
 $assets = @($archive)
@@ -105,11 +119,11 @@ if ($Installer) {
     New-Item -ItemType Directory -Path $payload -Force | Out-Null
     Copy-Item -LiteralPath $archive -Destination (Join-Path $payload 'app.zip') -Force
     $setupOutput = Join-Path $staging 'installer'
-    dotnet publish (Join-Path $root 'tools\Installer\Installer.csproj') -c $Configuration -r $Runtime -o $setupOutput --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true --nologo
+    dotnet publish (Join-Path $root 'tools\Installer\Installer.csproj') -c $Configuration -r $Runtime -o $setupOutput --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true --nologo @restoreProperties
     if ($LASTEXITCODE -ne 0) { throw 'Installer publish failed' }
-    $setup = Join-Path $dist "GuGuGaGaTranslator-Setup-$version.exe"
+    $setup = Join-Path $dist "LCTA-Setup-$version.exe"
     if (Test-Path -LiteralPath $setup) { throw "Installer already exists: $setup" }
-    Copy-Item -LiteralPath (Join-Path $setupOutput 'GuGuGaGaTranslator-Setup.exe') -Destination $setup
+    Copy-Item -LiteralPath (Join-Path $setupOutput 'LCTA-Setup.exe') -Destination $setup
     & (Join-Path $root 'tools\sign-release.ps1') -Path $setup -CertificateThumbprint $SignCertificateThumbprint -TimestampServer $TimestampServer -RequireSigning:$RequireSigning
     $assets += $setup
 }

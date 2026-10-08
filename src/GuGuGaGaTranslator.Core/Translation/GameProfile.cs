@@ -1,4 +1,5 @@
 using System.Text;
+using System.IO;
 
 namespace GuGuGaGaTranslator.Core.Translation;
 
@@ -18,6 +19,10 @@ public sealed class GameTerm
 
     public string? Note { get; set; }
 
+    public string? SourceUrl { get; set; }
+    public string? ReviewStatus { get; set; }
+    public bool Enabled { get; set; } = true;
+
     /// <summary>Render the term in the one-line sheet syntax.</summary>
     public override string ToString()
     {
@@ -29,6 +34,12 @@ public sealed class GameTerm
             builder.Append(" | 禁止: ").Append(string.Join("、", Forbidden));
         if (!string.IsNullOrWhiteSpace(Note))
             builder.Append(" | 备注: ").Append(Note);
+        if (!string.IsNullOrWhiteSpace(SourceUrl))
+            builder.Append(" | 出处: ").Append(SourceUrl);
+        if (!string.IsNullOrWhiteSpace(ReviewStatus))
+            builder.Append(" | 核对: ").Append(ReviewStatus);
+        if (!Enabled)
+            builder.Append(" | 启用: 否");
         return builder.ToString();
     }
 }
@@ -49,6 +60,7 @@ public sealed class GameProfile
 
     /// <summary>How this profile is recognized: substrings of the game window's title.</summary>
     public List<string> WindowHints { get; set; } = [];
+    public List<string> ProcessHints { get; set; } = [];
 
     public string? Note { get; set; }
 
@@ -150,9 +162,15 @@ public static class TermSheet
                 {
                     term.Note = body;
                 }
+                else if (key == "出处")
+                    term.SourceUrl = body;
+                else if (key == "核对")
+                    term.ReviewStatus = body;
+                else if (key == "启用")
+                    term.Enabled = body is not ("否" or "false" or "0");
                 else
                 {
-                    problems.Add($"第 {lineNumber} 行有无法识别的段「{key}」(可用:禁止 / 备注)");
+                    problems.Add($"第 {lineNumber} 行有无法识别的段「{key}」(可用:禁止 / 备注 / 出处 / 核对 / 启用)");
                 }
             }
 
@@ -190,6 +208,7 @@ public static class TermSheet
         {
             "en" or "english" or "eng" => "en",
             "ja" or "jp" or "japanese" or "jpn" => "ja",
+            "ko" or "kor" or "korean" or "ko-kr" => "ko",
             "zh" or "cn" or "chinese" => "zh",
             _ => null,
         };
@@ -239,12 +258,16 @@ public static class GameProfiles
             Id = "limbus-company",
             Name = "边狱巴士 / Limbus Company",
             WindowHints = ["Limbus", "边狱", "림버스"],
+            ProcessHints = ["LimbusCompany"],
+            Author = "LCTA 社区维护",
+            SourceUrl = "https://www.zeroasso.top/archive/main/",
+            ProfileVersion = "1.4.0",
             Note = "Project Moon 的作品。都市世界观,十二位罪人,大量专有名词来自《废墟图书馆》与《脑叶公司》。"
                 + "术语表按零协会汉化整理,同时带英文与日文两种原文,中/日/英互译都能用。",
             Worldview = LimbusProfile.Worldview,
             StyleHint = LimbusProfile.StyleHint,
             // 表里同时有 en: 和 ja: 两种原文,翻译时按当前方向取用,见 GameProfiles.ForDirection。
-            Terms = TermSheet.Parse(LimbusProfile.Terms),
+            Terms = LimbusProfile.CreateTerms(),
         },
         new()
         {
@@ -267,6 +290,18 @@ public static class GameProfiles
         string.IsNullOrWhiteSpace(id)
             ? null
             : profiles.FirstOrDefault(profile => profile.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+
+    public static GameProfile? MatchWindow(string? title, string? processName, IReadOnlyList<GameProfile> profiles)
+    {
+        var process = profiles.FirstOrDefault(profile => profile.ProcessHints.Any(hint =>
+            !string.IsNullOrWhiteSpace(hint) && string.Equals(Path.GetFileNameWithoutExtension(hint), processName, StringComparison.OrdinalIgnoreCase)));
+        if (process is not null)
+            return process;
+        // 浏览器中打开的游戏介绍或术语网页不应自动启用游戏档案。
+        if (new[] { "chrome", "msedge", "firefox", "brave", "opera", "iexplore" }.Contains(processName, StringComparer.OrdinalIgnoreCase))
+            return null;
+        return MatchByTitle(title, profiles);
+    }
 
     /// <summary>Pick the profile whose window hints match a window title; the longest matching hint wins, so a profile for
     /// a specific game beats one that merely matches its launcher.</summary>
@@ -373,7 +408,7 @@ public static class GameProfiles
         return result;
     }
 
-    /// <summary>Which of the three supported languages a tag or configuration value names, or null when it names none.</summary>
+    /// <summary>将语言标签归一到中、日、英、韩；不支持的标签返回 null。</summary>
     public static string? LanguageOf(string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -386,6 +421,8 @@ public static class GameProfiles
             return "ja";
         if (text.StartsWith("en", StringComparison.Ordinal) || text is "eng" or "english")
             return "en";
+        if (text.StartsWith("ko", StringComparison.Ordinal) || text is "kor" or "korean")
+            return "ko";
         return null;
     }
 
@@ -395,7 +432,9 @@ public static class GameProfiles
     private static bool IsChinese(string language) => LanguageOf(language) == "zh";
 
     private static bool IsUsable(GameTerm term) =>
-        !string.IsNullOrWhiteSpace(term.Source) && !string.IsNullOrWhiteSpace(term.Target);
+        term.Enabled && term.ReviewStatus != "待核对"
+        && !(string.IsNullOrWhiteSpace(term.ReviewStatus) && (term.Note?.Contains("待核对", StringComparison.Ordinal) ?? false))
+        && !string.IsNullOrWhiteSpace(term.Source) && !string.IsNullOrWhiteSpace(term.Target);
 
     private static GlossaryEntry Entry(string source, string target, List<string>? forbidden) =>
         new(source.Trim(), target.Trim(), forbidden is { Count: > 0 } ? forbidden.ToArray() : null);

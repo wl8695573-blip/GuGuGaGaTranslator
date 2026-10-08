@@ -19,7 +19,7 @@ using GuGuGaGaTranslator.Core.Translation;
 using GuGuGaGaTranslator.Ocr.Rapid;
 using Frame = GuGuGaGaTranslator.Core.Capture.Frame;
 
-internal static class Program
+internal static partial class Program
 {
     private static int _passed;
 
@@ -51,6 +51,7 @@ internal static class Program
             CheckCaptureMigration();
             CheckAppearance(scratch);
             CheckOverlay();
+            CheckLcta15(scratch);
             if (args.Contains("--capture"))
             {
                 CheckCapture(scratch);
@@ -189,7 +190,7 @@ internal static class Program
             Check(session.IsRunning, "isolated RapidOCR pipeline starts without a capture target");
             var recognizer = session.Recognizer;
             var pipeline = session.Pipeline;
-            foreach (var preset in DefaultLanguagePresets.Create())
+            foreach (var preset in Enumerable.Range(0, 4).SelectMany(_ => DefaultLanguagePresets.Create()))
             {
                 session.ApplyLanguagePresetAsync(preset).GetAwaiter().GetResult();
                 Check(session.Languages == new LanguagePair(preset.From, preset.To)
@@ -257,7 +258,7 @@ internal static class Program
             Invoke(main, "LoadConfigIntoUi");
             ((TextBox)main.FindName("ModelBox")).Text = "custom-unsaved-model";
             var chooser = (ComboBox)main.FindName("OverlayPresetCombo");
-            for (var cycle = 0; cycle < 3; cycle++)
+            for (var cycle = 0; cycle < 5; cycle++)
                 for (var index = 0; index < session.Config.Overlay.Presets.Count; index++)
                 {
                     chooser.SelectedIndex = index;
@@ -268,6 +269,14 @@ internal static class Program
                 }
             Check(((TextBox)main.FindName("ModelBox")).Text == "custom-unsaved-model",
                 "appearance changes preserve other unsaved settings");
+            var profiles = (ComboBox)main.FindName("GameProfileCombo");
+            for (var cycle = 0; cycle < 20; cycle++)
+            {
+                profiles.SelectedIndex = cycle % 2;
+                Pump();
+                Check(session.Config.Translation.ActiveProfile == (cycle % 2 == 0 ? "" : "limbus-company")
+                    && !Field<bool>(main, "_loadingUi"), $"profile selector cycle {cycle}: no recursive selection");
+            }
         }
         finally { main.Close(); session.DisposeAsync().AsTask().GetAwaiter().GetResult(); }
     }
@@ -311,6 +320,18 @@ internal static class Program
             Pump();
             Check(!overlay.IsVisible && !bar.IsVisible && dismissals == 2, "control bar system close safely dismisses both windows");
             overlay.Open();
+            config.Placement = OverlayPlacement.Below;
+            config.OffsetY = 8;
+            var workArea = OverlayWindowInterop.WorkAreaAt(new Int32Rect(250, 200, 420, 90));
+            var bottomSource = new Int32Rect(workArea.X + 100, workArea.Y + workArea.Height - 95, 420, 90);
+            overlay.ShowTranslated("Source", "底部字幕的译文应避让原文。", bottomSource);
+            Pump();
+            WindowEnumerator.TryReadFrameRect(new WindowInteropHelper(overlay).Handle, out var fallback);
+            Check(fallback.Y + fallback.Height <= bottomSource.Y, "bottom dialogue falls back above without covering source");
+            handle.RaiseEvent(new DragDeltaEventArgs(0, 10) { RoutedEvent = Thumb.DragDeltaEvent });
+            WindowEnumerator.TryReadFrameRect(new WindowInteropHelper(overlay).Handle, out var dragged);
+            Check(dragged.Y == fallback.Y + (int)Math.Round(10 * VisualTreeHelper.GetDpi(bar).DpiScaleY)
+                && config.Placement == OverlayPlacement.Above, "drag after automatic placement follows the pointer at current DPI");
             config.Placement = OverlayPlacement.Below;
             config.FontSize = 28;
             overlay.ShowTranslated("Source", string.Join('\n', Enumerable.Repeat("长译文需要滚动查看，不能落到屏幕外。", 80)), new Int32Rect(250, 900, 420, 90));
@@ -473,6 +494,7 @@ internal static class Program
             session.Config.Overlay.Width = 420;
             session.Config.Overlay.Height = 100;
             session.SetRegion(info!, info!.ClientRect);
+            session.ApplyLanguagePresetAsync(new() { From = "en", To = "zh-Hans", Ocr = "en-US" }).GetAwaiter().GetResult();
             foreach (var property in session.Config.Hotkeys.GetType().GetProperties())
                 if (property.PropertyType == typeof(string))
                     property.SetValue(session.Config.Hotkeys, "");
@@ -484,6 +506,21 @@ internal static class Program
             WaitFor(() => translation.Text.Contains("new day", StringComparison.OrdinalIgnoreCase), "Live capture did not reach the main view");
             Check(((TextBox)main.FindName("SourceBox")).Text.Contains("new day", StringComparison.OrdinalIgnoreCase)
                 && translation.Text.Contains("mock"), "live window capture, RapidOCR, mock translation and WPF result update complete");
+            ((TextBox)main.FindName("QuickTermSource")).Text = "new day";
+            ((TextBox)main.FindName("QuickTermTarget")).Text = "新一天";
+            InvokeClick(main, "OnAddQuickTerm");
+            WaitFor(() => translation.Text.Contains("新一天"), "Current line did not adopt added personal term");
+            Check(translation.Text.Contains("新一天"), "quick term immediately retranslates unchanged captured line");
+            ((TextBox)main.FindName("QuickTermSource")).Text = "new day";
+            ((TextBox)main.FindName("QuickTermTarget")).Text = "全新一天";
+            InvokeClick(main, "OnAddQuickTerm");
+            WaitFor(() => translation.Text.Contains("全新一天"), "Current line kept obsolete personal term");
+            Check(translation.Text.Contains("全新一天"), "quick term edit invalidates previous translation of current line");
+            session.Config.Translation.PersonalTerms.Clear();
+            session.SaveConfig();
+            session.ForgetContext();
+            WaitFor(() => translation.Text.Contains("new day", StringComparison.OrdinalIgnoreCase), "Current line did not recover after removing personal term");
+            Check(!translation.Text.Contains("全新一天"), "removing personal term restores current line without waiting for scene change");
             var overlay = Field<OverlayWindow>(main, "_overlay");
             var chooser = (ComboBox)main.FindName("OverlayPresetCombo");
             for (var index = 0; index < session.Config.Overlay.Presets.Count; index++)
@@ -502,6 +539,16 @@ internal static class Program
             Check(session.IsRunning, "main window restarts after closing the overlay");
             WaitFor(() => overlay.IsVisible && bar.IsVisible, "Overlay did not reopen");
             Check(overlay.IsVisible && bar.IsVisible, "both live windows reopen after restart");
+            for (var cycle = 1; cycle < 10; cycle++)
+            {
+                var closingButtons = Field<StackPanel>(bar, "_buttons");
+                Click((Border)closingButtons.Children[closingButtons.Children.Count - 1]);
+                WaitFor(() => !session.IsRunning && !session.IsStopping, "Repeated close did not stop the pipeline");
+                Check(!overlay.IsVisible && !bar.IsVisible, $"close cycle {cycle}: both windows hidden");
+                WaitFor(() => main.StartAutomatically(), "Repeated start did not restart the pipeline");
+                WaitFor(() => overlay.IsVisible && bar.IsVisible, "Repeated start did not show both windows");
+                Check(session.IsRunning && overlay.IsVisible && bar.IsVisible, $"restart cycle {cycle}: pipeline and overlay reopened");
+            }
             var stop = typeof(MainWindow).GetMethod("StopAsync", BindingFlags.Instance | BindingFlags.NonPublic)!;
             Await(((Task)stop.Invoke(main, null)!).ContinueWith(_ => true));
             Check(!overlay.IsVisible && !bar.IsVisible && !session.IsRunning, "main stop button hides the entire overlay");

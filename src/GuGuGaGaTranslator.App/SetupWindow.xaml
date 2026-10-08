@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Icon="Assets/icon.png"
-        Title="GuGuGaGaTranslator：开始使用"
+        Title="LCTA：开始使用"
         Width="440" SizeToContent="Height"
         WindowStyle="None" ResizeMode="NoResize"
         AllowsTransparency="True" Background="Transparent"
@@ -10,17 +10,17 @@
         ShowInTaskbar="True"
         FontFamily="{StaticResource UiFont}"
         Foreground="{StaticResource TextBrush}">
-  <Border CornerRadius="14" Background="{StaticResource WindowBackgroundBrush}"
+  <Border CornerRadius="2" Background="{StaticResource WindowBackgroundBrush}"
           BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
           MouseLeftButtonDown="OnDragArea">
     <StackPanel Margin="26,20,26,22">
 
       <Grid>
         <StackPanel Orientation="Horizontal">
-          <Image Source="Assets/icon.png" Width="36" Height="36" VerticalAlignment="Center"
+          <Image Source="Assets/lcta-wordmark.png" Width="90" Height="42" Stretch="Uniform" VerticalAlignment="Center"
                  RenderOptions.BitmapScalingMode="HighQuality" />
           <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
-            <TextBlock Text="GuGuGaGaTranslator" FontSize="17" FontFamily="{StaticResource DisplayFont}" />
+            <TextBlock Text="LCTA" FontSize="17" FontFamily="{StaticResource DisplayFont}" />
             <TextBlock x:Name="VersionText" FontSize="11" Foreground="{StaticResource HintTextBrush}" />
           </StackPanel>
         </StackPanel>

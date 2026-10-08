@@ -39,6 +39,7 @@ internal static class Program
             settingsSession.DisposeAsync().AsTask().GetAwaiter().GetResult();
             Console.WriteLine("PASS setup preserves custom fields and clears keys when changing provider.");
             var session = new AppSession(Path.Combine(output, "preview-config"));
+            session.LoadConfig();
             session.Config.Translation.Translator = session.Config.Translation.Translator with
             {
                 Provider = "openai-compatible",
@@ -49,6 +50,8 @@ internal static class Program
             ((Panel)main.Content).Background = main.Background;
             foreach (var name in new[] { "PopulateChoices", "LoadConfigIntoUi" })
                 typeof(MainWindow).GetMethod(name, BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(main, null);
+            ((CheckBox)main.FindName("FloatingBallCheck")).IsChecked = session.Config.FloatingBall.Enabled;
+            typeof(MainWindow).GetMethod("InitializeUpdates", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(main, null);
             ((ListView)main.FindName("WindowList")).ItemsSource = new[] { new { Display = "示例游戏 · 窗口模式（合成预览）" } };
             ((TextBlock)main.FindName("TargetSummary")).Text = "示例游戏 · 1280 × 720 · 区域随窗口尺寸调整";
             ((TextBox)main.FindName("SourceBox")).Text = "明日もここで会いましょう。";
@@ -68,6 +71,15 @@ internal static class Program
             providers.SelectedIndex = 1;
             tabs.SelectedIndex = tabs.Items.Count - 2;
             Render((FrameworkElement)main.Content, 1120, 740, Path.Combine(output, "screenshot-support.png"));
+            tabs.SelectedIndex = 2;
+            Render((FrameworkElement)main.Content, 1120, 740, Path.Combine(output, "screenshot-terms.png"));
+            session.Config.Translation.PersonalTerms.Add(new() { From = "en", To = "zh-Hans", Source = "Outis", Target = "奥提斯" });
+            var personalTerms = (Window)typeof(MainWindow).GetMethod("BuildPersonalTermDialog", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(main, null)!;
+            ((Panel)personalTerms.Content).Background = personalTerms.Background;
+            Render((FrameworkElement)personalTerms.Content, 640, 400, Path.Combine(output, "screenshot-personal-terms.png"));
+            tabs.SelectedIndex = 0;
+            var floatingBall = new FloatingBallWindow(new FloatingBallConfig(), [("打开主界面", () => { })]);
+            Render((FrameworkElement)floatingBall.Content, 58, 58, Path.Combine(output, "screenshot-floating-ball.png"), 3);
             var setup = new SetupWindow(session);
             ((TextBlock)setup.FindName("StorageHint")).Text = "密钥使用 Windows 当前账户加密保存。预览不保存配置。";
             Render((FrameworkElement)setup.Content, 440, null, Path.Combine(output, "screenshot-setup.png"));
@@ -86,7 +98,7 @@ internal static class Program
             barContent.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
             Render(barContent, barContent.DesiredSize.Width, barContent.DesiredSize.Height, Path.Combine(output, "screenshot-bar.png"));
             // Exercise narrow layouts and larger pixel output using the same controls.
-            Render((FrameworkElement)main.Content, 880, 520, Path.Combine(output, "screenshot-minimum.png"), 1.5);
+            Render((FrameworkElement)main.Content, 880, 620, Path.Combine(output, "screenshot-minimum.png"), 1.5);
             var editor = new GameProfileWindow(session, session.Config.Translation.GameProfiles[0]);
             ((Panel)editor.Content).Background = editor.Background;
             Render((FrameworkElement)editor.Content, 880, 720, Path.Combine(output, "screenshot-profile.png"));

@@ -19,6 +19,8 @@ public enum PipelineStatus
 
     NoText,
 
+    WaitingText,
+
     Translated,
 
     /// <summary>A translation is arriving piece by piece; <see cref="PipelineUpdate.Translation"/> holds the text so far.</summary>
@@ -105,6 +107,7 @@ public sealed record PipelineStats
 /// <summary>Loop tuning carried into the pipeline.</summary>
 public sealed record PipelineOptions
 {
+    public int TextSettleMs { get; init; } = 450;
     public int PollIntervalMs { get; init; } = 400;
 
     public int ChangeThresholdBits { get; init; } = 6;
@@ -198,6 +201,9 @@ public sealed class TranslationPipeline : IAsyncDisposable
     private long _revision;
     private volatile string? _pendingSource;
     private Int32Rect? _lastRegion;
+    private readonly TextStabilityGate _textStability = new();
+    private string? _failedSource;
+    private int _failedAttempts;
 
     private sealed record TranslationWork(long Revision, TranslationRequest Request, PipelineUpdate Update);
     private static Channel<TranslationWork> CreateQueue() => Channel.CreateBounded<TranslationWork>(
@@ -275,6 +281,10 @@ public sealed class TranslationPipeline : IAsyncDisposable
             _lastSourceText = null;
             _lastTranslation = null;
             _lastSignature = null;
+            _lastCells = null;
+            _textStability.Reset();
+            _failedSource = null;
+            _failedAttempts = 0;
             _recent.Clear();
             _forceNext = true;
         }
@@ -332,7 +342,7 @@ public sealed class TranslationPipeline : IAsyncDisposable
                 {
                     Status = PipelineStatus.Error,
                     At = DateTimeOffset.Now,
-                    Error = $"{exception.GetType().Name}: {exception.Message}",
+                    Error = TranslationErrors.Describe(exception),
                     TotalDuration = iteration.Elapsed,
                 });
                 await SafeDelayAsync(_options.ErrorBackoffMs, cancellationToken).ConfigureAwait(false);
@@ -385,7 +395,7 @@ public sealed class TranslationPipeline : IAsyncDisposable
             : FrameHasher.ChangedCellCount(_lastCells, cells);
         var forced = _forceNext || (DateTimeOffset.Now - _lastRecognizedAt).TotalMilliseconds >= _options.ForceRefreshMs;
 
-        if (!forced && distance < _options.ChangeThresholdBits && _options.TranslateOnlyOnChange)
+        if (!forced && !_textStability.IsWaiting && distance < _options.ChangeThresholdBits && _options.TranslateOnlyOnChange)
         {
             if (_pendingSource is not null)
                 return;
@@ -440,11 +450,38 @@ public sealed class TranslationPipeline : IAsyncDisposable
             return;
         }
 
+        lock (_state)
+        {
+            if (revision != _revision || _paused)
+                return;
+            if (!_textStability.Observe(sourceText, Environment.TickCount64, _options.TextSettleMs))
+            {
+                // 新台词还在增长时就废弃旧请求，防止旧结果覆盖正在出现的句子。
+                if (_pendingSource is not null && !string.Equals(_pendingSource, sourceText, StringComparison.Ordinal))
+                {
+                    _revision++;
+                    _activeTranslation?.Cancel();
+                    _pendingSource = null;
+                }
+                Publish(new PipelineUpdate
+                {
+                    Status = PipelineStatus.WaitingText,
+                    At = DateTimeOffset.Now,
+                    Ocr = ocr,
+                    SourceText = sourceText,
+                    CaptureDuration = captureWatch.Elapsed,
+                    OcrDuration = ocr.Duration,
+                    TotalDuration = iteration.Elapsed
+                });
+                return;
+            }
+        }
+
         // The same line re-read with a character of OCR noise is not a new line; reusing
         // its translation is what keeps a static box from paying per poll.
         if (_pendingSource is null && _lastSourceText is not null
             && _lastTranslation is not null
-            && TextNormalizer.Similarity(_lastSourceText, sourceText) >= _options.RepeatSimilarity)
+            && SameLine(_lastSourceText, sourceText))
         {
             Interlocked.Increment(ref _repeats);
             Publish(new PipelineUpdate
@@ -470,7 +507,9 @@ public sealed class TranslationPipeline : IAsyncDisposable
         {
             if (revision != _revision || _paused)
                 return;
-            if (_pendingSource is not null && TextNormalizer.Similarity(_pendingSource, sourceText) >= _options.RepeatSimilarity)
+            if (_failedSource == sourceText && _failedAttempts >= 3)
+                return;
+            if (_pendingSource is not null && SameLine(_pendingSource, sourceText))
                 return;
         }
         var languages = _settings.Languages();
@@ -480,7 +519,7 @@ public sealed class TranslationPipeline : IAsyncDisposable
             Text = sourceText,
             From = languages.From,
             To = languages.To,
-            Glossary = profile.Glossary,
+            Glossary = GlossarySelector.Select(sourceText, profile.Glossary),
             StyleHint = profile.StyleHint,
             Worldview = profile.Worldview,
             // The recent lines keep pronouns and tone consistent across a conversation.
@@ -543,8 +582,10 @@ public sealed class TranslationPipeline : IAsyncDisposable
                             Publish(work.Update with
                             {
                                 Status = PipelineStatus.Error,
-                                Error = exception.Message
+                                Error = TranslationErrors.Describe(exception) + " 同一句最多自动尝试 3 次；修改设置后可点击重新尝试。"
                             });
+                            _failedAttempts = _failedSource == request.Text ? _failedAttempts + 1 : 1;
+                            _failedSource = request.Text;
                         }
                     }
                     await SafeDelayAsync(_options.ErrorBackoffMs, cancellationToken).ConfigureAwait(false);
@@ -624,6 +665,8 @@ public sealed class TranslationPipeline : IAsyncDisposable
             _cache.Set(_settings.Translator.Id, request, translation);
             _lastSourceText = request.Text;
             _lastTranslation = translation;
+            _failedSource = null;
+            _failedAttempts = 0;
             Remember(request.Text, translation);
             Publish(work.Update with
             {
@@ -661,7 +704,7 @@ public sealed class TranslationPipeline : IAsyncDisposable
     /// <summary>Add a translated line to the rolling context window.</summary>
     private void Remember(string source, string translation)
     {
-        var capacity = Math.Max(0, _options.HistoryLines);
+        var capacity = Math.Clamp(_options.HistoryLines, 0, 8);
         if (capacity == 0)
             return;
 
@@ -672,7 +715,14 @@ public sealed class TranslationPipeline : IAsyncDisposable
         _recent.Add(new TranslationHistory(source, translation));
         while (_recent.Count > capacity)
             _recent.RemoveAt(0);
+        while (_recent.Count > 0 && _recent.Sum(line => line.Source.Length + (line.Translation?.Length ?? 0)) > 4000)
+            _recent.RemoveAt(0);
     }
+
+    private bool SameLine(string previous, string current) =>
+        previous == current || (!previous.StartsWith(current, StringComparison.Ordinal)
+            && !current.StartsWith(previous, StringComparison.Ordinal)
+            && TextNormalizer.Similarity(previous, current) >= _options.RepeatSimilarity);
 
     /// <summary>Whether the frame is a flat colour, which points at a capture problem rather than a recognition one.</summary>
     internal static bool IsBlank(Frame frame)
@@ -716,6 +766,7 @@ public sealed class TranslationPipeline : IAsyncDisposable
         // Any CJK character counts for both Chinese and Japanese: a Japanese line
         // can be all kanji, so separating them would reject valid dialogue.
         "ja" or "japanese" => IsCjk,
+        "ko" or "ko-kr" or "korean" => character => character is >= '\uAC00' and <= '\uD7AF' or >= '\u1100' and <= '\u11FF' or >= '\u3130' and <= '\u318F',
         "zh" or "zh-hans" or "zh-hant" or "zh-hans-cn" or "zh-hant-tw" or "chinese" => IsCjk,
         _ => null,
     };

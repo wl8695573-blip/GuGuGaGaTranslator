@@ -7,6 +7,21 @@ namespace GuGuGaGaTranslator.Core.Translation;
 /// the data stays editable as text instead of living as a hand-built object graph.</summary>
 internal static class LimbusProfile
 {
+    public static List<GameTerm> CreateTerms()
+    {
+        var terms = TermSheet.Parse(Terms);
+        foreach (var term in terms)
+        {
+            if (term.Note?.Contains("待核对", StringComparison.Ordinal) == true)
+            {
+                term.ReviewStatus = "待核对";
+                term.Enabled = false;
+            }
+            else
+                term.ReviewStatus = "历史收录";
+        }
+        return terms;
+    }
     /// <summary>English rows plus Japanese rows, each tagged with the language its source is written in.</summary>
     public const string Terms =
 """
@@ -312,7 +327,7 @@ ja: 爪 = 爪牙 | 备注: 待核对(The Claw)
 ja: 調律者 = 调律者 | 备注: 待核对(Arbiter)
 """;
 
-    public const string Worldview = "《边狱巴士》(Limbus Company,Project Moon 出品)的对话。背景是「都市」——由 26 家巨型企业(「翼」)与各自管辖的「巢」、以及巢之外的「后巷」构成的巨型都市国家。玩家扮演管理人但丁,带领十二位「罪人」乘坐巴士「梅菲斯托费勒斯」,在都市各处崩塌的脑叶公司支部里回收「金枝」。专有名词一律沿用社区通行的零协会译名,不要另造:Outis 是「奥提斯」而不是「奥德修斯」;Identity 是「人格」而不是「身份」;The City 是「都市」而不是「城市」;Fixer 是「收尾人」;Association 是「协会」;Abnormality 是「异想体」(日文原文写作「幻想体」);Distortion 是「扭曲」(日文原文写作「ねじれ」);Bloodfiend 是「血魔」(日文原文写作「血鬼」);Wing 是「翼」;Nest 是「巢」。英文的「N Corp.」一律译作「N公司」,不要写成「N社」。日文原文里罪人叫「囚人」、公司名写作「リンバス・カンパニー」,译文都要按中文译名走。";
+    public const string Worldview = "《边狱巴士》（Limbus Company，Project Moon）的剧情文字。专有名词以本次匹配到的术语为准；没有匹配到的内容忠实翻译，不补充原文未提及的世界设定、人物身份或后续剧情。";
 
-    public const string StyleHint = "罪人之间以名字或绰号互称,语气现代、口语化,夹带黑色幽默与讽刺,不要文言或书面官腔。各人的语气差别很大,不要写成同一个腔调:堂吉诃德热情外放、感叹号极多;默尔索平铺直叙、几乎不用语气词(不要给他加「啊/吧/呢」);良秀句子极短、很少说「我们」;辛克莱犹豫、多用省略号;罗佳爱用反问;但丁是管理人,台词短而克制。";
+    public const string StyleHint = "保留原文的语气、停顿和黑色幽默。仅在原文或近期对话明确说话者时参考人物差异：堂吉诃德热情，默尔索克制平直，良秀简短，辛克莱较为犹豫。不能为套用风格而添加感叹号、语气词或台词。说话者不明确时采用自然、中性的表达。";
 }

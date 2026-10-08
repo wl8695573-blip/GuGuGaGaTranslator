@@ -41,8 +41,8 @@ internal static class Program
             return 0;
         }
         var engine = Option(args, "--engine", "rapid");
-        if (engine is not ("rapid" or "windows"))
-            throw new ArgumentException("--engine rapid|windows");
+        if (engine is not ("rapid" or "korean" or "auto" or "windows"))
+            throw new ArgumentException("--engine rapid|korean|auto|windows");
         var iterations = Math.Clamp(int.Parse(Option(args, "--iterations", "3"), CultureInfo.InvariantCulture), 1, 100);
         var output = Path.GetFullPath(Option(args, "--output", ".artifacts/benchmark-" + engine));
         Directory.CreateDirectory(output);
@@ -50,19 +50,26 @@ internal static class Program
             ?? throw new InvalidDataException("Empty corpus");
         var results = new List<Result>();
         var initialization = Stopwatch.StartNew();
-        using var rapid = engine == "rapid" ? RapidOcrRecognizer.Create(new RapidOcrSettings
+        using var rapid = engine is "rapid" or "korean" ? RapidOcrRecognizer.Create(new RapidOcrSettings
         {
             ModelDirectory = Option(args, "--models", "models/v6"),
-            LimitSideLen = 320
+            LimitSideLen = 320,
+            Korean = engine == "korean"
         }) : null;
+        using var automatic = engine == "auto" ? new FourLanguageRecognizer(new RapidOcrSettings
+        {
+            ModelDirectory = Option(args, "--models", "models/v6"), LimitSideLen = 320
+        }, () => "auto") : null;
         initialization.Stop();
         foreach (var fixture in fixtures)
         {
+            if (engine == "korean" && !fixture.Language.StartsWith("ko", StringComparison.OrdinalIgnoreCase)) continue;
+            if (engine == "rapid" && fixture.Language.StartsWith("ko", StringComparison.OrdinalIgnoreCase)) continue;
             // Keep optional user-provided corpora inside their selected root.
             var path = Path.GetFullPath(Path.Combine(directory, fixture.File));
             if (!path.StartsWith(directory + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException("Fixture path escapes corpus");
-            ITextRecognizer? recognizer = rapid is not null ? rapid : WindowsOcrRecognizer.TryCreate(fixture.Language);
+            ITextRecognizer? recognizer = automatic is not null ? automatic : rapid is not null ? rapid : WindowsOcrRecognizer.TryCreate(fixture.Language);
             if (recognizer is null)
             {
                 results.Add(new(fixture.File, "SKIP: language pack unavailable", null, null, null, null, fixture.MaximumCer));
@@ -145,7 +152,7 @@ internal static class Program
     {
         Directory.CreateDirectory(directory);
         var fixtures = new List<Fixture>();
-        foreach (var (language, text) in new[] { ("en-US", "We will meet again tomorrow."), ("ja", "明日もここで会いましょう。"), ("zh-Hans-CN", "明天我们还会在这里见面。") })
+        foreach (var (language, text) in new[] { ("en-US", "We will meet again tomorrow."), ("ja", "明日もここで会いましょう。"), ("zh-Hans-CN", "明天我们还会在这里见面。"), ("ko-KR", "내일 여기서 다시 만나요.") })
             foreach (var dpi in new[] { 100, 125, 150 })
                 foreach (var appearance in new[] { "dark", "light", "low-contrast" })
                 {
@@ -156,7 +163,7 @@ internal static class Program
                         drawing.DrawRectangle(new SolidColorBrush(light ? Color.FromRgb(242, 244, 249) : Color.FromRgb(20, 27, 48)), null, new Rect(0, 0, 720, 120));
                         var brush = new SolidColorBrush(light ? Color.FromRgb(20, 27, 48) : appearance == "low-contrast" ? Color.FromRgb(110, 123, 146) : Colors.White);
                         var formatted = new FormattedText(text, CultureInfo.GetCultureInfo(language), FlowDirection.LeftToRight,
-                            new Typeface("Microsoft YaHei UI"), 28, brush, dpi / 100d);
+                            new Typeface(language.StartsWith("ko") ? "Malgun Gothic" : "Microsoft YaHei UI"), 28, brush, dpi / 100d);
                         drawing.DrawText(formatted, new Point(24, 40));
                     }
                     var bitmap = new RenderTargetBitmap(720 * dpi / 100, 120 * dpi / 100, 96d * dpi / 100, 96d * dpi / 100, PixelFormats.Pbgra32);

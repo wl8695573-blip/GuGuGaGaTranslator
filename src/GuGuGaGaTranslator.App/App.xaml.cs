@@ -33,7 +33,7 @@ public partial class App : Application
                 MessageBox.Show(
                     string.Join(Environment.NewLine, steps)
                         + (ok ? Environment.NewLine + Environment.NewLine + "关闭此提示后完成文件清理。" : string.Empty),
-                    "卸载 GuGuGaGaTranslator",
+                    "卸载 LCTA",
                     MessageBoxButton.OK,
                     ok ? MessageBoxImage.Information : MessageBoxImage.Warning);
             }
@@ -51,7 +51,7 @@ public partial class App : Application
         catch (AbandonedMutexException) { _ownsMutex = true; }
         if (!_ownsMutex)
         {
-            MessageBox.Show("程序已经在运行，请使用已打开的窗口。", "GuGuGaGaTranslator");
+            MessageBox.Show("程序已经在运行，请使用已打开的窗口。", "LCTA");
             Shutdown();
             return;
         }

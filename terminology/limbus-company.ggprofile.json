@@ -1,0 +1,2830 @@
+{
+  "format": "gugugaga-game-profile",
+  "schemaVersion": 2,
+  "profile": {
+    "id": "limbus-company",
+    "name": "边狱巴士 / Limbus Company",
+    "author": "LCTA 社区维护",
+    "sourceUrl": "https://www.zeroasso.top/archive/main/",
+    "license": null,
+    "profileVersion": "2026.10.8.1",
+    "windowHints": [
+      "Limbus",
+      "边狱",
+      "림버스"
+    ],
+    "processHints": [
+      "LimbusCompany"
+    ],
+    "note": "Project Moon 的作品。都市世界观,十二位罪人,大量专有名词来自《废墟图书馆》与《脑叶公司》。术语表按零协会汉化整理,同时带英文与日文两种原文,中/日/英互译都能用。",
+    "from": null,
+    "to": null,
+    "ocrLanguage": null,
+    "worldview": "《边狱巴士》（Limbus Company，Project Moon）的剧情文字。专有名词以本次匹配到的术语为准；没有匹配到的内容忠实翻译，不补充原文未提及的世界设定、人物身份或后续剧情。",
+    "styleHint": "保留原文的语气、停顿和黑色幽默。仅在原文或近期对话明确说话者时参考人物差异：堂吉诃德热情，默尔索克制平直，良秀简短，辛克莱较为犹豫。不能为套用风格而添加感叹号、语气词或台词。说话者不明确时采用自然、中性的表达。",
+    "terms": [
+      {
+        "language": "en",
+        "source": "Yi Sang",
+        "target": "李箱",
+        "forbidden": [
+          "李相",
+          "伊桑"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Faust",
+        "target": "浮士德",
+        "forbidden": [
+          "法乌斯特"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Don Quixote",
+        "target": "堂吉诃德",
+        "forbidden": [
+          "唐吉诃德",
+          "堂吉珂德"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Ryōshū",
+        "target": "良秀",
+        "forbidden": [
+          "凉秀",
+          "辽修",
+          "良修"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Meursault",
+        "target": "默尔索",
+        "forbidden": [
+          "穆尔索",
+          "梅尔索",
+          "莫尔索"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Hong Lu",
+        "target": "鸿璐",
+        "forbidden": [
+          "洪露",
+          "红露",
+          "鸿露"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Heathcliff",
+        "target": "希斯克利夫",
+        "forbidden": [
+          "希斯克里夫",
+          "西斯克利夫"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Ishmael",
+        "target": "以实玛利",
+        "forbidden": [
+          "伊斯梅尔",
+          "伊什梅尔",
+          "以赛玛利"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Rodion",
+        "target": "罗佳",
+        "forbidden": [
+          "罗迪昂",
+          "罗季昂",
+          "罗迪恩"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Sinclair",
+        "target": "辛克莱",
+        "forbidden": [
+          "辛克雷",
+          "辛克莱尔"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Outis",
+        "target": "奥提斯",
+        "forbidden": [
+          "奥德修斯",
+          "奥蒂斯",
+          "欧提斯"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Gregor",
+        "target": "格里高尔",
+        "forbidden": [
+          "格雷戈尔",
+          "格里格"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Dante",
+        "target": "但丁",
+        "forbidden": [
+          "丹特",
+          "丹堤"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Vergilius",
+        "target": "维吉里乌斯",
+        "forbidden": [
+          "维吉尔",
+          "维尔吉利乌斯"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Charon",
+        "target": "卡戎",
+        "forbidden": [
+          "卡隆",
+          "夏隆"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Sinners",
+        "target": "罪人",
+        "forbidden": [
+          "囚犯",
+          "罪徒"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Mephistopheles",
+        "target": "梅菲斯托费勒斯",
+        "forbidden": [
+          "梅菲斯特",
+          "墨菲斯托"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Sancho",
+        "target": "桑丘",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Dulcinea",
+        "target": "杜尔西内娅",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Sansón",
+        "target": "参孙",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Barber",
+        "target": "理发师",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Priest",
+        "target": "神父",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Cassetti",
+        "target": "卡塞蒂",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Kromer",
+        "target": "克罗默",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Demian",
+        "target": "德米安",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Hohenheim",
+        "target": "霍恩海姆",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Ahab",
+        "target": "亚哈",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Queequeg",
+        "target": "魁魁格",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Starbuck",
+        "target": "斯达巴克",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Pip",
+        "target": "比普",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Catherine",
+        "target": "凯瑟琳",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Hindley",
+        "target": "亨德利",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Linton",
+        "target": "林顿",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Nelly",
+        "target": "耐莉",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Moses",
+        "target": "摩西",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Ezra",
+        "target": "以斯拉",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Sonya",
+        "target": "索尼亚",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Jia Xichun",
+        "target": "贾惜春",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Jia Baoyu",
+        "target": "贾宝玉",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Lin Daiyu",
+        "target": "林黛玉",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Xue Baochai",
+        "target": "薛宝钗",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Dongbaek",
+        "target": "冬柏",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Dongrang",
+        "target": "东朗",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Gubo",
+        "target": "仇甫",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Araya",
+        "target": "阿赖耶",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Erlking Heathcliff",
+        "target": "魔王希斯克利夫",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Time Ripper",
+        "target": "时间杀人魔",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "League of Nine",
+        "target": "九人会",
+        "forbidden": [
+          "九人联盟",
+          "新九人会",
+          "九人协会"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Limbus Company",
+        "target": "边狱公司",
+        "forbidden": [
+          "林布斯",
+          "边狱企业"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The LCB",
+        "target": "LCB",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "LCCB",
+        "target": "先遣部队",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "LCCA",
+        "target": "收尾部队",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "LCD",
+        "target": "LCD",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "LCE",
+        "target": "LCE",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Limbus Kindergarten",
+        "target": "边狱幼儿园",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Backdoor",
+        "target": "后门",
+        "forbidden": [
+          "暗门"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "PDA Device",
+        "target": "PDA终端",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The City",
+        "target": "都市",
+        "forbidden": [
+          "城市"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "District",
+        "target": "区",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Nests",
+        "target": "巢",
+        "forbidden": [
+          "巢穴",
+          "鸟巢",
+          "巢都"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Backstreets",
+        "target": "后巷",
+        "forbidden": [
+          "后街",
+          "背街"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Outskirts",
+        "target": "郊区",
+        "forbidden": [
+          "郊外"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Great Lake",
+        "target": "大湖",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Night in the Backstreets",
+        "target": "后巷深宵",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Head",
+        "target": "首脑",
+        "forbidden": [
+          "元首",
+          "头目"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Claw",
+        "target": "爪牙",
+        "forbidden": [
+          "爪子",
+          "利爪"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Arbiter",
+        "target": "调律者",
+        "forbidden": [
+          "仲裁者",
+          "调停者",
+          "裁定者"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Taboo",
+        "target": "禁忌",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Wings",
+        "target": "翼",
+        "forbidden": [
+          "翅膀",
+          "羽翼"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Singularities",
+        "target": "奇点",
+        "forbidden": [
+          "奇异点",
+          "奇异性"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Golden Bough",
+        "target": "金枝",
+        "forbidden": [
+          "黄金枝",
+          "金树枝",
+          "黄金树枝"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Relic",
+        "target": "遗物",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Sign",
+        "target": "印记",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Smoke War",
+        "target": "烟霾战争",
+        "forbidden": [
+          "烟雾战争"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Concept Incinerator",
+        "target": "概念焚化炉",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Library",
+        "target": "图书馆",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Lobotomy Corp.",
+        "target": "脑叶公司",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Lobotomy Corp. Branch",
+        "target": "脑叶公司支部",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Seed of Light",
+        "target": "光之种",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "White Nights and Dark Days",
+        "target": "白夜黑昼",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "A Corp.",
+        "target": "A公司",
+        "forbidden": [
+          "A社"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "G Corp.",
+        "target": "G公司",
+        "forbidden": [
+          "G社"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "H Corp.",
+        "target": "H公司",
+        "forbidden": [
+          "H社"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "K Corp.",
+        "target": "K公司",
+        "forbidden": [
+          "K社"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "L Corp.",
+        "target": "L公司",
+        "forbidden": [
+          "L社"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "M Corp.",
+        "target": "M公司",
+        "forbidden": [
+          "M社"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "N Corp.",
+        "target": "N公司",
+        "forbidden": [
+          "N社",
+          "恩公司"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "P Corp.",
+        "target": "P公司",
+        "forbidden": [
+          "P社"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "R Corp.",
+        "target": "R公司",
+        "forbidden": [
+          "R社"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "S Corp.",
+        "target": "S公司",
+        "forbidden": [
+          "S社"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "T Corp.",
+        "target": "T公司",
+        "forbidden": [
+          "T社"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "U Corp.",
+        "target": "U公司",
+        "forbidden": [
+          "U社"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "W Corp.",
+        "target": "W公司",
+        "forbidden": [
+          "W社"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "X Corp.",
+        "target": "X公司",
+        "forbidden": [
+          "X社"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Associations",
+        "target": "协会",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Hana Association",
+        "target": "하나协会",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Zwei Association",
+        "target": "Zwei协会",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Shi Association",
+        "target": "し协会",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Cinq Association",
+        "target": "Cinq协会",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Liu Association",
+        "target": "六协会",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Seven Association",
+        "target": "Seven协会",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Devyat' Association",
+        "target": "Девять协会",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Dieci Association",
+        "target": "Dieci协会",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Öufi Association",
+        "target": "Öufi协会",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Fixer",
+        "target": "收尾人",
+        "forbidden": [
+          "修理工",
+          "修理者",
+          "调停人"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Color Fixer",
+        "target": "特色",
+        "forbidden": [
+          "彩色收尾人"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Offices",
+        "target": "事务所",
+        "forbidden": [
+          "办公室"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Workshops",
+        "target": "工坊",
+        "forbidden": [
+          "车间",
+          "工作室"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Syndicate",
+        "target": "帮派",
+        "forbidden": [
+          "辛迪加"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Kurokumo Clan",
+        "target": "黑云会",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Blade Lineage",
+        "target": "剑契组",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Yurodiviye",
+        "target": "圣愚",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The House of Spiders",
+        "target": "蜘蛛巢",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Heishou Pack",
+        "target": "黑兽",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Technology Liberation Alliance",
+        "target": "技术解放联盟",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Dead Rabbits",
+        "target": "死兔帮",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Tieqiu Crew",
+        "target": "铁工会",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Tingtang Gang",
+        "target": "豆豆帮",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Twinhook Pirates",
+        "target": "双钩海盗团",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Los Mariachis",
+        "target": "流浪乐队",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Night Awls",
+        "target": "夜锥组",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Wild Hunt",
+        "target": "狂猎",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "La Manchaland",
+        "target": "拉·曼却领",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Nagel und Hammer",
+        "target": "钉与锤",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Pequod",
+        "target": "裴廓德号",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Wuthering Heights",
+        "target": "呼啸山庄",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Dawn Office",
+        "target": "黎明事务所",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Molar Office",
+        "target": "臼齿事务所",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Full-Stop Office",
+        "target": "句点事务所",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Hook Office",
+        "target": "吊钩事务所",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Rosespanner Workshop",
+        "target": "玫瑰扳手工坊",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Fingers",
+        "target": "手指",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Index",
+        "target": "食指",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Thumb",
+        "target": "拇指",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Middle",
+        "target": "中指",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Ring",
+        "target": "环指",
+        "forbidden": [
+          "无名指",
+          "戒指"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "The Pinky",
+        "target": "小指",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Nursefather",
+        "target": "父辈",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Apprentice",
+        "target": "子辈",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Proxy",
+        "target": "代行者",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Proselyte",
+        "target": "苦行者",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Docent",
+        "target": "讲解员",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Maestro",
+        "target": "大师",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Big Sister",
+        "target": "幼姊",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Little Sister",
+        "target": "幼妹",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Great Brother",
+        "target": "长兄",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Sottocapo",
+        "target": "二老板",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Consigliere",
+        "target": "顾问",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Abnormalities",
+        "target": "异想体",
+        "forbidden": [
+          "异常体",
+          "异变体",
+          "怪物体"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Distortions",
+        "target": "扭曲",
+        "forbidden": [
+          "畸变",
+          "失真"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Qliphoth Deterrence",
+        "target": "逆卡巴拉抑制力",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Qliphoth Counter",
+        "target": "逆卡巴拉计数器",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Qliphoth Meltdown",
+        "target": "逆卡巴拉熔毁",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Cognition Filter",
+        "target": "认知滤网",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Enkephalin",
+        "target": "脑啡肽",
+        "forbidden": [
+          "脑磷脂",
+          "恩凯法林"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Canned Experience",
+        "target": "经验罐头",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Identities",
+        "target": "人格",
+        "forbidden": [],
+        "note": "指罪人可替换的人格(抽卡单位),不是「身份」",
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Identity",
+        "target": "人格",
+        "forbidden": [],
+        "note": "同上",
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Identity Uptying",
+        "target": "人格同步",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Thread",
+        "target": "纺锤",
+        "forbidden": [
+          "线程"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Threadspinning",
+        "target": "异想解析",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Resonance",
+        "target": "共鸣",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Attunement",
+        "target": "感应度",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "fathoms of the ego",
+        "target": "自我心道",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Mirror Worlds",
+        "target": "镜像世界",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Mirror Dungeons",
+        "target": "镜像迷宫",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Refraction Railway",
+        "target": "折射轨道",
+        "forbidden": [
+          "折射铁路",
+          "反射铁道"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Luxcavation Dungeons",
+        "target": "采光迷宫",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Dungeon of the Fathoms",
+        "target": "心象迷宫",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Bloodfiends",
+        "target": "血魔",
+        "forbidden": [
+          "血鬼",
+          "吸血鬼"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Kindred",
+        "target": "眷属",
+        "forbidden": [
+          "血亲",
+          "亲属"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Bloodbag",
+        "target": "血袋",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Pallidified",
+        "target": "白化",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Seaborn",
+        "target": "海嗣",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Sea Terror",
+        "target": "恐鱼",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "E.G.O",
+        "target": "E.G.O",
+        "forbidden": [
+          "EGO"
+        ],
+        "note": "保留缩写,不译成「自我」",
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "E.G.O Gifts",
+        "target": "E.G.O饰品",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "E.G.O Corrosion",
+        "target": "E.G.O侵蚀",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Extraction Ticket",
+        "target": "提取券",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Sanity",
+        "target": "理智值",
+        "forbidden": [
+          "精神值"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Lunacy",
+        "target": "狂气",
+        "forbidden": [
+          "疯狂值"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Clash",
+        "target": "拼点",
+        "forbidden": [
+          "对拼",
+          "冲突"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Stagger",
+        "target": "混乱",
+        "forbidden": [
+          "硬直",
+          "踉跄",
+          "眩晕"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Tremor",
+        "target": "震颤",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Rupture",
+        "target": "破裂",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Sinking",
+        "target": "沉沦",
+        "forbidden": [
+          "下沉"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Bleed",
+        "target": "流血",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Burn",
+        "target": "烧伤",
+        "forbidden": [
+          "燃烧"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Poise",
+        "target": "呼吸法",
+        "forbidden": [
+          "姿态",
+          "平衡"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Charge",
+        "target": "充能",
+        "forbidden": [
+          "充电"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Haste",
+        "target": "迅捷",
+        "forbidden": [
+          "急速"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Bind",
+        "target": "束缚",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Fragile",
+        "target": "易损",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "en",
+        "source": "Protection",
+        "target": "守护",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "ダンテ",
+        "target": "但丁",
+        "forbidden": [
+          "丹特",
+          "丹堤"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "イサン",
+        "target": "李箱",
+        "forbidden": [
+          "李相",
+          "伊桑"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "ファウスト",
+        "target": "浮士德",
+        "forbidden": [
+          "法乌斯特"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "ドンキホーテ",
+        "target": "堂吉诃德",
+        "forbidden": [
+          "唐吉诃德",
+          "堂吉珂德"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "良秀",
+        "target": "良秀",
+        "forbidden": [
+          "凉秀",
+          "辽修",
+          "良修"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "ムルソー",
+        "target": "默尔索",
+        "forbidden": [
+          "穆尔索",
+          "梅尔索"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "ホンル",
+        "target": "鸿璐",
+        "forbidden": [
+          "洪露",
+          "红露",
+          "鸿露"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "ヒースクリフ",
+        "target": "希斯克利夫",
+        "forbidden": [
+          "希斯克里夫",
+          "西斯克利夫"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "イシュメール",
+        "target": "以实玛利",
+        "forbidden": [
+          "伊斯梅尔",
+          "伊什梅尔"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "ロージャ",
+        "target": "罗佳",
+        "forbidden": [
+          "罗迪昂",
+          "罗季昂"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "シンクレア",
+        "target": "辛克莱",
+        "forbidden": [
+          "辛克雷",
+          "辛克莱尔"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "ウーティス",
+        "target": "奥提斯",
+        "forbidden": [
+          "奥德修斯",
+          "奥蒂斯"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "グレゴール",
+        "target": "格里高尔",
+        "forbidden": [
+          "格雷戈尔",
+          "格里格"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "囚人",
+        "target": "罪人",
+        "forbidden": [
+          "囚犯",
+          "罪徒"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "管理人",
+        "target": "管理人",
+        "forbidden": [],
+        "note": "日文对玩家的称呼,零协中文同样用「管理人」",
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "リンバス・カンパニー",
+        "target": "边狱公司",
+        "forbidden": [
+          "林布斯"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "メフィストフェレス",
+        "target": "梅菲斯托费勒斯",
+        "forbidden": [
+          "梅菲斯特",
+          "墨菲斯托"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "都市",
+        "target": "都市",
+        "forbidden": [
+          "城市"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "巣",
+        "target": "巢",
+        "forbidden": [
+          "巢穴",
+          "鸟巢"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "裏路地",
+        "target": "后巷",
+        "forbidden": [
+          "后街",
+          "背街"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "大湖",
+        "target": "大湖",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "翼",
+        "target": "翼",
+        "forbidden": [
+          "翅膀",
+          "羽翼"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "特異点",
+        "target": "奇点",
+        "forbidden": [
+          "奇异点"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "事務所",
+        "target": "事务所",
+        "forbidden": [
+          "办公室"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "協会",
+        "target": "协会",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "工房",
+        "target": "工坊",
+        "forbidden": [
+          "车间",
+          "工作室"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "フィクサー",
+        "target": "收尾人",
+        "forbidden": [
+          "修理工",
+          "修理者"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "バトラー",
+        "target": "管家",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "図書館",
+        "target": "图书馆",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "アンジェラ",
+        "target": "安吉拉",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "残響楽団",
+        "target": "残响乐团",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "九人会",
+        "target": "九人会",
+        "forbidden": [
+          "九人联盟",
+          "新九人会"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "幻想体",
+        "target": "异想体",
+        "forbidden": [
+          "异常体",
+          "异变体"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "ねじれ",
+        "target": "扭曲",
+        "forbidden": [
+          "畸变",
+          "失真"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "血鬼",
+        "target": "血魔",
+        "forbidden": [
+          "吸血鬼"
+        ],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "血鬼の狩人",
+        "target": "血魔猎人",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "大湖の鯨捕り",
+        "target": "捕鲸人",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "人格",
+        "target": "人格",
+        "forbidden": [
+          "身份"
+        ],
+        "note": "指罪人可替换的人格(抽卡单位)",
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "E.G.O",
+        "target": "E.G.O",
+        "forbidden": [
+          "EGO"
+        ],
+        "note": "保留缩写,不译成「自我」",
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "ドーセント",
+        "target": "讲解员",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "野獣派",
+        "target": "野兽派",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "立体派",
+        "target": "立体派",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "点描派",
+        "target": "点彩派",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "中指",
+        "target": "中指",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "セブン協会",
+        "target": "Seven协会",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "トレス協会",
+        "target": "Tres协会",
+        "forbidden": [],
+        "note": null,
+        "sourceUrl": null,
+        "reviewStatus": "历史收录",
+        "enabled": true
+      },
+      {
+        "language": "ja",
+        "source": "黄金の枝",
+        "target": "金枝",
+        "forbidden": [],
+        "note": "待核对(Golden Bough 的日文写法)",
+        "sourceUrl": null,
+        "reviewStatus": "待核对",
+        "enabled": false
+      },
+      {
+        "language": "ja",
+        "source": "クリフォト",
+        "target": "逆卡巴拉",
+        "forbidden": [],
+        "note": "待核对(Qliphoth)",
+        "sourceUrl": null,
+        "reviewStatus": "待核对",
+        "enabled": false
+      },
+      {
+        "language": "ja",
+        "source": "エンケファリン",
+        "target": "脑啡肽",
+        "forbidden": [],
+        "note": "待核对(Enkephalin)",
+        "sourceUrl": null,
+        "reviewStatus": "待核对",
+        "enabled": false
+      },
+      {
+        "language": "ja",
+        "source": "正気度",
+        "target": "理智值",
+        "forbidden": [],
+        "note": "待核对(Sanity)",
+        "sourceUrl": null,
+        "reviewStatus": "待核对",
+        "enabled": false
+      },
+      {
+        "language": "ja",
+        "source": "狂気",
+        "target": "狂气",
+        "forbidden": [],
+        "note": "待核对(Lunacy)",
+        "sourceUrl": null,
+        "reviewStatus": "待核对",
+        "enabled": false
+      },
+      {
+        "language": "ja",
+        "source": "ロボトミー・コーポレーション",
+        "target": "脑叶公司",
+        "forbidden": [],
+        "note": "待核对",
+        "sourceUrl": null,
+        "reviewStatus": "待核对",
+        "enabled": false
+      },
+      {
+        "language": "ja",
+        "source": "後ろの扉",
+        "target": "后门",
+        "forbidden": [],
+        "note": "待核对(The Backdoor)",
+        "sourceUrl": null,
+        "reviewStatus": "待核对",
+        "enabled": false
+      },
+      {
+        "language": "ja",
+        "source": "鏡世界",
+        "target": "镜像世界",
+        "forbidden": [],
+        "note": "待核对(Mirror Worlds)",
+        "sourceUrl": null,
+        "reviewStatus": "待核对",
+        "enabled": false
+      },
+      {
+        "language": "ja",
+        "source": "鏡ダンジョン",
+        "target": "镜像迷宫",
+        "forbidden": [],
+        "note": "待核对(Mirror Dungeons)",
+        "sourceUrl": null,
+        "reviewStatus": "待核对",
+        "enabled": false
+      },
+      {
+        "language": "ja",
+        "source": "色彩",
+        "target": "特色",
+        "forbidden": [],
+        "note": "待核对(Color Fixer)",
+        "sourceUrl": null,
+        "reviewStatus": "待核对",
+        "enabled": false
+      },
+      {
+        "language": "ja",
+        "source": "首脳",
+        "target": "首脑",
+        "forbidden": [],
+        "note": "待核对(The Head)",
+        "sourceUrl": null,
+        "reviewStatus": "待核对",
+        "enabled": false
+      },
+      {
+        "language": "ja",
+        "source": "爪",
+        "target": "爪牙",
+        "forbidden": [],
+        "note": "待核对(The Claw)",
+        "sourceUrl": null,
+        "reviewStatus": "待核对",
+        "enabled": false
+      },
+      {
+        "language": "ja",
+        "source": "調律者",
+        "target": "调律者",
+        "forbidden": [],
+        "note": "待核对(Arbiter)",
+        "sourceUrl": null,
+        "reviewStatus": "待核对",
+        "enabled": false
+      }
+    ]
+  }
+}

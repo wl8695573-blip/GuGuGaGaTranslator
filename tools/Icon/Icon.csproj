@@ -1,16 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Draws the mascot and writes the icon set. It is a tool rather than an
-       asset folder on purpose: the artwork is code, so it can be regenerated,
-       diffed, and shipped in a public repository without dragging in an image
-       whose license nobody can state. Runs on WPF's own vector stack, so it
-       needs no drawing package. -->
+  <!-- 使用 WPF 按比例转换维护者选定的字标，无需额外绘图库。 -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF>
     <RootNamespace>GuGuGaGaTranslator.Icon</RootNamespace>
-    <AssemblyName>gugugaga-icon</AssemblyName>
+    <AssemblyName>lcta-icon</AssemblyName>
   </PropertyGroup>
 
 </Project>

@@ -89,7 +89,7 @@ if ($LASTEXITCODE -ne 0) { throw "ollama create 失败" }
 Write-Host ''
 & $ollama list
 Write-Host ''
-Write-Host '完成。在 GuGuGaGaTranslator 里这样配:' -ForegroundColor Green
+Write-Host '完成。在 LCTA 里这样配:' -ForegroundColor Green
 Write-Host "  翻译引擎 = openai-compatible"
 Write-Host "  接口地址 = http://127.0.0.1:11434/v1"
 Write-Host "  模型名   = $ModelName"

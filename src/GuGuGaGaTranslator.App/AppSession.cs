@@ -14,7 +14,7 @@ namespace GuGuGaGaTranslator.App;
 
 /// <summary>Everything one run owns: the configuration, the translator, the
 /// recognizer, the dumper, and the translation loop; the windows are views over it.</summary>
-public sealed class AppSession : IAsyncDisposable
+public sealed partial class AppSession : IAsyncDisposable
 {
     private ITranslator? _translator;
     private bool _stopping;
@@ -24,6 +24,14 @@ public sealed class AppSession : IAsyncDisposable
     private WindowCapture? _windowCapture;
     private LanguagePair _languages = new("auto", "zh-Hans");
     private readonly List<string> _recentSources = [];
+    private readonly SemaphoreSlim _settingsGate = new(1, 1);
+
+    private async Task ChangeSettingsAsync(Func<Task> action)
+    {
+        await _settingsGate.WaitAsync().ConfigureAwait(true);
+        try { await action().ConfigureAwait(true); }
+        finally { _settingsGate.Release(); }
+    }
 
     public ConfigStore Store { get; }
 
@@ -73,7 +81,8 @@ public sealed class AppSession : IAsyncDisposable
     public void LoadConfig()
     {
         Config = Store.Load();
-        // 旧版本存过韩语/繁体这类现在已经不在界面上的语言:先把配置拉回三语范围内。
+        LoadBundledTermLibrary();
+        // 保留支持的四种语言，修复旧配置中无法识别的语言标签。
         Config.NormalizeLanguages();
         _languages = new LanguagePair(Config.Translation.From, Config.Translation.To);
         ConfigureCache();
@@ -86,6 +95,7 @@ public sealed class AppSession : IAsyncDisposable
 
     public void SaveConfig()
     {
+        RememberTargetSettings();
         Store.Save(Config);
         ConfigureCache();
     }
@@ -170,16 +180,67 @@ public sealed class AppSession : IAsyncDisposable
     /// <summary>Adopt a window as the target without touching the region it already has; used by「一键框选并翻译」.</summary>
     public void SetTarget(WindowInfo window)
     {
+        if (!string.Equals(Config.Target.Identity, window.Identity, StringComparison.OrdinalIgnoreCase))
+        {
+            RememberTargetSettings();
+            var saved = Config.SavedTargets.LastOrDefault(item => item.Identity.Equals(window.Identity, StringComparison.OrdinalIgnoreCase));
+            Config.Target.Region = saved?.Region;
+            Config.Target.ReferenceClientWidth = saved?.ReferenceClientWidth ?? 0;
+            Config.Target.ReferenceClientHeight = saved?.ReferenceClientHeight ?? 0;
+            Config.Target.ManualProfile = saved?.ManualProfile ?? false;
+            Config.Target.ManualRegion = saved?.ManualRegion ?? false;
+            Config.Target.RegionSettingsVersion = 1;
+            Config.Target.ManualLanguage = saved?.ManualLanguage ?? false;
+            Config.Translation.From = saved?.From ?? "auto";
+            Config.Translation.To = saved?.To ?? "zh-Hans";
+            Config.Translation.ActiveProfile = saved?.ProfileId ?? "";
+            Config.Ocr.Language = saved?.OcrLanguage ?? "auto";
+            Config.NormalizeLanguages();
+            _languages = new LanguagePair(Config.Translation.From, Config.Translation.To);
+            ForgetContext();
+        }
         Config.Target.Identity = window.Identity;
         Config.Target.TitleHint = window.Title;
     }
 
+    private void RememberTargetSettings()
+    {
+        if (string.IsNullOrWhiteSpace(Config.Target.Identity))
+            return;
+        Config.SavedTargets.RemoveAll(item => item.Identity.Equals(Config.Target.Identity, StringComparison.OrdinalIgnoreCase));
+        Config.SavedTargets.Add(new SavedTargetConfig
+        {
+            Identity = Config.Target.Identity,
+            Region = Config.Target.Region,
+            ReferenceClientWidth = Config.Target.ReferenceClientWidth,
+            ReferenceClientHeight = Config.Target.ReferenceClientHeight,
+            From = Config.Translation.From, To = Config.Translation.To, OcrLanguage = Config.Ocr.Language,
+            ProfileId = Config.Translation.ActiveProfile,
+            ManualProfile = Config.Target.ManualProfile, ManualLanguage = Config.Target.ManualLanguage,
+            ManualRegion = Config.Target.ManualRegion, RegionSettingsVersion = 1
+        });
+        while (Config.SavedTargets.Count > 24)
+            Config.SavedTargets.RemoveAt(0);
+    }
+
+    public Task SelectTargetAsync(WindowInfo window) => ChangeSettingsAsync(() => SelectTargetCoreAsync(window));
+
+    private async Task SelectTargetCoreAsync(WindowInfo window)
+    {
+        if (!string.Equals(Config.Target.Identity, window.Identity, StringComparison.OrdinalIgnoreCase))
+            await StopAsync().ConfigureAwait(true);
+        SetTarget(window);
+        await AutoDetectProfileCoreAsync(window.Title, window.ProcessName).ConfigureAwait(true);
+        SaveConfig();
+        LanguagesChanged?.Invoke(_languages);
+        ProfileChanged?.Invoke(ActiveProfile);
+    }
+
     /// <summary>Record a screen-space selection as a client-relative region for the given target window.</summary>
-    public void SetRegion(WindowInfo window, Int32Rect screenRegion)
+    public void SetRegion(WindowInfo window, Int32Rect screenRegion, bool manual = true)
     {
         var client = window.ClientRect;
-        Config.Target.Identity = window.Identity;
-        Config.Target.TitleHint = window.Title;
+        SetTarget(window);
         Pipeline?.InvalidateTranslation();
         Config.Target.Region = new RegionRect(
             screenRegion.X - client.X,
@@ -188,14 +249,15 @@ public sealed class AppSession : IAsyncDisposable
             screenRegion.Height);
         Config.Target.ReferenceClientWidth = client.Width;
         Config.Target.ReferenceClientHeight = client.Height;
+        Config.Target.ManualRegion = manual;
+        Config.Target.RegionSettingsVersion = 1;
     }
 
     public void ClearRegion()
     {
-        Pipeline?.InvalidateTranslation();
+        ForgetContext();
         Config.Target.Region = null;
-        Config.Target.Identity = null;
-        Config.Target.TitleHint = null;
+        Config.Target.ManualRegion = false;
         Config.Target.ReferenceClientWidth = Config.Target.ReferenceClientHeight = 0;
     }
 
@@ -204,6 +266,12 @@ public sealed class AppSession : IAsyncDisposable
     {
         if (IsRunning || _stopping)
             return;
+        if (Config.Translation.Translator.Provider == "caiyun"
+            && !CaiyunTranslator.SupportsDirection(Config.Translation.From, Config.Translation.To))
+        {
+            Notice?.Invoke(TranslationErrors.Describe(new UnsupportedTranslationDirectionException()));
+            return;
+        }
         if (Recognizer is IDisposable previous)
             previous.Dispose();
         Recognizer = null;
@@ -255,6 +323,7 @@ public sealed class AppSession : IAsyncDisposable
             Dumper = _dumper,
             Options = new PipelineOptions
             {
+                TextSettleMs = Config.Pipeline.TextSettleMs,
                 PollIntervalMs = Config.Pipeline.PollIntervalMs,
                 ChangeThresholdBits = Config.Pipeline.ChangeThresholdBits,
                 RepeatSimilarity = Config.Pipeline.RepeatSimilarity,
@@ -279,7 +348,10 @@ public sealed class AppSession : IAsyncDisposable
         Pipeline.Updated += update =>
         {
             Diagnostics.Record(update);
-            Remember(update.SourceText);
+            if (update.Status is PipelineStatus.Translated or PipelineStatus.Reused)
+                Remember(update.SourceText);
+            else if (update.Status is PipelineStatus.NoText or PipelineStatus.Blank or PipelineStatus.NoRegion)
+                lock (_recentSources) _recentSources.Clear();
             Updated?.Invoke(update);
         };
         Pipeline.Start();
@@ -338,8 +410,11 @@ public sealed class AppSession : IAsyncDisposable
     }
 
     /// <summary>Switch to a direction from the overlay's switcher: direction, recognition language, and configuration move together.</summary>
-    public async Task ApplyLanguagePresetAsync(LanguagePreset preset)
+    public Task ApplyLanguagePresetAsync(LanguagePreset preset) => ChangeSettingsAsync(() => ApplyLanguagePresetCoreAsync(preset));
+
+    private async Task ApplyLanguagePresetCoreAsync(LanguagePreset preset)
     {
+        Config.Target.ManualLanguage = true;
         var ocrBefore = Config.Ocr.Language;
         Config.Translation.From = preset.From;
         Config.Translation.To = preset.To;
@@ -351,7 +426,7 @@ public sealed class AppSession : IAsyncDisposable
         ForgetContext();
 
         if (IsRunning && !Config.Ocr.Language.Equals(ocrBefore, StringComparison.OrdinalIgnoreCase)
-            && Recognizer is not RapidOcrRecognizer)
+            && Recognizer is not (RapidOcrRecognizer or FourLanguageRecognizer))
         {
             // RapidOCR 使用同一组多语言模型；仅系统识别器需要按语言重建。
             await StopAsync().ConfigureAwait(true);
@@ -385,7 +460,10 @@ public sealed class AppSession : IAsyncDisposable
             return new ProfileContext(
                 GameProfiles.Merge(
                     GameProfiles.ForDirection(profile, languages.From, languages.To),
-                    Config.Translation.Glossary),
+                    Config.Translation.Glossary,
+                    Config.Translation.PersonalTerms.Where(term =>
+                        (term.From == languages.From || languages.From == "auto") && term.To == languages.To)
+                        .Select(term => new GlossaryEntry(term.Source, term.Target, term.Forbidden))),
                 string.IsNullOrWhiteSpace(profile?.StyleHint) ? Config.Translation.Translator.StyleHint : profile.StyleHint,
                 profile?.Worldview);
         }
@@ -403,13 +481,18 @@ public sealed class AppSession : IAsyncDisposable
 
     /// <summary>Switch the game profile: its terms, style, and any language it fixes move together.
     /// A running loop needs a rebuild only when the recognition language changed, because that swaps the recognizer.</summary>
-    public async Task ApplyProfileAsync(GameProfile? profile, string? because = null)
+    public Task ApplyProfileAsync(GameProfile? profile, string? because = null, bool manual = true) =>
+        ChangeSettingsAsync(() => ApplyProfileCoreAsync(profile, because, manual));
+
+    private async Task ApplyProfileCoreAsync(GameProfile? profile, string? because = null, bool manual = true)
     {
         var previousId = Config.Translation.ActiveProfile;
         var ocrBefore = Config.Ocr.Language;
 
         Config.Translation.ActiveProfile = profile?.Id ?? string.Empty;
-        if (profile is not null)
+        if (manual)
+            Config.Target.ManualProfile = true;
+        if (profile is not null && !Config.Target.ManualLanguage)
         {
             if (!string.IsNullOrWhiteSpace(profile.From))
                 Config.Translation.From = profile.From;
@@ -427,7 +510,7 @@ public sealed class AppSession : IAsyncDisposable
         ForgetContext();
 
         if (IsRunning && !Config.Ocr.Language.Equals(ocrBefore, StringComparison.OrdinalIgnoreCase)
-            && Recognizer is not RapidOcrRecognizer)
+            && Recognizer is not (RapidOcrRecognizer or FourLanguageRecognizer))
         {
             await StopAsync().ConfigureAwait(true);
             Start();
@@ -443,27 +526,40 @@ public sealed class AppSession : IAsyncDisposable
             ? "已关闭游戏专属模式:回到通用翻译,不做术语校正。"
             : $"{because ?? "已切到"}「{profile.Name}」:{profile.Terms.Count} 条术语"
                 + (bans > 0 ? $"、{bans} 条禁用译法" : string.Empty)
-                + (Config.Translation.EnforceTerms ? ",译错会自动改回官方译名。" : ",只作为提示(术语校正已关闭)。"));
+                + (Config.Translation.EnforceTerms ? ",按已匹配术语校正译名。" : ",只作为提示(术语校正已关闭)。"));
     }
 
     /// <summary>Pick the profile that matches a window title and switch to it.</summary>
-    public async Task<GameProfile?> AutoDetectProfileAsync(string? title = null)
+    public async Task<GameProfile?> AutoDetectProfileAsync(string? title = null, string? processName = null)
     {
-        if (!Config.Translation.AutoDetectProfile)
-            return null;
+        await _settingsGate.WaitAsync().ConfigureAwait(true);
+        try { return await AutoDetectProfileCoreAsync(title, processName).ConfigureAwait(true); }
+        finally { _settingsGate.Release(); }
+    }
 
-        var match = GameProfiles.MatchByTitle(title ?? FindTarget()?.Title, Config.Translation.GameProfiles);
+    private async Task<GameProfile?> AutoDetectProfileCoreAsync(string? title = null, string? processName = null)
+    {
+        if (!Config.Translation.AutoDetectProfile || Config.Target.ManualProfile)
+            return ActiveProfile;
+
+        var target = FindTarget();
+        var match = GameProfiles.MatchWindow(title ?? target?.Title, processName ?? target?.ProcessName, Config.Translation.GameProfiles);
         if ((match?.Id ?? string.Empty) == Config.Translation.ActiveProfile)
             return match;
 
-        await ApplyProfileAsync(match, because: "按窗口标题自动识别到").ConfigureAwait(true);
+        await ApplyProfileCoreAsync(match, because: "按目标窗口匹配到", manual: false).ConfigureAwait(true);
         return match;
     }
 
     public GameProfile? FindProfile(string? id) => GameProfiles.FindById(id, Config.Translation.GameProfiles);
 
     /// <summary>Drop the running context, so lines translated under the old terms are not reused as history.</summary>
-    public void ForgetContext() => Pipeline?.InvalidateTranslation();
+    public void ForgetContext()
+    {
+        Pipeline?.InvalidateTranslation();
+        lock (_recentSources)
+            _recentSources.Clear();
+    }
 
     /// <summary>Keep the last few distinct recognized lines: what 「AI 生成术语表」 sends when there are no terms to list yet.</summary>
     private void Remember(string source)
@@ -527,13 +623,29 @@ public sealed class AppSession : IAsyncDisposable
         var window = FindTarget() ?? throw new InvalidOperationException("目标窗口已关闭。");
         if (Config.Target.CaptureBackend.Equals("window", StringComparison.OrdinalIgnoreCase))
         {
-            if (_windowCapture?.Handle != window.Handle)
+            try
             {
-                _windowCapture?.Dispose();
-                _windowCapture = null;
-                _windowCapture = new WindowCapture(window.Handle);
+                if (_windowCapture?.Handle != window.Handle)
+                {
+                    _windowCapture?.Dispose();
+                    _windowCapture = null;
+                    _windowCapture = new WindowCapture(window.Handle);
+                }
+                return await _windowCapture.CaptureAsync(window, region, cancellationToken).ConfigureAwait(false);
             }
-            return await _windowCapture.CaptureAsync(window, region, cancellationToken).ConfigureAwait(false);
+            catch (Exception error) when (error is TimeoutException or NotSupportedException or System.Runtime.InteropServices.COMException)
+            {
+                // 只回退到读取目标窗口的兼容方式，不把桌面上的遮挡物送入识别。
+                var fallback = ScreenCapture.CaptureWindowClient(window, CaptureBackend.PrintWindow);
+                var pixels = fallback.Bgra;
+                var hasContent = false;
+                for (var index = 0; index < pixels.Length; index += 16)
+                    if (pixels[index] > 8 || pixels[index + 1] > 8 || pixels[index + 2] > 8) { hasContent = true; break; }
+                if (!hasContent)
+                    throw new CaptureUnavailableException(error);
+                return ImageOps.Crop(fallback, new Int32Rect(region.X - fallback.SourceRegion.X,
+                    region.Y - fallback.SourceRegion.Y, region.Width, region.Height));
+            }
         }
         var client = ScreenCapture.CaptureWindowClient(window, CaptureBackend.PrintWindow);
         return ImageOps.Crop(client, new Int32Rect(
@@ -544,26 +656,28 @@ public sealed class AppSession : IAsyncDisposable
     {
         if (Config.Ocr.Engine.Equals("rapidocr", StringComparison.OrdinalIgnoreCase))
         {
-            return RapidOcrRecognizer.Create(new RapidOcrSettings
+            return new FourLanguageRecognizer(new RapidOcrSettings
             {
                 ModelDirectory = string.IsNullOrWhiteSpace(Config.Ocr.RapidModelDirectory)
                     ? RapidOcrRecognizer.DefaultModelDirectory()
                     : Config.Ocr.RapidModelDirectory,
                 LimitSideLen = Config.Ocr.RapidLimitSideLen,
                 UseGpu = Config.Ocr.RapidUseGpu,
-            });
+            }, () => Config.Ocr.Language);
         }
 
         var fallbacks = Config.Ocr.Fallbacks.Length > 0 ? Config.Ocr.Fallbacks : ["en-US", "zh-Hans-CN"];
 
         if (Config.Ocr.Language.Equals("auto", StringComparison.OrdinalIgnoreCase))
         {
-            var preferred = new[] { "ja", "en-US", "zh-Hans-CN" }.Concat(fallbacks).Distinct(StringComparer.OrdinalIgnoreCase);
+            var preferred = new[] { "ja", "en-US", "zh-Hans-CN", "ko-KR" }.Concat(fallbacks).Distinct(StringComparer.OrdinalIgnoreCase);
             // 只装了一种引擎就没有可挑的,直接返回单引擎识别器。
-            var multi = MultiLanguageRecognizer.TryCreate(preferred);
+            var multi = MultiLanguageRecognizer.TryCreate(preferred, maxCandidates: 4);
             return multi is not null ? multi : MultiLanguageRecognizer.TryCreateSingle(preferred);
         }
 
+        if (Config.Ocr.Language.StartsWith("ko", StringComparison.OrdinalIgnoreCase))
+            return WindowsOcrRecognizer.TryCreate(Config.Ocr.Language);
         return WindowsOcrRecognizer.TryCreateWithFallback(Config.Ocr.Language, fallbacks);
     }
 

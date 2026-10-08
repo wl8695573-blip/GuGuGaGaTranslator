@@ -1,0 +1,3 @@
+# 更新清单校验原始字节，禁止 Git 自动改写换行。
+terminology/*.json -text whitespace=cr-at-eol
+models/korean/ppocrv5_korean_dict.txt -text

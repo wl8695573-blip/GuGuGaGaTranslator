@@ -14,7 +14,7 @@ public partial class App : Application
         // --silent --dir <path>: install with no window, then exit.
         if (e.Args.Any(arg => arg.Equals("--silent", StringComparison.OrdinalIgnoreCase)))
         {
-            Shutdown(InstallerWindow.RunSilent(directory ?? DefaultDirectory()));
+            Shutdown(InstallerWindow.RunSilent(directory ?? InstallerWindow.DefaultDirectory()));
             return;
         }
 
@@ -26,11 +26,6 @@ public partial class App : Application
 
         new InstallerWindow().Show();
     }
-
-    private static string DefaultDirectory() => System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Programs",
-        "GuGuGaGaTranslator");
 
     private static string? Argument(string[] args, string name)
     {

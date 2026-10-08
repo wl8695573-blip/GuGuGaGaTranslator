@@ -13,5 +13,6 @@
     <Project Path="tools/Icon/Icon.csproj" />
     <Project Path="tools/Probe/Probe.csproj" />
     <Project Path="tools/SampleWindow/SampleWindow.csproj" />
+    <Project Path="tools/TermLibrary/TermLibrary.csproj" />
   </Folder>
 </Solution>

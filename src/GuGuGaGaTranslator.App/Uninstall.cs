@@ -28,11 +28,14 @@ internal static class Uninstall
                 throw new InvalidOperationException("安装标记与卸载登记不匹配。");
             _manifest = manifest;
             ScheduleDirectoryRemoval(onMessage);
-            foreach (var shortcut in new[] {
-                Path.Combine(InstallationManifest.UserFolder(Environment.SpecialFolder.StartMenu), "Programs", ProductName + ".lnk"),
-                Path.Combine(InstallationManifest.UserFolder(Environment.SpecialFolder.DesktopDirectory), ProductName + ".lnk") })
-                if (File.Exists(shortcut))
-                    File.Delete(shortcut);
+            foreach (var name in new[] { InstallationManifest.DisplayName, ProductName })
+            {
+                foreach (var shortcut in new[] {
+                    Path.Combine(InstallationManifest.UserFolder(Environment.SpecialFolder.StartMenu), "Programs", name + ".lnk"),
+                    Path.Combine(InstallationManifest.UserFolder(Environment.SpecialFolder.DesktopDirectory), name + ".lnk") })
+                    if (File.Exists(shortcut))
+                        File.Delete(shortcut);
+            }
             Registry.CurrentUser.DeleteSubKeyTree(RegistryKey, false);
             onMessage?.Invoke("卸载已安排，将在程序退出后删除安装清单中的文件。用户添加的文件会保留。");
             return true;

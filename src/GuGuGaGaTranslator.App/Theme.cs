@@ -11,7 +11,12 @@ internal static class Theme
 {
     /// <summary>Look up a palette color.</summary>
     public static Color Color(string key, Color fallback) =>
-        Application.Current?.Resources[key] is Color color ? color : fallback;
+        Application.Current?.Resources[key] switch
+        {
+            Color color => color,
+            SolidColorBrush brush => brush.Color,
+            _ => fallback
+        };
 
     /// <summary>Look up a palette color as a brush.</summary>
     public static SolidColorBrush Brush(string key, Color fallback) => new(Color(key, fallback));

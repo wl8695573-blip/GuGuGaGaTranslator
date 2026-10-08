@@ -56,7 +56,7 @@ internal static class Improvements
             Target = "other"
         });
         Program.Check(GameProfileArchive.Validate(clone).Count > 0, "profile conflicts rejected");
-        foreach (var data in new[] { "{}", GameProfileArchive.Serialize(profile).Replace("\"schemaVersion\": 1", "\"schemaVersion\": 99"),
+        foreach (var data in new[] { "{}", GameProfileArchive.Serialize(profile).Replace("\"schemaVersion\": 2", "\"schemaVersion\": 99"),
             GameProfileArchive.Serialize(profile).Replace("\"profile\":", "\"apiKey\":\"should-not-import\",\"profile\":") })
         {
             var rejected = false;

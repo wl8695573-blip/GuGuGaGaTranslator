@@ -1,40 +1,30 @@
 # Third-party notices / 第三方素材声明
 
-代码、图标和第三方依赖分别适用各自的许可。以下列出素材来源、署名与分发要求。
+代码、图标和第三方依赖分别适用各自的许可。
 
-## 应用图标 / 吉祥物:鲸鱼娘(社区二创)
+## LCTA“边·译”图标
 
-`src/GuGuGaGaTranslator.App/Assets/icon.ico`(多尺寸 16–256)与 `icon.png`(256×256,窗口图标)是社区二创作品,**不是 DeepSeek 官方素材**。
+当前图标采用维护者选定的黑、橙、白“边·译”字标，由图像生成工具按维护者的构图、字形和修改要求制作。设计参考了 Project Moon《边狱巴士》中 H 公司的标志，重新组合了文字和连接结构。
+
+- 原始字标：`src/GuGuGaGaTranslator.App/Assets/lcta-wordmark.png`。
+- 窗口和程序图标：同目录下的 `icon.png` 与 `icon.ico`。
+- 转换工具：`tools/Icon`；按原比例居中生成 16、24、32、48、64、128、256 像素图标。
+
+该设计不代表与 Project Moon 或零协会合作，也不表示获得其背书。本仓库的代码许可不授予 Project Moon 原标志及其他第三方内容的权利；免费、开源及重新绘制不自动解决相关授权问题。
+
+## 旧版社区图标
+
+已发布的 GuGuGaGaTranslator 1.3.2 等旧版使用鲸鱼娘社区图标。为保留历史署名，记录如下；它不再是当前开发版的应用图标。
 
 | 项 | 内容 |
 |---|---|
 | 来源仓库 | [fornarwhal/deepseek-whale-girl-icon](https://github.com/fornarwhal/deepseek-whale-girl-icon) |
-| 角色形象来源 | **上善无形**(原创 OC「溟月」) |
-| DeepSeek 元素二创 | **ZipZipPipe**(GPT Image 2) |
-| 改进版修复 | **QYQCAMIAO** |
-| 许可协议 | **CC BY-NC-SA 4.0**(署名 · 非商用 · 相同方式共享) |
+| 角色形象来源 | 上善无形，原创 OC“溟月” |
+| DeepSeek 元素二创 | ZipZipPipe，GPT Image 2 |
+| 改进版修复 | QYQCAMIAO |
+| 来源标示的许可 | CC BY-NC-SA 4.0，署名、非商业使用、相同方式共享 |
 
-**使用这份图标就等于接受三条义务**:
-
-1. **署名** —— 上面那三行署名必须保留。本文件就是署名处,公开发布时不要删掉;
-2. **非商用** —— 不得用于以营利为目的的发布或宣传(收费、广告变现、随硬件搭售等);
-3. **相同方式共享** —— 基于这张图改出来的版本(例如你自己重画的),必须以同样的 CC BY-NC-SA 4.0 分发。
-
-> **注意**:该来源仓库自己声明"图片来自网络流传,具体作者未确认;如原作者认为不妥,请联系删除"。也就是说这份图标的**来源链本身是不确定的** —— 它继承了这个不确定性。想彻底避开,用下面那个替代品。
-
-**代码不受这份 CC 协议影响**:CC BY-NC-SA 只覆盖图片本身,不传染到程序代码。
-
-## 仓库内绘制的替代图标
-
-`tools/Icon` 使用 WPF 绘制鲸鱼图标，输出 `drawn-mascot.ico` 和 `drawn-mascot.png`，作为社区图标的替代选项。工具代码适用本仓库代码许可。
-
-```powershell
-dotnet run --project tools/Icon
-Copy-Item src\GuGuGaGaTranslator.App\Assets\drawn-mascot.ico src\GuGuGaGaTranslator.App\Assets\icon.ico -Force
-Copy-Item src\GuGuGaGaTranslator.App\Assets\drawn-mascot.png src\GuGuGaGaTranslator.App\Assets\icon.png -Force
-```
-
-换完重新 `.\build.ps1 -Publish -SingleFile -Zip` 即可,工程文件里指向的就是 `icon.ico` / `icon.png` 这两个名字,不用改代码。
+该来源仓库亦说明图片的原作者未完全确认。保留本记录不等于确认其全部权利链。使用或改编旧图标时，应核实来源并遵守适用许可；当前代码许可不替代图标许可。
 
 ## DeepSeek 名称与商标
 
@@ -60,4 +50,5 @@ Copy-Item src\GuGuGaGaTranslator.App\Assets\drawn-mascot.png src\GuGuGaGaTransla
 | 内容 | 来源 | 许可 |
 |---|---|---|
 | RapidOCR / PP-OCRv6 ONNX 模型(`models/v6/`) | [RapidAI/RapidOCR](https://github.com/RapidAI/RapidOCR) | 见其仓库(Apache-2.0) |
+| 韩语 PP-OCRv5 mobile ONNX 与字典 (`models/korean/`) | [RapidAI 官方模型列表](https://github.com/RapidAI/RapidOCR/blob/main/python/rapidocr/default_models.yaml)、[PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)；下载路径与哈希见 `models/korean/README.md` | Apache-2.0；随包保留来源与现有许可文件 |
 | 各翻译服务(DeepSeek、彩云、有道、百度等)的接口 | 各自官方开放平台 | 各自的开发者协议;本程序只按协议调用,不分发其内容 |

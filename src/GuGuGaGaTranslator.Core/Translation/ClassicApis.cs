@@ -461,6 +461,14 @@ public sealed class CaiyunTranslator : ClassicApiTranslator
     /// <summary>彩云's single direction string, such as <c>ja2zh</c>.</summary>
     public static string Direction(string from, string to) => $"{Code(from)}2{Code(to)}";
 
+    public static bool SupportsDirection(string from, string to)
+    {
+        var source = Code(from);
+        var target = Code(to);
+        return source != target && (target == "zh" && source is "auto" or "en" or "ja" or "ko"
+            || source is "zh" or "auto" && target is "en" or "ja" or "ko");
+    }
+
     /// <summary>彩云's own short codes.</summary>
     private static string Code(string tag) => tag.ToLowerInvariant() switch
     {
@@ -479,6 +487,7 @@ public sealed class CaiyunTranslator : ClassicApiTranslator
         string to,
         CancellationToken cancellationToken)
     {
+        if (!SupportsDirection(from, to)) throw new UnsupportedTranslationDirectionException();
         var token = RequireAccount();
         var direction = Direction(from, to);
         var body = JsonSerializer.Serialize(new Dictionary<string, object?>

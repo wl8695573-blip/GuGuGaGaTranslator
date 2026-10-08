@@ -24,7 +24,7 @@ public static class GameProfileArchive
     public static string Serialize(GameProfile profile)
     {
         RequireValid(profile);
-        var json = JsonSerializer.Serialize(new Envelope("gugugaga-game-profile", 1, profile), Json);
+        var json = JsonSerializer.Serialize(new Envelope("gugugaga-game-profile", 2, profile), Json);
         if (System.Text.Encoding.UTF8.GetByteCount(json) > MaximumBytes)
             throw new InvalidDataException("档案超过 1 MB，请精简术语和说明。");
         return json;
@@ -40,7 +40,7 @@ public static class GameProfileArchive
             archive = JsonSerializer.Deserialize<Envelope>(json, Json);
         }
         catch (JsonException error) { throw new InvalidDataException("档案格式不正确，或含有当前版本不支持的字段。", error); }
-        if (archive is null || archive.Format != "gugugaga-game-profile" || archive.SchemaVersion != 1 || archive.Profile is null)
+        if (archive is null || archive.Format != "gugugaga-game-profile" || archive.SchemaVersion is not (1 or 2) || archive.Profile is null)
             throw new InvalidDataException("不支持此档案格式或版本。");
         RequireValid(archive.Profile);
         return archive.Profile;
@@ -77,6 +77,9 @@ public static class GameProfileArchive
         if (profile.WindowHints is null || profile.WindowHints.Count > 50
             || profile.WindowHints.Any(hint => string.IsNullOrWhiteSpace(hint) || hint.Length > 200))
             problems.Add("窗口关键字须为 1–200 个字符，最多 50 个。");
+        if (profile.ProcessHints is null || profile.ProcessHints.Count > 50
+            || profile.ProcessHints.Any(hint => string.IsNullOrWhiteSpace(hint) || hint.Length > 200))
+            problems.Add("进程名称须为 1–200 个字符，最多 50 个。");
         if (profile.Terms is null || profile.Terms.Count > 5000)
             problems.Add("术语表最多包含 5000 条。");
         if (!string.IsNullOrEmpty(profile.From) && !DefaultLanguagePresets.IsSupported(profile.From, true))
@@ -109,6 +112,12 @@ public static class GameProfileArchive
                 continue;
             }
             var tag = string.IsNullOrWhiteSpace(term.Language) ? "*" : GameProfiles.LanguageOf(term.Language);
+            if (!string.IsNullOrWhiteSpace(term.SourceUrl)
+                && (term.SourceUrl.Length > 2048 || !Uri.TryCreate(term.SourceUrl, UriKind.Absolute, out var source)
+                    || source.Scheme is not ("http" or "https")))
+                problems.Add("术语出处须为 HTTP/HTTPS 地址。");
+            if (term.ReviewStatus?.Length > 100)
+                problems.Add("术语核对状态过长。");
             if (tag is null)
             {
                 problems.Add("术语的语言标签仅支持 en / ja / zh。");

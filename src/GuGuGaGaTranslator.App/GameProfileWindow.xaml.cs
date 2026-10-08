@@ -20,6 +20,7 @@ public partial class GameProfileWindow : Window
         new("auto", LanguageNames.Label("auto")),
         new("ja", LanguageNames.Label("ja")),
         new("en", LanguageNames.Label("en")),
+        new("ko", LanguageNames.Label("ko")),
         new("zh-Hans", LanguageNames.Label("zh-Hans")),
     ];
 
@@ -30,6 +31,7 @@ public partial class GameProfileWindow : Window
         new("zh-Hans-CN", LanguageNames.Label("zh-Hans-CN")),
         new("ja", LanguageNames.Label("ja")),
         new("en-US", LanguageNames.Label("en-US")),
+        new("ko-KR", LanguageNames.Label("ko-KR")),
     ];
 
     private readonly AppSession _session;
@@ -54,6 +56,7 @@ public partial class GameProfileWindow : Window
 
         NameBox.Text = _profile.Name;
         HintsBox.Text = string.Join(", ", _profile.WindowHints);
+        ProcessHintsBox.Text = string.Join(", ", _profile.ProcessHints);
         WorldviewBox.Text = _profile.Worldview ?? string.Empty;
         StyleBox.Text = _profile.StyleHint ?? string.Empty;
         TermsBox.Text = _profile.TermsAsText();
@@ -135,6 +138,9 @@ public partial class GameProfileWindow : Window
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
         _profile.From = NullIfEmpty(ValueOf(FromCombo));
+        _profile.ProcessHints = ProcessHintsBox.Text
+            .Split([',', '，', ';', '；', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         _profile.To = NullIfEmpty(ValueOf(ToCombo));
         _profile.OcrLanguage = NullIfEmpty(ValueOf(OcrCombo));
         _profile.Worldview = NullIfEmpty(WorldviewBox.Text);

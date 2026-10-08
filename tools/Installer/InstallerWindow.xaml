@@ -2,26 +2,39 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Icon="Assets/icon.png"
-        Title="安装 GuGuGaGaTranslator"
+        Title="安装 LCTA"
         Width="560" SizeToContent="Height" ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
-        Background="#FF0F1430" Foreground="#FFEDF1FF"
-        FontFamily="YouYuan, 幼圆, Microsoft YaHei UI, Segoe UI">
+        Background="#FF121212" Foreground="#FFF3EBDC"
+        FontFamily="Microsoft YaHei UI, Segoe UI">
+  <Window.Resources>
+    <Style TargetType="TextBox">
+      <Setter Property="Background" Value="#FF20201E" />
+      <Setter Property="Foreground" Value="#FFF3EBDC" />
+      <Setter Property="BorderBrush" Value="#FF494039" />
+    </Style>
+    <Style TargetType="CheckBox"><Setter Property="Foreground" Value="#FFF3EBDC" /></Style>
+    <Style TargetType="Button">
+      <Setter Property="Background" Value="#FF302A25" />
+      <Setter Property="Foreground" Value="#FFF3EBDC" />
+      <Setter Property="BorderBrush" Value="#FF494039" />
+    </Style>
+  </Window.Resources>
   <StackPanel Margin="24,20,24,20">
 
     <StackPanel Orientation="Horizontal">
-      <Image Source="Assets/icon.png" Width="56" Height="56" VerticalAlignment="Center"
+      <Image Source="Assets/lcta-wordmark.png" Width="126" Height="56" Stretch="Uniform" VerticalAlignment="Center"
              RenderOptions.BitmapScalingMode="HighQuality" />
       <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
-        <TextBlock Text="GuGuGaGaTranslator" FontSize="21" FontWeight="Bold" />
-        <TextBlock x:Name="SubtitleText" FontSize="12" Foreground="#FFA6B0DC" />
+        <TextBlock Text="LCTA" FontSize="21" FontWeight="Bold" />
+        <TextBlock x:Name="SubtitleText" FontSize="12" Foreground="#FFCEC2AE" />
       </StackPanel>
     </StackPanel>
 
     <TextBlock x:Name="IntroText" Margin="0,18,0,0" TextWrapping="Wrap" FontSize="12.5"
-               Foreground="#FFC0C8E8" />
+               Foreground="#FFDDCFB6" />
 
-    <TextBlock Text="安装到" Margin="0,18,0,2" FontSize="11.5" Foreground="#FFA6B0DC" />
+    <TextBlock Text="安装到" Margin="0,18,0,2" FontSize="11.5" Foreground="#FFCEC2AE" />
     <Grid>
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*" />
@@ -37,12 +50,12 @@
     <CheckBox x:Name="LaunchCheck" Content="安装完成后立即运行" IsChecked="True" Margin="0,2,0,0" />
 
     <TextBlock x:Name="StatusText" Margin="0,16,0,0" TextWrapping="Wrap" FontSize="12"
-               Foreground="#FF7C87B8" Text="点击「安装」开始。整个程序会被复制到上面这个目录,不会改动系统设置。" />
+               Foreground="#FFB5A58F" Text="点击“安装”开始。程序会创建快捷方式并登记到 Windows 应用列表，用户配置保存在原配置目录。" />
 
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
       <Button x:Name="CancelButton" Content="取消" Click="OnCancel" MinWidth="88" Padding="12,7" Margin="0,0,8,0" />
       <Button x:Name="InstallButton" Content="安装" Click="OnInstall" MinWidth="110" Padding="14,7"
-              Background="#FF5B7BFF" Foreground="White" BorderBrush="#FF8FA8FF" BorderThickness="1" />
+              Background="#FFFF8A24" Foreground="#FF17130F" BorderBrush="#FFFFB45E" BorderThickness="1" />
     </StackPanel>
 
   </StackPanel>

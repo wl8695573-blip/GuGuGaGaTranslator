@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-    Starts or stops the local Ollama server that GuGuGaGaTranslator uses as its offline
+    Starts or stops the local Ollama server that LCTA uses as its offline
     translation engine.
 
 .DESCRIPTION

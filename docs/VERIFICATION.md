@@ -27,7 +27,67 @@ dotnet run --project tools/InteractionChecks -c Release -- .artifacts/interactio
 
 报告写入 `.artifacts/benchmark-rapid` 或 `.artifacts/benchmark-windows`，含 JSON、Markdown、系统/.NET/逻辑处理器数。可指定 `--fixtures`、`--models`、`--iterations`、`--output` 使用本地语料，清单字段与固定 corpus 一致。自备真实游戏样本应具有可分享的授权，并避免包含用户隐私。
 
-## 本次本机记录（1.3.2，2026-10-02）
+## LCTA 本机记录（1.5.0，2026-10-08）
+
+使用独立配置、合成窗口和 mock 翻译，没有读取用户密钥或发送付费翻译请求。
+
+| 项目 | 结果 | 范围与限制 |
+|---|---|---|
+| Release 编译 | 0 警告、0 错误 | Windows 11 / .NET 10.0.401 SDK |
+| 回归 | 122 项通过 | 四语方向、韩语标签、选区迁移、个人术语、公共三方合并、保存失败回滚、禁用与删除、版本与 SHA256、安装包取消和坏哈希 |
+| 交互 | 202 项通过 | 完整捕获 → OCR → mock → WPF；10 轮关闭重启；悬浮球点击、拖动、关闭重开和提醒；手动选区保存；个人术语管理；同一原文添加、修改、删除后重译 |
+| 韩语模型 | 9/9，CER 0%；中位约 289–310 ms | 三次/例，短边 320，合成样本；[指标](benchmark-lcta-korean.json) |
+| 自动四语 OCR | 36/36，CER 0%；单次约 516–659 ms | 中日英韩 × 三种 DPI × 三种背景；一次/例，含预热；[指标](benchmark-lcta-auto-four.json)，不能据此推断生产 P95 |
+| 界面 | 主窗口、最小尺寸、术语管理、支持页等预览通过 | 修复原文区域被挤没和列宽过窄；880×620 内容区与 150% 像素输出 |
+| 包与升级 | 安装、1.3.2 与 1.4.0 升级、再次升级、卸载与便携自检通过 | 包含韩语模型和公共词库；校验 SHA256，保留安装 ID 与用户额外文件；临时目录验收 |
+| 词库 | 253 条档案与版本清单校验一致 | 原有英文、日文及中文译名，13 条禁用候选；不等于全部出处已核实或具备完整韩语专名 |
+
+旧线程问题在关闭后重启检查中复现；改为在 UI Dispatcher 上启动并显示错误后，重跑完整检查通过。即时术语检查从实际目标窗口读取未变化的台词，确认更新后当前句重译。
+
+公共更新测试使用本地 HTTP 替身，涵盖正确与错误校验、取消、旧文件保留、三方合并及保存失败回滚。发布后还需核对真实 GitHub 清单和正式版本入口；模拟结果不能代替公开文件验证。
+
+四语测试语料临时生成，不覆盖仓库原有 27 张固定样本：
+
+```powershell
+dotnet run --project tools/Benchmark -c Release -- --generate --fixtures .artifacts/ocr-four-language
+dotnet run --project tools/Benchmark -c Release -- --engine korean --fixtures .artifacts/ocr-four-language --iterations 3 --check
+dotnet run --project tools/Benchmark -c Release -- --engine auto --fixtures .artifacts/ocr-four-language --iterations 1 --check
+dotnet run --project tools/TermLibrary -c Release -- terminology --check
+```
+
+安装包增加韩语模型、字典及内置词库；构建清单记录韩语模型哈希，包自检实际加载两类 OCR 与词库。首次 1.5.0 包的安装与两类旧版升级均已重跑通过；整理说明后的最终包还需再执行同一套检查。记录见 `.artifacts/package-acceptance-1.5-132.txt`、`package-acceptance-1.5-140.txt` 和最终包日志。每次构建不能沿用旧包结果。
+
+原始日志位于 `.artifacts/build-1.5-final.txt`、`regression-1.5-final.txt`、`interactions-1.5-final.txt`、`ocr-auto-four.txt`、`ocr-korean.txt`，临时数据不提交。
+
+尚未覆盖真实边狱巴士剧情、真实在线译文质量与费用、混合 DPI 跨屏实机、独占全屏、全部显卡和长时间内存基线。窗口捕获仍受目标绘制状态及受保护内容限制，屏幕捕获无法恢复已被遮住的文字。历史术语逐条出处和图标使用条件仍需维护；没有声称取得合作或未确认的授权。
+## 历史 LCTA 本机记录（1.4.0，2026-10-08）
+
+版本状态：**本地测试版，未上传 GitHub**。使用隔离配置、合成窗口和 mock 翻译；没有读取用户密钥或向真实翻译服务发出付费请求。
+
+| 项目 | 结果 | 限制 |
+|---|---|---|
+| Release 编译 | 0 警告、0 错误 | Windows 11 / .NET 10.0.401 SDK；运行时 10.0.12 |
+| 回归 | 82 项通过 | 包含文字稳定门限、逐字字幕、每句最多 3 次自动尝试、过期请求、匹配术语、候选禁用、旧档案导入、目标设置与手动语言优先、密钥和诊断保护 |
+| 交互 | 155 项通过 | 20 次外观预设、24 次方向、20 次档案切换；10 轮关闭重启；实际窗口捕获与 RapidOCR → mock 翻译 → WPF；底部避让和 DPI 换算后的拖动 |
+| RapidOCR | 27/27，CER 0%；每例中位约 319–398 ms，初始化约 461 ms | CPU、短边 320、3 次/例；中日英合成样本；[完整指标](benchmark-lcta-rapid.json) |
+| WPF 界面 | 主窗口、首次设置、两种服务设置、档案、支持页、悬浮层和控制条已渲染检查 | 最小内容区域 880×620，150% 像素输出；不能代替实际游戏中可读性评价 |
+| 安装与升级 | 新安装、1.3.2 → LCTA、LCTA 再次升级、卸载通过 | 隔离中文与空格目录；保留安装实例 ID 和用户额外文件，旧可执行入口移除；登记与快捷方式测试结束后还原 |
+| 便携包 | SHA256、模型哈希、SQLite / DPAPI / OCR / WPF 自检、拒绝便携卸载通过 | 包含运行时；未签名；独立解压启动检查使用临时配置 |
+
+重试验收先发现旧版升级时安装实例 ID 被重建，修正后重新打包检查通过。最终发行文件仍须每次执行下列包验收命令，不能用旧包结果代替新包结果。
+
+```powershell
+.\build.ps1 -Publish -SingleFile -Zip -Installer
+.\tools\verify-release.ps1 -LegacyInstaller .\dist\GuGuGaGaTranslator-Setup-1.3.2.exe
+```
+
+`-LegacyInstaller` 可省略；省略时只检查当前安装器的安装、升级和卸载。指定的旧包必须来自可信的项目发行文件。测试会临时操作应用登记与快捷方式，结束时还原原有登记和快捷方式，使用独立目录，不删除真实配置。
+
+本机原始日志在 `.artifacts/build-lcta.txt`、`regression-lcta.txt`、`interactions-lcta.txt`、`package-build-lcta.txt`、`package-acceptance-lcta.txt`；临时文件不提交。UI 截图保存在 `assets/screenshot-*.png`。
+
+**尚未覆盖：** 真实《边狱巴士》剧情与英文报纸样本、真实在线服务的译文质量和费用、混合 DPI 跨屏实机、独占全屏、各显卡硬件加速与 PrintWindow 差异、长时间运行与内存基线。历史术语逐条出处和图标使用条件仍需整理；未取得的许可或合作没有作为事实写入文档。Windows OCR 本次未重跑，下面的结果只属于 1.3.2。
+
+## 历史本机记录（1.3.2，2026-10-02）
 
 | 项目 | 结果 | 限制 |
 |---|---|---|
@@ -53,9 +113,9 @@ dotnet run --project tools/InteractionChecks -c Release -- .artifacts/interactio
 
 脚本核对发布 SHA256，检查拒绝占用目录、安装文件清单、SQLite/DPAPI/RapidOCR/WPF 无界面自检、覆盖升级、卸载保留用户文件、便携包自检及拒绝卸载。测试使用 `.artifacts/verify-*`，备份并恢复该产品的 HKCU 卸载登记与快捷方式。不要在同一账户同时运行多个安装验收。
 
-独立自检命令：`GuGuGaGaTranslator.exe --config-dir <测试目录> --verify-installation <报告.json>`。不捕获桌面、不请求翻译服务、不显示窗口，结果通过退出码和 JSON 提供。
+LCTA 开发版自检入口为 `LCTA.exe --config-dir <测试目录> --verify-installation <报告.json>`；已发布的 1.3.2 使用 `GuGuGaGaTranslator.exe`。不捕获桌面、不请求翻译服务、不显示窗口，结果通过退出码和 JSON 提供。
 
-推送/PR 的 `build.yml` 执行回归、OCR、WPF 预览和 69 项交互检查；`package.yml` 对相关 PR 或手动触发执行完整包验收并上传证据，默认生成未签名验收包。
+推送/PR 的 `build.yml` 执行回归、原有与四语自动 OCR、公共词库校验、WPF 预览和不抓屏的交互检查；`package.yml` 对相关 PR 或手动触发执行完整包验收并上传证据，默认生成未签名验收包。
 
 ## 正式签名
 

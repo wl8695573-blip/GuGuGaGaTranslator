@@ -8,6 +8,8 @@ on:
       - 'tools/verify-release.ps1'
       - 'tools/sign-release.ps1'
       - 'src/**'
+      - 'models/**'
+      - 'terminology/**'
       - 'Directory.Build.props'
       - '.github/workflows/package.yml'
 permissions:

@@ -8,13 +8,16 @@
     <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
     <UseWPF>true</UseWPF>
     <RootNamespace>GuGuGaGaTranslator.Installer</RootNamespace>
-    <AssemblyName>GuGuGaGaTranslator-Setup</AssemblyName>
+    <AssemblyName>LCTA-Setup</AssemblyName>
+    <Title>LCTA 安装程序</Title>
+    <Product>LCTA</Product>
     <ApplicationIcon>..\..\src\GuGuGaGaTranslator.App\Assets\icon.ico</ApplicationIcon>
 
   </PropertyGroup>
 
   <ItemGroup>
     <Resource Include="..\..\src\GuGuGaGaTranslator.App\Assets\icon.png" Link="Assets\icon.png" />
+    <Resource Include="..\..\src\GuGuGaGaTranslator.App\Assets\lcta-wordmark.png" Link="Assets\lcta-wordmark.png" />
   </ItemGroup>
 
   <!-- build.ps1 -Installer drops the published zip here; the folder is not in git. -->

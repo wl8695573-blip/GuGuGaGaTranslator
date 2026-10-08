@@ -30,6 +30,7 @@ public sealed record RapidOcrSettings
     public bool DoAngle { get; init; } = true;
 
     public bool ReturnWordBox { get; init; }
+    public bool Korean { get; init; }
 }
 
 /// <summary>An offline recognizer over PaddleOCR ONNX models, driven through RapidOcrNet; the bundled
@@ -48,9 +49,9 @@ public sealed class RapidOcrRecognizer : ITextRecognizer, IDisposable
         ModelDirectory = modelDirectory;
     }
 
-    public string Id => "rapidocr:pp-ocrv6-small";
+    public string Id { get; private init; } = "rapidocr:pp-ocrv6-small";
 
-    public string LanguageTag => "multi";
+    public string LanguageTag { get; private init; } = "multi";
 
     public string ModelDirectory { get;  }
 
@@ -120,6 +121,15 @@ public sealed class RapidOcrRecognizer : ITextRecognizer, IDisposable
     {
         var directory = settings.ModelDirectory ?? DefaultModelDirectory();
         var files = ResolveModels(directory);
+        if (settings.Korean)
+        {
+            var koreanDirectory = Path.GetFullPath(Path.Combine(directory, "..", "korean"));
+            files = files with
+            {
+                Recognizer = Path.Combine(koreanDirectory, "korean_PP-OCRv5_rec_mobile.onnx"),
+                Dictionary = Path.Combine(koreanDirectory, "ppocrv5_korean_dict.txt")
+            };
+        }
         if (!files.IsComplete)
         {
             throw new InvalidOperationException(
@@ -164,7 +174,11 @@ public sealed class RapidOcrRecognizer : ITextRecognizer, IDisposable
                 ImgResize = settings.ImgResize
             };
 
-        return new RapidOcrRecognizer(ocr, options, directory);
+        return new RapidOcrRecognizer(ocr, options, directory)
+        {
+            Id = settings.Korean ? "rapidocr:korean-pp-ocrv5-mobile" : "rapidocr:pp-ocrv6-small",
+            LanguageTag = settings.Korean ? "ko-KR" : "multi"
+        };
     }
 
     [SupportedOSPlatform("windows")]

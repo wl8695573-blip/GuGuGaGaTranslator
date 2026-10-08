@@ -35,6 +35,28 @@ public sealed class TargetConfig
     /// <summary>window 读取目标窗口合成画面；screen 读取可见屏幕；printwindow 为兼容后端。</summary>
     public string CaptureBackend { get; set; } = "window";
     public int CaptureSettingsVersion { get; set; }
+
+    public bool ManualProfile { get; set; }
+    public bool ManualRegion { get; set; }
+    public int RegionSettingsVersion { get; set; }
+    public bool ManualLanguage { get; set; }
+}
+
+/// <summary>目标的阅读设置，不包含服务密钥。按进程和窗口类保存，跨启动继续使用。</summary>
+public sealed class SavedTargetConfig
+{
+    public string Identity { get; set; } = "";
+    public RegionRect? Region { get; set; }
+    public int ReferenceClientWidth { get; set; }
+    public int ReferenceClientHeight { get; set; }
+    public string From { get; set; } = "auto";
+    public string To { get; set; } = "zh-Hans";
+    public string OcrLanguage { get; set; } = "auto";
+    public string ProfileId { get; set; } = "";
+    public bool ManualProfile { get; set; }
+    public bool ManualRegion { get; set; }
+    public int RegionSettingsVersion { get; set; }
+    public bool ManualLanguage { get; set; }
 }
 
 /// <summary>How images are prepared and read.</summary>
@@ -68,6 +90,7 @@ public sealed class OcrConfig
 /// <summary>The language pair and the engine that serves it.</summary>
 public sealed class TranslationConfig
 {
+    public List<PersonalTerm> PersonalTerms { get; set; } = [];
     public string From { get; set; } = "auto";
 
     public string To { get; set; } = "zh-Hans";
@@ -253,7 +276,7 @@ public sealed class LanguagePreset
     public override string ToString() => Label;
 }
 
-/// <summary>The switcher's out-of-the-box directions: 中 / 日 / 英, all six pairs.</summary>
+/// <summary>中、日、英、韩的十二种互译方向，以及自动译中。</summary>
 public static class DefaultLanguagePresets
 {
     public static List<LanguagePreset> Create() =>
@@ -265,12 +288,18 @@ public static class DefaultLanguagePresets
         new() { Label = "中 → 英", From = "zh-Hans", To = "en", Ocr = "zh-Hans-CN" },
         new() { Label = "日 → 英", From = "ja", To = "en", Ocr = "ja" },
         new() { Label = "英 → 日", From = "en", To = "ja", Ocr = "en-US" },
+        new() { Label = "韩 → 中", From = "ko", To = "zh-Hans", Ocr = "ko-KR" },
+        new() { Label = "中 → 韩", From = "zh-Hans", To = "ko", Ocr = "zh-Hans-CN" },
+        new() { Label = "韩 → 日", From = "ko", To = "ja", Ocr = "ko-KR" },
+        new() { Label = "日 → 韩", From = "ja", To = "ko", Ocr = "ja" },
+        new() { Label = "韩 → 英", From = "ko", To = "en", Ocr = "ko-KR" },
+        new() { Label = "英 → 韩", From = "en", To = "ko", Ocr = "en-US" },
     ];
 
     /// <summary>支持的翻译语言。</summary>
-    public static readonly string[] SupportedLanguages = ["zh-Hans", "ja", "en"];
+    public static readonly string[] SupportedLanguages = ["zh-Hans", "ja", "en", "ko"];
 
-    /// <summary>Whether a configured language is one of the three; <c>auto</c> counts as a source.</summary>
+    /// <summary>支持四种翻译语言；auto 仅作为原文语言。</summary>
     public static bool IsSupported(string? language, bool allowAuto) =>
         !string.IsNullOrWhiteSpace(language)
         && ((allowAuto && language.Equals("auto", StringComparison.OrdinalIgnoreCase))
@@ -280,13 +309,15 @@ public static class DefaultLanguagePresets
     /// matched by prefix rather than against the translation list.</summary>
     public static bool IsSupportedOcr(string? language) =>
         !string.IsNullOrWhiteSpace(language)
-        && new[] { "auto", "ja", "ja-JP", "en", "en-US", "en-GB", "zh", "zh-CN", "zh-Hans", "zh-Hans-CN", "zh-Hans-SG" }
+        && new[] { "auto", "ja", "ja-JP", "en", "en-US", "en-GB", "ko", "ko-KR", "zh", "zh-CN", "zh-Hans", "zh-Hans-CN", "zh-Hans-SG" }
             .Contains(language, StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>How often to look, and when a look is worth recognizing.</summary>
 public sealed class PipelineConfig
 {
+    public int TextSettleMs { get; set; } = 450;
+
     public int PollIntervalMs { get; set; } = 400;
 
     /// <summary>How many of the 256 signature blocks must change before a frame is recognized.</summary>
@@ -356,6 +387,10 @@ public sealed class DebugConfig
 /// <summary>The whole persisted configuration, one JSON file.</summary>
 public sealed class AppConfig
 {
+    public UpdateConfig Updates { get; set; } = new();
+    public FloatingBallConfig FloatingBall { get; set; } = new();
+    public List<SavedTargetConfig> SavedTargets { get; set; } = [];
+
     /// <summary>Whether the first-run setup card has been shown, so a person who skipped it is not asked again on every launch.</summary>
     public bool SetupCompleted { get; set; }
 
@@ -376,11 +411,12 @@ public sealed class AppConfig
     public DebugConfig Debug { get; set; } = new();
 
     /// <summary>Drop language choices this version no longer offers, so a configuration carried over from an
-    /// older build cannot point at a language the interface can no longer select — the tool translates
-    /// 中 / 日 / 英 and nothing else.</summary>
+    /// older build cannot point at a language the interface can no longer select. Supports 中 / 日 / 英 / 韩.</summary>
     public void NormalizeLanguages()
     {
         Target ??= new();
+        FloatingBall ??= new();
+        Updates ??= new();
         Ocr ??= new();
         Translation ??= new();
         Overlay ??= new();
@@ -388,6 +424,21 @@ public sealed class AppConfig
         Hotkeys ??= new();
         Pipeline ??= new();
         Debug ??= new();
+        SavedTargets ??= [];
+        SavedTargets.RemoveAll(target => target is null || string.IsNullOrWhiteSpace(target.Identity));
+        SavedTargets = SavedTargets.TakeLast(24).ToList();
+        if (Target.RegionSettingsVersion < 1)
+        {
+            Target.ManualRegion = Target.Region is not null;
+            Target.RegionSettingsVersion = 1;
+        }
+        foreach (var saved in SavedTargets.Where(saved => saved.RegionSettingsVersion < 1))
+        {
+            saved.ManualRegion = saved.Region is not null;
+            saved.RegionSettingsVersion = 1;
+        }
+        Pipeline.TextSettleMs = Math.Clamp(Pipeline.TextSettleMs, 0, 3000);
+        Translation.HistoryLines = Math.Clamp(Translation.HistoryLines, 0, 8);
         // 旧版默认屏幕捕获会读到遮挡物，首次升级改用窗口捕获；之后保留手动选择。
         if (Target.CaptureSettingsVersion < 1)
         {
@@ -401,6 +452,8 @@ public sealed class AppConfig
         Translation.Cache ??= new();
         Translation.GameProfiles ??= [];
         Translation.Glossary ??= [];
+        Translation.PersonalTerms ??= [];
+        Translation.PersonalTerms.RemoveAll(term => term is null || string.IsNullOrWhiteSpace(term.Source) || string.IsNullOrWhiteSpace(term.Target));
         Translation.GameProfiles.RemoveAll(profile => profile is null);
         Ocr.Fallbacks ??= [];
         Overlay.LanguagePresets ??= [];
@@ -436,6 +489,10 @@ public sealed class AppConfig
             profile.Id ??= "";
             profile.Name ??= "";
             profile.WindowHints ??= [];
+            profile.ProcessHints ??= [];
+            profile.ProcessHints.RemoveAll(hint => string.IsNullOrWhiteSpace(hint));
+            if (profile.Id == "limbus-company" && profile.ProcessHints.Count == 0)
+                profile.ProcessHints.Add("LimbusCompany");
             profile.WindowHints.RemoveAll(hint => string.IsNullOrWhiteSpace(hint));
             profile.Terms ??= [];
             profile.Terms.RemoveAll(term => term is null);
@@ -444,6 +501,11 @@ public sealed class AppConfig
                 term.Source ??= "";
                 term.Target ??= "";
                 term.Forbidden ??= [];
+                if (string.IsNullOrWhiteSpace(term.ReviewStatus) && term.Note?.Contains("待核对", StringComparison.Ordinal) == true)
+                {
+                    term.ReviewStatus = "待核对";
+                    term.Enabled = false;
+                }
             }
             if (!string.IsNullOrEmpty(profile.From) && !DefaultLanguagePresets.IsSupported(profile.From, true))
                 profile.From = null;
@@ -460,5 +522,33 @@ public sealed class AppConfig
 
         // 六个方向一个都不剩(例如旧配置只有韩语方向)就换回默认那套。
         Overlay.LanguagePresets = kept.Count > 0 ? kept : DefaultLanguagePresets.Create();
+        foreach (var preset in DefaultLanguagePresets.Create().Where(preset => preset.From == "ko" || preset.To == "ko"))
+            if (!Overlay.LanguagePresets.Any(existing => existing.From == preset.From && existing.To == preset.To))
+                Overlay.LanguagePresets.Add(preset);
     }
+}
+
+/// <summary>用户添加的方向专属术语，优先于公共词库。</summary>
+public sealed class PersonalTerm
+{
+    public string From { get; set; } = "en";
+    public string To { get; set; } = "zh-Hans";
+    public string Source { get; set; } = "";
+    public string Target { get; set; } = "";
+    public List<string> Forbidden { get; set; } = [];
+}
+
+public sealed class FloatingBallConfig
+{
+    public bool Enabled { get; set; } = true;
+    public int? X { get; set; }
+    public int? Y { get; set; }
+}
+
+public sealed class UpdateConfig
+{
+    public bool CheckOnStartup { get; set; } = true;
+    public bool AutoApplyTerms { get; set; }
+    public DateTimeOffset? LastCheck { get; set; }
+    public GameProfile? TermBaseline { get; set; }
 }

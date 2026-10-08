@@ -11,10 +11,10 @@ $version = [string]$props.Project.PropertyGroup.Version
 $tag = "v$version"
 $slug = $Repo -replace '^https://github.com/', '' -replace '\.git$', ''
 if ($slug -notmatch '^[\w.-]+/[\w.-]+$') { throw 'Invalid repository' }
-if (-not $NotesFile) { $NotesFile = Join-Path $PSScriptRoot 'release-notes.md' }
+if (-not $NotesFile) { $NotesFile = Join-Path $PSScriptRoot 'release-notes-lcta.md' }
 $notes = [IO.File]::ReadAllText((Resolve-Path -LiteralPath $NotesFile), [Text.Encoding]::UTF8)
 $dist = Join-Path $root 'dist'
-$names = @("GuGuGaGaTranslator-Setup-$version.exe", "GuGuGaGaTranslator-win-x64-$version.zip", "SHA256SUMS-$version.txt")
+$names = @("LCTA-Setup-$version.exe", "LCTA-win-x64-$version.zip", "SHA256SUMS-$version.txt")
 foreach ($name in $names) { if (-not (Test-Path -LiteralPath (Join-Path $dist $name))) { throw "Missing artifact: $name" } }
 foreach ($line in [IO.File]::ReadAllLines((Join-Path $dist $names[2]))) {
     $parts = $line -split '  ',2
@@ -36,7 +36,7 @@ if (-not $token) {
     foreach ($line in $credentialLines) { if ($line.StartsWith('password=')) { $token = $line.Substring(9).Trim() } }
 }
 if (-not $token) { throw 'No stored GitHub credential' }
-$headers = @{ Authorization = "Bearer $token"; Accept = 'application/vnd.github+json'; 'User-Agent' = 'GuGuGaGaTranslator-release'; 'X-GitHub-Api-Version' = '2022-11-28' }
+$headers = @{ Authorization = "Bearer $token"; Accept = 'application/vnd.github+json'; 'User-Agent' = 'LCTA-release'; 'X-GitHub-Api-Version' = '2022-11-28' }
 function Invoke-Api([string]$Method, [string]$Url, $Body = $null) {
     $args = @{ Method=$Method; Uri=$Url; Headers=$headers }
     if ($null -ne $Body) {
@@ -49,7 +49,7 @@ $api = "https://api.github.com/repos/$slug"
 $existing = @(Invoke-Api GET "$api/releases?per_page=100") | Where-Object tag_name -eq $tag
 if ($existing -and -not $existing.draft) { throw "Published release $tag already exists; refusing to replace it." }
 $release = if ($existing) { $existing } else {
-    Invoke-Api POST "$api/releases" @{ tag_name=$tag; target_commitish=$commit; name="GuGuGaGaTranslator $version"; body=$notes; draft=$true; prerelease=$false }
+    Invoke-Api POST "$api/releases" @{ tag_name=$tag; target_commitish=$commit; name="LCTA $version"; body=$notes; draft=$true; prerelease=$false }
 }
 foreach ($name in $names) {
     $file = Get-Item -LiteralPath (Join-Path $dist $name)

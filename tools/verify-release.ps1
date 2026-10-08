@@ -1,4 +1,4 @@
-﻿param([string]$Version = '')
+﻿param([string]$Version = '', [string]$LegacyInstaller = '')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 if (-not $Version) {
@@ -14,7 +14,7 @@ foreach ($line in Get-Content -LiteralPath (Join-Path $root "dist\SHA256SUMS-$Ve
 $sandbox = Join-Path $root ('.artifacts\verify-' + [guid]::NewGuid().ToString('N').Substring(0,8))
 $installDir = Join-Path $sandbox 'installed 中文 with spaces'
 $configDir = Join-Path $sandbox 'config'
-$setup = Join-Path $root "dist\GuGuGaGaTranslator-Setup-$Version.exe"
+$setup = Join-Path $root "dist\LCTA-Setup-$Version.exe"
 $registryPath = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\GuGuGaGaTranslator'
 $savedKey = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($registryPath)
 $savedValues = @{}
@@ -24,6 +24,8 @@ if ($savedKey) {
 }
 $shortcutPaths = @(
     (Join-Path ([Environment]::GetFolderPath('StartMenu', 'DoNotVerify')) 'Programs\GuGuGaGaTranslator.lnk'),
+    (Join-Path ([Environment]::GetFolderPath('StartMenu', 'DoNotVerify')) 'Programs\LCTA.lnk'),
+    (Join-Path ([Environment]::GetFolderPath('DesktopDirectory', 'DoNotVerify')) 'LCTA.lnk'),
     (Join-Path ([Environment]::GetFolderPath('DesktopDirectory', 'DoNotVerify')) 'GuGuGaGaTranslator.lnk')
 )
 $savedShortcuts = @{}
@@ -47,19 +49,45 @@ try {
     Run-Checked $setup "--silent --dir `"$blocked`"" 1
     if ((Get-ChildItem -LiteralPath $blocked).Count -ne 1) { throw 'Installer modified occupied directory' }
     Write-Host 'PASS rejects occupied directory'
+    if ($LegacyInstaller) {
+        $legacy = (Resolve-Path -LiteralPath $LegacyInstaller).Path
+        $legacyDir = Join-Path $sandbox 'legacy-upgrade'
+        Run-Checked $legacy "--silent --dir `"$legacyDir`""
+        $oldMarker = Get-Content -LiteralPath (Join-Path $legacyDir '.gugugaga-install.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        $legacyUserFile = Join-Path $legacyDir 'user-extra.txt'
+        [IO.File]::WriteAllText($legacyUserFile, 'user data')
+        Run-Checked $setup "--silent --dir `"$legacyDir`""
+        $newMarker = Get-Content -LiteralPath (Join-Path $legacyDir '.gugugaga-install.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($newMarker.Id -ne $oldMarker.Id -or ($newMarker.Files -notcontains 'LCTA.exe')) { throw 'Legacy identity was not preserved' }
+        if (Test-Path -LiteralPath (Join-Path $legacyDir 'GuGuGaGaTranslator.exe')) { throw 'Obsolete legacy executable remains' }
+        if ([IO.File]::ReadAllText($legacyUserFile) -ne 'user data') { throw 'Legacy upgrade removed user data' }
+        $registration = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($registryPath)
+        try { if ($registration.GetValue('DisplayName') -ne 'LCTA') { throw 'Legacy upgrade display name mismatch' } }
+        finally { $registration.Dispose() }
+        $legacyNewExe = Join-Path $legacyDir 'LCTA.exe'
+        Run-Checked $legacyNewExe '--uninstall --quiet'
+        $deadline = [DateTime]::UtcNow.AddSeconds(20)
+        while ((Test-Path -LiteralPath $legacyNewExe) -and [DateTime]::UtcNow -lt $deadline) { Start-Sleep -Milliseconds 200 }
+        if ((Test-Path -LiteralPath $legacyNewExe) -or [IO.File]::ReadAllText($legacyUserFile) -ne 'user data') { throw 'Legacy upgraded uninstall failed' }
+        Write-Host 'PASS legacy-to-LCTA upgrade preserves identity and user files; removes old executable'
+    }
     Run-Checked $setup "--silent --dir `"$installDir`""
     $marker = Join-Path $installDir '.gugugaga-install.json'
     if (-not (Test-Path -LiteralPath $marker)) { throw 'Missing install manifest' }
     $manifest = Get-Content -LiteralPath $marker -Raw -Encoding UTF8 | ConvertFrom-Json
     foreach ($file in $manifest.Files) { if (-not (Test-Path -LiteralPath (Join-Path $installDir $file))) { throw "Missing installed file: $file" } }
     $buildManifest = Get-Content -LiteralPath (Join-Path $installDir 'build-manifest.json') -Raw | ConvertFrom-Json
-    if ((Get-FileHash -LiteralPath (Join-Path $installDir 'GuGuGaGaTranslator.exe') -Algorithm SHA256).Hash.ToLowerInvariant() -ne $buildManifest.appSha256) { throw 'App manifest checksum mismatch' }
+    if ((Get-FileHash -LiteralPath (Join-Path $installDir 'LCTA.exe') -Algorithm SHA256).Hash.ToLowerInvariant() -ne $buildManifest.appSha256) { throw 'App manifest checksum mismatch' }
     foreach ($model in $buildManifest.models) {
         if ($model.file -notmatch '^[a-zA-Z0-9_.-]+$') { throw 'Invalid model filename' }
         if ((Get-FileHash -LiteralPath (Join-Path $installDir ('models\v6\' + $model.file)) -Algorithm SHA256).Hash.ToLowerInvariant() -ne $model.sha256) { throw 'Model manifest checksum mismatch' }
     }
+    foreach ($model in $buildManifest.extraModels) {
+        if ($model.directory -ne 'korean' -or $model.file -notmatch '^[a-zA-Z0-9_.-]+$') { throw 'Invalid extra model path' }
+        if ((Get-FileHash -LiteralPath (Join-Path $installDir ('models\korean\' + $model.file)) -Algorithm SHA256).Hash.ToLowerInvariant() -ne $model.sha256) { throw 'Extra model manifest checksum mismatch' }
+    }
     Write-Host 'PASS install manifest matches files'
-    $exe = Join-Path $installDir 'GuGuGaGaTranslator.exe'
+    $exe = Join-Path $installDir 'LCTA.exe'
     if ((Get-Item -LiteralPath $exe).VersionInfo.FileVersion -ne "$Version.0") { throw 'App version mismatch' }
     [IO.File]::WriteAllText((Join-Path $configDir 'config.json'), '{"setupCompleted":true,"translation":{"translator":{"provider":"mock"}}}')
     $report = Join-Path $sandbox 'installed-smoke.json'
@@ -77,8 +105,8 @@ try {
     if ([IO.File]::ReadAllText($extra) -ne 'must survive uninstall') { throw 'Uninstaller removed user file' }
     Write-Host 'PASS uninstall preserves user file'
     $portable = Join-Path $sandbox 'portable'
-    Expand-Archive -LiteralPath (Join-Path $root "dist\GuGuGaGaTranslator-win-x64-$Version.zip") -DestinationPath $portable
-    $portableExe = Join-Path $portable 'GuGuGaGaTranslator\GuGuGaGaTranslator.exe'
+    Expand-Archive -LiteralPath (Join-Path $root "dist\LCTA-win-x64-$Version.zip") -DestinationPath $portable
+    $portableExe = Join-Path $portable 'LCTA\LCTA.exe'
     $portableReport = Join-Path $sandbox 'portable-smoke.json'
     Run-Checked $portableExe "--config-dir `"$configDir`" --verify-installation `"$portableReport`""
     if (-not (Get-Content -LiteralPath $portableReport -Raw | ConvertFrom-Json).passed) { throw 'Portable package smoke failed' }

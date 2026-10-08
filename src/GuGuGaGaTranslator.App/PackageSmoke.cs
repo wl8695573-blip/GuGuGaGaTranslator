@@ -33,7 +33,7 @@ internal static class PackageSmoke
                 if (storage.Get("smoke") != "示例缓存")
                     throw new InvalidDataException("SQLite/DPAPI round trip failed");
             }
-            using var recognizer = RapidOcrRecognizer.Create(new RapidOcrSettings());
+            using var recognizer = new FourLanguageRecognizer(new RapidOcrSettings(), () => "auto");
             recognizer.RecognizeAsync(new Frame
             {
                 Bgra = Enumerable.Repeat((byte)255, 320 * 80 * 4).ToArray(),
@@ -42,6 +42,9 @@ internal static class PackageSmoke
                 SourceRegion = new Int32Rect(0, 0, 320, 80),
                 CapturedAt = DateTimeOffset.UtcNow,
             }).GetAwaiter().GetResult();
+            var bundledTerms = GameProfileArchive.Read(Path.Combine(AppContext.BaseDirectory, "terminology", "limbus-company.ggprofile.json"));
+            if (bundledTerms.Id != "limbus-company" || bundledTerms.Terms.Count == 0)
+                throw new InvalidDataException("Bundled term library is missing or invalid");
             foreach (var profile in GameProfiles.Default())
                 if (GameProfileArchive.Validate(profile).Count > 0)
                     throw new InvalidDataException("Invalid built-in profile");
@@ -54,7 +57,7 @@ internal static class PackageSmoke
             {
                 passed = true,
                 version = typeof(App).Assembly.GetName().Version?.ToString(),
-                checks = new[] { "SQLite", "DPAPI", "RapidOCR", "profiles", "WPF views" }
+                checks = new[] { "SQLite", "DPAPI", "RapidOCR", "Korean OCR", "bundled term library", "profiles", "WPF views" }
             }));
             return 0;
         }

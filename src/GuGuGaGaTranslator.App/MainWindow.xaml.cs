@@ -53,6 +53,7 @@ public partial class MainWindow : Window
         new("zh-Hans", LanguageNames.Label("zh-Hans")),
         new("ja", LanguageNames.Label("ja")),
         new("en", LanguageNames.Label("en")),
+        new("ko", LanguageNames.Label("ko")),
     ];
 
     /// <summary>可选识别语言，加载时标注系统可用性。</summary>
@@ -61,6 +62,7 @@ public partial class MainWindow : Window
         new("auto", LanguageNames.Label("auto", "逐个已装的语言试一遍,取最像文字的结果")),
         new("ja", LanguageNames.Label("ja")),
         new("en-US", LanguageNames.Label("en-US")),
+        new("ko-KR", LanguageNames.Label("ko-KR")),
         new("zh-Hans-CN", LanguageNames.Label("zh-Hans-CN")),
     ];
 
@@ -68,7 +70,7 @@ public partial class MainWindow : Window
     [
         new("mock", "预览模式（mock）：只识别，不翻译"),
         new("openai-compatible", "OpenAI 兼容接口（云端或本地 AI 模型）"),
-        new("caiyun", "彩云小译 —— 基础翻译，支持译后术语校正"),
+        new("caiyun", "彩云小译 —— 中↔英/日/韩；其他方向请换服务"),
         new("youdao", "有道翻译 —— 基础翻译，支持译后术语校正"),
         new("baidu", "百度翻译 —— 基础翻译，支持译后术语校正"),
     ];
@@ -110,6 +112,7 @@ public partial class MainWindow : Window
     private nint _handle;
     private bool _loadingUi;
     private bool _closing;
+    private int _targetSelections;
     private CancellationTokenSource? _providerTestCancellation;
     private List<HotkeyAction> _actions = [];
     private readonly List<int> _registeredHotkeys = [];
@@ -143,11 +146,15 @@ public partial class MainWindow : Window
         // 启动时按已保存的目标窗口匹配档案。
         await _session.AutoDetectProfileAsync().ConfigureAwait(true);
         SyncProfileControls();
+        if (!_closing) SyncFloatingBall();
+        if (!_closing) InitializeUpdates();
     }
 
     private void OnClosed(object? sender, EventArgs e)
     {
         _closing = true;
+        _updateCancellation?.Cancel();
+        _floatingBall?.Close();
         _providerTestCancellation?.Cancel();
         // 加载前关闭窗口时句柄为 0，不能传给 HwndSource.FromHwnd。
         if (_handle != 0)
@@ -392,7 +399,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Select a region and start translation.</summary>
-    private void OnRegionAndStart()
+    private async void OnRegionAndStart()
     {
         if (WindowList.SelectedItem is not WindowInfo)
         {
@@ -403,7 +410,9 @@ public partial class MainWindow : Window
                 return;
             }
 
-            _session.SetTarget(foreground);
+            await _session.SelectTargetAsync(foreground);
+            SyncLanguageControls();
+            SyncProfileControls();
             RefreshWindowList();
             OnNotice($"已自动选中当前窗口:{foreground.Title}");
         }
@@ -432,15 +441,7 @@ public partial class MainWindow : Window
 
         // 可用性直接写进选项文字:缺日文 OCR 功能是识别不出东西最常见的原因。
         var installed = WindowsOcrRecognizer.AvailableLanguages;
-        var ocrChoices = OcrLanguages
-            .Select(choice => choice.Value.Equals("auto", StringComparison.OrdinalIgnoreCase)
-                || installed.Contains(choice.Value, StringComparer.OrdinalIgnoreCase)
-                    ? choice
-                    : choice with
-                    {
-                        Label = $"{choice.Label} —— 未安装语言包,需在 Windows 设置里添加"
-                    })
-            .ToList();
+        var ocrChoices = OcrLanguages.ToList();
 
         foreach (var tag in installed.Where(tag => OcrLanguages.All(choice => !choice.Value.Equals(tag, StringComparison.OrdinalIgnoreCase))))
         {
@@ -567,8 +568,8 @@ public partial class MainWindow : Window
             var directory = string.IsNullOrWhiteSpace(RapidModelsBox.Text)
                 ? "自动查找 models\\v6"
                 : RapidModelsBox.Text.Trim();
-            OcrEngineSummary.Text = $"当前:RapidOCR 离线模型(多语言,日/英/中通吃,不需系统语言包)。"
-                + $"模型目录:{directory}。「识别语言」对它不生效,「识别前放大倍数」也会被忽略(它自己会缩放)。";
+            OcrEngineSummary.Text = $"RapidOCR 离线识别：中、日、英、韩。选择韩语时使用专用模型；自动模式比较语言候选。"
+                + $"模型目录：{directory}。原文语言明确时建议手动选择，识别器自行缩放。";
             return;
         }
 
@@ -636,6 +637,7 @@ public partial class MainWindow : Window
         PollIntervalBox.Text = Text(config.Pipeline.PollIntervalMs);
         ChangeThresholdBox.Text = Text(config.Pipeline.ChangeThresholdBits);
         ForceRefreshBox.Text = Text(config.Pipeline.ForceRefreshMs);
+        TextSettleBox.Text = Text(config.Pipeline.TextSettleMs);
         PersistentCacheCheck.IsChecked = config.Translation.Cache.Persist;
         UpdateCacheStatus();
         CacheRetentionBox.Text = Text(config.Translation.Cache.RetentionDays);
@@ -664,8 +666,12 @@ public partial class MainWindow : Window
         config.Ocr.RapidLimitSideLen = Math.Max(0, (int)Number(RapidLimitSideBox.Text, config.Ocr.RapidLimitSideLen));
         config.Ocr.RapidModelDirectory = RapidModelsBox.Text.Trim();
 
-        config.Translation.From = ValueOf(FromCombo, "auto");
-        config.Translation.To = ValueOf(ToCombo, "zh-Hans");
+        var from = ValueOf(FromCombo, "auto");
+        var to = ValueOf(ToCombo, "zh-Hans");
+        if (from != config.Translation.From || to != config.Translation.To)
+            config.Target.ManualLanguage = true;
+        config.Translation.From = from;
+        config.Translation.To = to;
         var provider = ValueOf(ProviderCombo, "mock");
         var classic = ClassicEngines.ContainsKey(provider);
         config.Translation.Translator = config.Translation.Translator with
@@ -712,6 +718,8 @@ public partial class MainWindow : Window
         config.Pipeline.PollIntervalMs = Math.Max(50, (int)Number(PollIntervalBox.Text, config.Pipeline.PollIntervalMs));
         config.Pipeline.ChangeThresholdBits = Math.Max(1, (int)Number(ChangeThresholdBox.Text, config.Pipeline.ChangeThresholdBits));
         config.Pipeline.ForceRefreshMs = Math.Max(0, (int)Number(ForceRefreshBox.Text, config.Pipeline.ForceRefreshMs));
+        config.Pipeline.TextSettleMs = Math.Clamp((int)Number(TextSettleBox.Text, config.Pipeline.TextSettleMs), 0, 3000);
+        config.Translation.HistoryLines = Math.Clamp(config.Translation.HistoryLines, 0, 8);
 
         return true;
     }
@@ -725,8 +733,33 @@ public partial class MainWindow : Window
         // 选中游戏的那一刻才知道该用哪份档案,所以也在那一刻切换。
         if (WindowList.SelectedItem is WindowInfo window)
         {
-            await _session.AutoDetectProfileAsync(window.Title).ConfigureAwait(true);
-            SyncProfileControls();
+            _targetSelections++;
+            StartButton.IsEnabled = RegionButton.IsEnabled = BottomStripButton.IsEnabled = false;
+            try
+            {
+                var changed = _session.Config.Target.Identity != window.Identity;
+                await _session.SelectTargetAsync(window).ConfigureAwait(true);
+                if (_closing)
+                    return;
+                if (changed)
+                {
+                    _overlay?.Hide();
+                    SourceBox.Clear();
+                    TranslationBox.Clear();
+                }
+                SyncLanguageControls();
+                SyncProfileControls();
+                UpdateTargetSummary();
+            }
+            catch (Exception)
+            {
+                OnNotice("切换目标失败，请停止翻译后重新选择窗口。");
+            }
+            finally
+            {
+                _targetSelections--;
+                StartButton.IsEnabled = RegionButton.IsEnabled = BottomStripButton.IsEnabled = _targetSelections == 0;
+            }
         }
     }
 
@@ -748,6 +781,7 @@ public partial class MainWindow : Window
 
     private void UpdateTargetSummary()
     {
+        UpdateRunSummary();
         var target = WindowList.SelectedItem as WindowInfo;
         var region = _session.Config.Target.Region;
 
@@ -766,6 +800,8 @@ public partial class MainWindow : Window
 
     private void OnPickRegion(object sender, RoutedEventArgs e)
     {
+        if (_targetSelections > 0)
+            return;
         if (WindowList.SelectedItem is not WindowInfo target)
         {
             OnNotice("请先在左侧列表里点选一个窗口。");
@@ -831,6 +867,7 @@ public partial class MainWindow : Window
             main = true;
         }
 
+        if (_floatingBall?.IsVisible == true) _floatingBall.Hide();
         var panel = _overlay?.SuspendForPicker() ?? false;
         return new HiddenOwnWindows(main, panel);
     }
@@ -845,6 +882,7 @@ public partial class MainWindow : Window
         }
 
         _overlay?.ResumeAfterPicker(hidden.Panel);
+        if (_session.Config.FloatingBall.Enabled && _floatingBall is not null) _floatingBall.Show();
     }
 
     private void OnClearRegion(object sender, RoutedEventArgs e)
@@ -852,11 +890,29 @@ public partial class MainWindow : Window
         _session.ClearRegion();
         _session.SaveConfig();
         UpdateTargetSummary();
-        OnNotice("已清除区域与目标窗口。");
+        OnNotice("已清除字幕区域，保留当前窗口与语言设置。请重新框选。");
     }
 
     private async void OnStart(object sender, RoutedEventArgs e)
     {
+        try { await Dispatcher.Invoke(StartCoreAsync); }
+        catch (Exception)
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                _overlay?.Dismiss();
+                OnNotice("启动失败，请检查 OCR 模型目录和翻译服务配置后重试。");
+            });
+        }
+    }
+
+    private async Task StartCoreAsync()
+    {
+        if (_targetSelections > 0)
+        {
+            OnNotice("正在切换目标窗口，请稍后开始翻译。");
+            return;
+        }
         if (_session.IsStopping)
         {
             await _session.StopAsync().ConfigureAwait(true);
@@ -911,8 +967,8 @@ public partial class MainWindow : Window
     private async Task StopAsync()
     {
         _overlay?.Dismiss();
-        await _session.StopAsync().ConfigureAwait(true);
-        StatusText.Text = "已停止";
+        await _session.StopAsync().ConfigureAwait(false);
+        await Dispatcher.InvokeAsync(() => StatusText.Text = "已停止");
     }
 
     private void OnOverlayDismissRequested() => _ = StopAsync();
@@ -1045,7 +1101,7 @@ public partial class MainWindow : Window
         var height = Math.Max(60, (int)(client.Height * 0.27));
         var x = (client.Width - width) / 2;
 
-        _session.SetRegion(target, new Int32Rect(client.X + x, client.Y + y, width, height));
+        _session.SetRegion(target, new Int32Rect(client.X + x, client.Y + y, width, height), manual: false);
         _session.SaveConfig();
         UpdateTargetSummary();
         OnNotice($"已把区域设为窗口底部(相对客户区 {_session.Config.Target.Region})。"
@@ -1199,8 +1255,12 @@ public partial class MainWindow : Window
         if (_loadingUi)
             return;
         var profile = _session.FindProfile(ValueOf(GameProfileCombo, string.Empty));
-        await _session.ApplyProfileAsync(profile).ConfigureAwait(true);
-        SyncProfileControls();
+        try
+        {
+            await _session.ApplyProfileAsync(profile).ConfigureAwait(true);
+            SyncProfileControls();
+        }
+        catch (Exception) { OnNotice("档案切换失败，请检查配置目录是否可写。"); }
     }
 
     private async void OnProfileOptionChanged(object sender, RoutedEventArgs e)
@@ -1231,6 +1291,13 @@ public partial class MainWindow : Window
     }
 
     private void OnNewGameProfile(object sender, RoutedEventArgs e) => OpenProfileEditor(null);
+    private void OnRestoreLimbus(object sender, RoutedEventArgs e)
+    {
+        var profile = GameProfiles.Default().First(item => item.Id == "limbus-company");
+        profile.Id = GameProfiles.MakeId("limbus-restored", _session.Config.Translation.GameProfiles.Select(item => item.Id));
+        profile.Name = "边狱巴士 · 内置副本";
+        OpenProfileEditor(profile);
+    }
 
     private void OnImportProfile(object sender, RoutedEventArgs e)
     {
@@ -1332,7 +1399,7 @@ public partial class MainWindow : Window
             Text = sample,
             From = languages.From,
             To = languages.To,
-            Glossary = profile.Glossary,
+            Glossary = GlossarySelector.Select(sample, profile.Glossary),
             StyleHint = profile.StyleHint,
             Worldview = profile.Worldview,
         };
@@ -1393,17 +1460,20 @@ public partial class MainWindow : Window
 
     private void UpdateProfileSummary()
     {
+        UpdateRunSummary();
         var active = _session.ActiveProfile;
         if (active is null)
         {
-            GameProfileSummary.Text = "当前生效:通用翻译 —— 没有术语表,专有名词全靠模型自己判断。"
-                + "想让「新九人会」这类词译得和官中一致,就新建一份档案。";
+            GameProfileSummary.Text = $"当前生效：通用翻译 · {_session.Config.Translation.PersonalTerms.Count} 条个人术语。添加后立即应用。";
             return;
         }
 
         var bans = active.Terms.Sum(term => term.Forbidden.Count);
-        GameProfileSummary.Text = $"当前生效:{active.Name} —— {active.Terms.Count} 条术语、{bans} 条禁用译法"
-            + (string.IsNullOrWhiteSpace(active.Worldview) ? " · 没有写世界观(补上它往往比加术语更有效)" : " · 已带世界观描述") + (_session.Config.Translation.EnforceTerms ? " · 强制校正:开" : " · 强制校正:关(模型可以不理术语表)");
+        var candidates = active.Terms.Count(term => !term.Enabled || term.ReviewStatus == "待核对"
+            || string.IsNullOrWhiteSpace(term.ReviewStatus) && term.Note?.Contains("待核对") == true);
+        GameProfileSummary.Text = $"当前生效：{active.Name} · {active.Terms.Count - candidates} 条可用术语"
+            + (candidates > 0 ? $" · {candidates} 条禁用或待核对" : "")
+            + (_session.Config.Translation.EnforceTerms ? " · 译后校正开启" : " · 译后校正关闭");
     }
 
     /// <summary>The profile changed from somewhere else, such as auto-detection.</summary>
@@ -1424,6 +1494,37 @@ public partial class MainWindow : Window
 
         _overlay?.SetLanguages(_session.Languages);
         UpdateEngineSummary();
+        UpdateRunSummary();
+    }
+
+    private void UpdateRunSummary()
+    {
+        if (RunModeText is null)
+            return;
+        var config = _session.Config;
+        RunModeText.Text = $"{_session.ActiveProfile?.Name ?? "通用翻译"} · {DisplayLanguage(config.Translation.From)} → {DisplayLanguage(config.Translation.To)}"
+            + $"\n{(config.Translation.Translator.Provider == "mock" ? "预览模式：仅识别，不翻译" : "使用已配置的翻译服务")} · 字幕稳定等待 {config.Pipeline.TextSettleMs} ms";
+    }
+
+    private async Task QuickDirectionAsync(string from, string ocr)
+    {
+        try
+        {
+            await _session.ApplyLanguagePresetAsync(new LanguagePreset { From = from, To = "zh-Hans", Ocr = ocr, Label = $"{from} → 中文" });
+            SyncLanguageControls();
+        }
+        catch (Exception) { OnNotice("切换语言失败，请检查配置目录与识别设置。"); }
+    }
+
+    private async void OnQuickAuto(object sender, RoutedEventArgs e) => await QuickDirectionAsync("auto", "auto");
+    private async void OnQuickEnglish(object sender, RoutedEventArgs e) => await QuickDirectionAsync("en", "en-US");
+    private async void OnQuickJapanese(object sender, RoutedEventArgs e) => await QuickDirectionAsync("ja", "ja");
+    private void OnOpenProfilesTab(object sender, RoutedEventArgs e) => SettingsTabs.SelectedIndex = 2;
+    private void OnTermFeedback(object sender, RoutedEventArgs e) => OpenExternal("https://github.com/wl8695573-blip/GuGuGaGaTranslator/issues/new?template=terminology.yml", "术语反馈表单");
+    private void OnRetryCurrent(object sender, RoutedEventArgs e)
+    {
+        _session.ForgetContext();
+        OnNotice("已清理上下文并重新识别当前句；若设置有改动，请先保存配置。");
     }
 
     /// <summary>Start the loop as if the button had been pressed, for the <c>--autostart</c> command line.</summary>
@@ -1545,7 +1646,7 @@ public partial class MainWindow : Window
         {
             Filter = "诊断 ZIP (*.zip)|*.zip",
             DefaultExt = ".zip",
-            FileName = "GuGuGaGaTranslator-diagnostics-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".zip",
+            FileName = "LCTA-diagnostics-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".zip",
         };
         if (dialog.ShowDialog(this) != true)
             return;
@@ -1627,16 +1728,22 @@ public partial class MainWindow : Window
             if (update.Ocr is not null)
                 SourceBox.Text = update.SourceText;
 
-            if (update.Status == PipelineStatus.NoText)
+            if (update.Status is PipelineStatus.NoText or PipelineStatus.Blank or PipelineStatus.NoRegion)
             {
-                SourceBox.Text = "(未识别到文字)";
+                TranslationBox.Clear();
+                _overlay?.ClearText();
+                if (update.Status == PipelineStatus.NoText)
+                    SourceBox.Text = "(未识别到文字)";
                 return;
             }
 
             if (update.Translation is null)
             {
-                if (update.Status == PipelineStatus.Translating)
+                if (update.Status is PipelineStatus.Translating or PipelineStatus.WaitingText)
+                {
+                    TranslationBox.Clear();
                     _overlay?.ClearText();
+                }
                 return;
             }
 
@@ -1662,6 +1769,7 @@ public partial class MainWindow : Window
     {
         PipelineStatus.NoRegion => "没有可用的区域:目标窗口可能已关闭或最小化。",
         PipelineStatus.Unchanged => "画面未变化,跳过识别。",
+        PipelineStatus.WaitingText => "文字正在变化，等待完整台词…",
         PipelineStatus.NoText => update.Skipped == PipelineSkipReason.WrongScript
             ? $"识别到的是界面文字(「{update.SourceText}」),不像台词,已跳过 —— 这块区域可能压到了游戏的按钮。"
                 + "用 Ctrl+Alt+R 把区域收紧到对话框上,或在「调试」页关掉脚本守卫。"

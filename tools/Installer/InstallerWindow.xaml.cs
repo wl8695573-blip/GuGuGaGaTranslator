@@ -16,6 +16,7 @@ namespace GuGuGaGaTranslator.Installer;
 public partial class InstallerWindow : Window
 {
     private const string ProductName = "GuGuGaGaTranslator";
+    private const string DisplayName = InstallationManifest.DisplayName;
     private static string Version => Assembly.GetExecutingAssembly().GetName().Version!.ToString(3);
     private const string Payload = "payload.app.zip";
     private const string RegistryKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\" + ProductName;
@@ -34,10 +35,28 @@ public partial class InstallerWindow : Window
         StatusText.Text = $"点击「安装」开始。共 {PayloadSize():N0} MB 会被复制到上面这个目录,不会改动系统设置。";
     }
 
-    private static string DefaultDirectory() => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Programs",
-        ProductName);
+    internal static string DefaultDirectory()
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(RegistryKey);
+        if (key?.GetValue("InstallLocation") is string registered &&
+            Path.IsPathFullyQualified(registered) && Directory.Exists(registered))
+        {
+            try
+            {
+                var directory = InstallationManifest.ValidateDirectory(registered);
+                var manifest = InstallationManifest.Read(directory);
+                if (key.GetValue("InstallationId") as string == manifest.Id)
+                    return directory;
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or
+                InvalidOperationException or System.Text.Json.JsonException or ArgumentException)
+            {
+                // 原安装目录不可用时，提供新的默认目录。
+            }
+        }
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Programs", DisplayName);
+    }
 
     private static double PayloadSize()
     {
@@ -122,11 +141,16 @@ public partial class InstallerWindow : Window
         directory = InstallationManifest.ValidateDirectory(directory);
         using var existingRegistration = Registry.CurrentUser.OpenSubKey(RegistryKey);
         var registered = existingRegistration?.GetValue("InstallLocation") as string;
+        InstallationManifest? previousManifest = null;
         if (Directory.Exists(directory) && Directory.EnumerateFileSystemEntries(directory).Any())
         {
             if (registered is null || !Path.GetFullPath(registered).TrimEnd('\\').Equals(directory, StringComparison.OrdinalIgnoreCase)
-                || !File.Exists(Path.Combine(directory, ProductName + ".exe")))
+                || !(File.Exists(Path.Combine(directory, InstallationManifest.ExecutableName)) ||
+                     File.Exists(Path.Combine(directory, InstallationManifest.LegacyExecutableName))))
                 throw new InvalidOperationException("请选择空目录。仅已登记的本产品目录允许覆盖升级。");
+            previousManifest = InstallationManifest.Read(directory);
+            if (existingRegistration?.GetValue("InstallationId") as string != previousManifest.Id)
+                throw new InvalidOperationException("安装标记与卸载登记不匹配。");
         }
         var files = new List<string>();
         Directory.CreateDirectory(directory);
@@ -158,28 +182,50 @@ public partial class InstallerWindow : Window
             }
         }
 
-        var exe = Path.Combine(directory, ProductName + ".exe");
-        if (!File.Exists(exe)) throw new InvalidOperationException($"解压后没有找到 {ProductName}.exe。");
+        var exe = Path.Combine(directory, InstallationManifest.ExecutableName);
+        if (!File.Exists(exe)) throw new InvalidOperationException($"解压后没有找到 {InstallationManifest.ExecutableName}。");
+
+        if (previousManifest is not null)
+        {
+            foreach (var obsolete in previousManifest.Files.Except(files, StringComparer.OrdinalIgnoreCase))
+            {
+                var path = InstallationManifest.ResolveFile(directory, obsolete);
+                if (File.Exists(path)) File.Delete(path);
+            }
+            startMenuShortcut |= File.Exists(ShortcutPath(Environment.SpecialFolder.StartMenu, ProductName));
+            desktopShortcut |= File.Exists(ShortcutPath(Environment.SpecialFolder.DesktopDirectory, ProductName));
+        }
 
         if (startMenuShortcut)
         {
-            CreateShortcut(Path.Combine(
-                InstallationManifest.UserFolder(Environment.SpecialFolder.StartMenu), "Programs", ProductName + ".lnk"), exe, directory);
+            CreateShortcut(ShortcutPath(Environment.SpecialFolder.StartMenu, DisplayName), exe, directory);
             message("已添加到开始菜单");
         }
 
         if (desktopShortcut)
         {
-            CreateShortcut(Path.Combine(
-                InstallationManifest.UserFolder(Environment.SpecialFolder.DesktopDirectory), ProductName + ".lnk"), exe, directory);
+            CreateShortcut(ShortcutPath(Environment.SpecialFolder.DesktopDirectory, DisplayName), exe, directory);
             message("已创建桌面快捷方式");
         }
 
-        var manifest = new InstallationManifest(ProductName, Guid.NewGuid().ToString(), files.ToArray());
+        var manifest = new InstallationManifest(ProductName, previousManifest?.Id ?? Guid.NewGuid().ToString(), files.ToArray());
         manifest.Save(directory);
         RegisterUninstall(directory, exe, manifest.Id);
+        if (previousManifest is not null)
+        {
+            foreach (var folder in new[] { Environment.SpecialFolder.StartMenu, Environment.SpecialFolder.DesktopDirectory })
+            {
+                var oldShortcut = ShortcutPath(folder, ProductName);
+                if (File.Exists(oldShortcut)) File.Delete(oldShortcut);
+            }
+        }
         message("已登记到「应用和功能」");
     }
+
+    private static string ShortcutPath(Environment.SpecialFolder folder, string name) =>
+        folder == Environment.SpecialFolder.StartMenu
+            ? Path.Combine(InstallationManifest.UserFolder(folder), "Programs", name + ".lnk")
+            : Path.Combine(InstallationManifest.UserFolder(folder), name + ".lnk");
 
     /// <summary>The single top-level folder every entry shares, or an empty string.</summary>
     /// <param name="archive">The payload.</param>
@@ -222,9 +268,9 @@ public partial class InstallerWindow : Window
         using var key = Registry.CurrentUser.CreateSubKey(RegistryKey)
             ?? throw new InvalidOperationException("无法写入注册表,安装目录已经复制完成,可以从那里直接运行。");
 
-        key.SetValue("DisplayName", ProductName);
+        key.SetValue("DisplayName", DisplayName);
         key.SetValue("DisplayVersion", Version);
-        key.SetValue("Publisher", ProductName);
+        key.SetValue("Publisher", DisplayName);
         key.SetValue("DisplayIcon", exe);
         key.SetValue("InstallLocation", directory);
         key.SetValue("InstallationId", installationId);
@@ -239,7 +285,7 @@ public partial class InstallerWindow : Window
 
     private static void Launch(string directory)
     {
-        var exe = Path.Combine(directory, ProductName + ".exe");
+        var exe = Path.Combine(directory, InstallationManifest.ExecutableName);
         if (!File.Exists(exe)) return;
 
         Process.Start(new ProcessStartInfo(exe) { WorkingDirectory = directory, UseShellExecute = true });

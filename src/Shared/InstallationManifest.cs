@@ -6,6 +6,10 @@ namespace GuGuGaGaTranslator.Installation;
 public sealed record InstallationManifest(string Product, string Id, string[] Files)
 {
     public const string ProductName = "GuGuGaGaTranslator";
+    public const string DisplayName = "LCTA";
+    public const string ExecutableName = DisplayName + ".exe";
+    public const string LegacyExecutableName = ProductName + ".exe";
+    // 安装标记沿用旧名称，便于识别并升级已安装的版本。
     public const string FileName = ".gugugaga-install.json";
 
     public static string UserFolder(Environment.SpecialFolder folder)
@@ -47,7 +51,9 @@ public sealed record InstallationManifest(string Product, string Id, string[] Fi
             File.ReadAllText(ResolveFile(directory, FileName)))
             ?? throw new InvalidOperationException("安装清单无效。");
         if (manifest.Product != ProductName || !Guid.TryParse(manifest.Id, out _) ||
-            manifest.Files is null || !manifest.Files.Contains(ProductName + ".exe", StringComparer.OrdinalIgnoreCase))
+            manifest.Files is null ||
+            !(manifest.Files.Contains(ExecutableName, StringComparer.OrdinalIgnoreCase) ||
+              manifest.Files.Contains(LegacyExecutableName, StringComparer.OrdinalIgnoreCase)))
             throw new InvalidOperationException("安装清单不属于此产品。");
         foreach (var file in manifest.Files)
             ResolveFile(directory, file);

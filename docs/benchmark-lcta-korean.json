@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "engine": "korean",
+  "iterations": 3,
+  "initializationMs": 339.2841,
+  "os": "Microsoft Windows NT 10.0.22631.0",
+  "runtime": "10.0.12",
+  "processorCount": 16,
+  "limitations": "Synthetic dialogue, not a real-game compatibility claim. Warmups and model initialization excluded from median/P95. Whitespace ignored; NFKC Unicode normalized. Missing Windows languages are skipped.",
+  "results": [
+    {
+      "file": "ko-KR-100-dark.png",
+      "status": "PASS",
+      "actual": "\uB0B4\uC77C \uC5EC\uAE30\uC11C \uB2E4\uC2DC \uB9CC\uB098\uC694.",
+      "cer": 0,
+      "medianMs": 304.4392,
+      "p95Ms": 348.9683,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ko-KR-100-light.png",
+      "status": "PASS",
+      "actual": "\uB0B4\uC77C \uC5EC\uAE30\uC11C \uB2E4\uC2DC \uB9CC\uB098\uC694.",
+      "cer": 0,
+      "medianMs": 308.8635,
+      "p95Ms": 337.7743,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ko-KR-100-low-contrast.png",
+      "status": "PASS",
+      "actual": "\uB0B4\uC77C \uC5EC\uAE30\uC11C \uB2E4\uC2DC \uB9CC\uB098\uC694.",
+      "cer": 0,
+      "medianMs": 303.1488,
+      "p95Ms": 331.69,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ko-KR-125-dark.png",
+      "status": "PASS",
+      "actual": "\uB0B4\uC77C \uC5EC\uAE30\uC11C \uB2E4\uC2DC \uB9CC\uB098\uC694.",
+      "cer": 0,
+      "medianMs": 302.3524,
+      "p95Ms": 304.7303,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ko-KR-125-light.png",
+      "status": "PASS",
+      "actual": "\uB0B4\uC77C \uC5EC\uAE30\uC11C \uB2E4\uC2DC \uB9CC\uB098\uC694.",
+      "cer": 0,
+      "medianMs": 295.8206,
+      "p95Ms": 306.6692,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ko-KR-125-low-contrast.png",
+      "status": "PASS",
+      "actual": "\uB0B4\uC77C \uC5EC\uAE30\uC11C \uB2E4\uC2DC \uB9CC\uB098\uC694.",
+      "cer": 0,
+      "medianMs": 309.5475,
+      "p95Ms": 320.9592,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ko-KR-150-dark.png",
+      "status": "PASS",
+      "actual": "\uB0B4\uC77C \uC5EC\uAE30\uC11C \uB2E4\uC2DC \uB9CC\uB098\uC694.",
+      "cer": 0,
+      "medianMs": 306.6495,
+      "p95Ms": 317.0676,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ko-KR-150-light.png",
+      "status": "PASS",
+      "actual": "\uB0B4\uC77C \uC5EC\uAE30\uC11C \uB2E4\uC2DC \uB9CC\uB098\uC694.",
+      "cer": 0,
+      "medianMs": 289.2693,
+      "p95Ms": 326.6654,
+      "maximumCer": 0.15
+    },
+    {
+      "file": "ko-KR-150-low-contrast.png",
+      "status": "PASS",
+      "actual": "\uB0B4\uC77C \uC5EC\uAE30\uC11C \uB2E4\uC2DC \uB9CC\uB098\uC694.",
+      "cer": 0,
+      "medianMs": 293.4451,
+      "p95Ms": 299.2979,
+      "maximumCer": 0.15
+    }
+  ]
+}

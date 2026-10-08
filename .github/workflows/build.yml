@@ -11,6 +11,9 @@ jobs:
       - run: dotnet build GuGuGaGaTranslator.slnx -c Release
       - run: dotnet run --project tools/Regression -c Release
       - run: dotnet run --project tools/Benchmark -c Release -- --engine rapid --iterations 3 --check
+      - run: dotnet run --project tools/TermLibrary -c Release -- terminology --check
+      - run: dotnet run --project tools/Benchmark -c Release -- --generate --fixtures .artifacts/ocr-four-language
+      - run: dotnet run --project tools/Benchmark -c Release -- --engine auto --fixtures .artifacts/ocr-four-language --iterations 1 --check
       - run: dotnet run --project tools/UiPreview -c Release -- .artifacts/ui
       - run: dotnet run --project tools/InteractionChecks -c Release -- .artifacts/interactions
       - run: dotnet build tools/Installer/Installer.csproj -c Release
@@ -21,4 +24,5 @@ jobs:
           include-hidden-files: true
           path: |
             .artifacts/benchmark-rapid
+            .artifacts/benchmark-auto
             .artifacts/ui/*.png

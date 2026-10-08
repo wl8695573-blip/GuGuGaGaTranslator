@@ -45,6 +45,7 @@ public sealed class OverlayWindow : Window
     private Int32Rect _region;
     private int _panelTopPhysical;
     private int _panelLeftPhysical;
+    private string _effectivePlacement = OverlayPlacement.Below;
     private LanguageBarWindow? _bar;
     private string? _profileLabel;
     private LanguagePair _languages = new("ja", "zh-Hans");
@@ -259,6 +260,7 @@ public sealed class OverlayWindow : Window
 
     private void MoveBy(int dx, int dy)
     {
+        _config.Placement = _effectivePlacement;
         _config.OffsetX += dx;
         _config.OffsetY += _config.Placement == OverlayPlacement.Above ? -dy : dy;
         PlaceAt(_region);
@@ -276,6 +278,7 @@ public sealed class OverlayWindow : Window
         var dpi = VisualTreeHelper.GetDpi(this);
         var dx = (int)Math.Round(e.HorizontalChange * dpi.DpiScaleX);
         var dy = (int)Math.Round(e.VerticalChange * dpi.DpiScaleY);
+        _config.Placement = _effectivePlacement;
 
         if (_config.Width <= 0)
             _config.Width = Math.Max(120, _region.Width);
@@ -416,8 +419,28 @@ public sealed class OverlayWindow : Window
         var panelHeight = Math.Min(area.Height - 52, (int)Math.Ceiling(
             (ActualHeight > 0 ? ActualHeight : _config.FontSize * 2.4) * scaleY));
 
+        var placement = _config.Placement.ToLowerInvariant();
+        var gap = Math.Max(0, _config.OffsetY);
+        var aboveSpace = Math.Max(0, region.Y - area.Y - gap);
+        var belowSpace = Math.Max(0, area.Y + area.Height - region.Y - region.Height - gap);
+        if (placement is OverlayPlacement.Above or OverlayPlacement.Below)
+        {
+            var preferredSpace = placement == OverlayPlacement.Above ? aboveSpace : belowSpace;
+            var otherSpace = placement == OverlayPlacement.Above ? belowSpace : aboveSpace;
+            if (preferredSpace < panelHeight && otherSpace >= 80)
+            {
+                // 底部字幕下方没有空间时改放上方；长译文收进滚动区域，避免挤回原字幕。
+                placement = placement == OverlayPlacement.Above ? OverlayPlacement.Below : OverlayPlacement.Above;
+                _panel.MaxHeight = Math.Min(_panel.MaxHeight, otherSpace / scaleY);
+                if (_config.Height > 0)
+                    Height = Math.Min(Height, _panel.MaxHeight);
+                UpdateLayout();
+                panelHeight = Math.Min(otherSpace, (int)Math.Ceiling(ActualHeight * scaleY));
+            }
+        }
+        _effectivePlacement = placement;
         var x = region.X + _config.OffsetX;
-        var y = _config.Placement.ToLowerInvariant() switch
+        var y = placement switch
         {
             OverlayPlacement.Over => region.Y + _config.OffsetY,
             OverlayPlacement.Above => region.Y - panelHeight - _config.OffsetY,

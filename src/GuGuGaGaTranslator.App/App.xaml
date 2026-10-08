@@ -3,53 +3,53 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <Application.Resources>
 
-    <!-- 字体:幼圆优先,缺失时逐级回退到雅黑 / 系统默认,避免缺字体显示方框 -->
-    <FontFamily x:Key="UiFont">YouYuan, 幼圆, Microsoft YaHei UI, Microsoft YaHei, Segoe UI</FontFamily>
-    <FontFamily x:Key="DisplayFont">Arial Rounded MT Bold, Comic Sans MS, YouYuan, 幼圆, Microsoft YaHei UI, Segoe UI</FontFamily>
+    <!-- 中文使用系统雅黑；英文标题使用窄体字。 -->
+    <FontFamily x:Key="UiFont">Microsoft YaHei UI, Segoe UI, Microsoft YaHei</FontFamily>
+    <FontFamily x:Key="DisplayFont">Bahnschrift, Microsoft YaHei UI, Segoe UI</FontFamily>
 
-    <!-- 配色:主窗口、悬浮层、框选遮罩共用这一段,改这里的值整个程序一起变;取色来自程序图标,悬浮层保持深色(要压在游戏画面上) -->
+    <!-- 黑灰面板、暖白文字与橙色强调；主界面、弹窗和悬浮层共用。 -->
 
     <!-- 窗口与面板 -->
-    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FF0F1430" />
-    <SolidColorBrush x:Key="SurfaceBrush"          Color="#FF161D42" />
-    <SolidColorBrush x:Key="FieldBrush"            Color="#FF0B1029" />
-    <SolidColorBrush x:Key="BorderBrush"           Color="#FF2C3873" />
-    <SolidColorBrush x:Key="ButtonFaceBrush"       Color="#FF1E2757" />
-    <SolidColorBrush x:Key="ButtonHoverBrush"      Color="#FF2E3C7E" />
-    <SolidColorBrush x:Key="ButtonPressedBrush"    Color="#FF3C4C99" />
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FF121212" />
+    <SolidColorBrush x:Key="SurfaceBrush"          Color="#FF20201E" />
+    <SolidColorBrush x:Key="FieldBrush"            Color="#FF151513" />
+    <SolidColorBrush x:Key="BorderBrush"           Color="#FF494039" />
+    <SolidColorBrush x:Key="ButtonFaceBrush"       Color="#FF302A25" />
+    <SolidColorBrush x:Key="ButtonHoverBrush"      Color="#FF493A2D" />
+    <SolidColorBrush x:Key="ButtonPressedBrush"    Color="#FF61432D" />
 
     <!-- 文字 -->
-    <SolidColorBrush x:Key="TextBrush"       Color="#FFEDF1FF" />
-    <SolidColorBrush x:Key="MutedTextBrush"  Color="#FFA6B0DC" />
-    <SolidColorBrush x:Key="HintTextBrush"   Color="#FF7C87B8" />
-    <SolidColorBrush x:Key="SourceTextBrush" Color="#FFC0C8E8" />
+    <SolidColorBrush x:Key="TextBrush"       Color="#FFF3EBDC" />
+    <SolidColorBrush x:Key="MutedTextBrush"  Color="#FFCEC2AE" />
+    <SolidColorBrush x:Key="HintTextBrush"   Color="#FFB5A58F" />
+    <SolidColorBrush x:Key="SourceTextBrush" Color="#FFDDCFB6" />
 
     <!-- 强调色:悬浮层边框、框选框、选中态都用它 -->
-    <SolidColorBrush x:Key="AccentBrush"     Color="#FF5B7BFF" />
-    <SolidColorBrush x:Key="AccentSoftBrush" Color="#FF8FA8FF" />
-    <SolidColorBrush x:Key="BowPinkBrush"    Color="#FFFF87B8" />
+    <SolidColorBrush x:Key="AccentBrush"     Color="#FFFF8A24" />
+    <SolidColorBrush x:Key="AccentSoftBrush" Color="#FFFFB45E" />
+    <SolidColorBrush x:Key="BowPinkBrush"    Color="#FFD95C45" />
 
-    <!-- 下拉列表用的浅色底 + 近黑字 -->
-    <SolidColorBrush x:Key="MenuFaceBrush"     Color="#FFF4F6FD" />
-    <SolidColorBrush x:Key="MenuSelectedBrush" Color="#FFD9E2FB" />
-    <SolidColorBrush x:Key="MenuTextBrush"     Color="#FF12172E" />
+    <!-- 下拉菜单沿用深色面板。 -->
+    <SolidColorBrush x:Key="MenuFaceBrush"     Color="#FF25221E" />
+    <SolidColorBrush x:Key="MenuSelectedBrush" Color="#FF59412C" />
+    <SolidColorBrush x:Key="MenuTextBrush"     Color="#FFF3EBDC" />
 
     <!-- 状态色:测试连接成功 / 失败 -->
-    <SolidColorBrush x:Key="OkTextBrush"    Color="#FF6FE0BE" />
-    <SolidColorBrush x:Key="ErrorTextBrush" Color="#FFFF8A9B" />
+    <SolidColorBrush x:Key="OkTextBrush"    Color="#FF9BD2A4" />
+    <SolidColorBrush x:Key="ErrorTextBrush" Color="#FFFF9080" />
 
     <!-- 只有代码用得到的颜色:悬浮层与框选遮罩要带透明度的 Color,不是 Brush -->
-    <Color x:Key="OverlayPanelColor">#FF0E1330</Color>
-    <Color x:Key="OverlayBorderColor">#FF5B7BFF</Color>
+    <Color x:Key="OverlayPanelColor">#FF151410</Color>
+    <Color x:Key="OverlayBorderColor">#FFFF8A24</Color>
     <Color x:Key="OverlayOutlineColor">#FF000000</Color>
-    <Color x:Key="SelectionStrokeColor">#FF5B7BFF</Color>
-    <Color x:Key="SelectionFillColor">#335B7BFF</Color>
+    <Color x:Key="SelectionStrokeColor">#FFFF8A24</Color>
+    <Color x:Key="SelectionFillColor">#33FF8A24</Color>
     <Color x:Key="DimColor">#66000000</Color>
-    <Color x:Key="ChipColor">#CC0E1330</Color>
+    <Color x:Key="ChipColor">#E6151410</Color>
 
     <!-- 控件样式:隐式样式(没有 x:Key)对该类型的所有控件生效,不用逐个控件去改 -->
 
-    <!-- 按钮:模板换掉是因为默认模板画不出圆角 -->
+    <!-- 控件使用方正边框。 -->
     <Style TargetType="Button">
       <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
       <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
@@ -60,7 +60,7 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border x:Name="Chrome" CornerRadius="10"
+            <Border x:Name="Chrome" CornerRadius="2"
                     Background="{StaticResource ButtonFaceBrush}"
                     BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                     Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
@@ -87,7 +87,7 @@
 
     <Style x:Key="PrimaryButton" TargetType="Button">
       <Setter Property="FontFamily" Value="{StaticResource UiFont}" />
-      <Setter Property="Foreground" Value="White" />
+      <Setter Property="Foreground" Value="#FF17130F" />
       <Setter Property="Padding" Value="14,7" />
       <Setter Property="Margin" Value="0,0,6,0" />
       <Setter Property="MinWidth" Value="88" />
@@ -95,7 +95,7 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="Button">
-            <Border x:Name="Chrome" CornerRadius="10"
+            <Border x:Name="Chrome" CornerRadius="2"
                     Background="{StaticResource AccentBrush}"
                     BorderBrush="{StaticResource AccentSoftBrush}" BorderThickness="1"
                     Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
@@ -127,7 +127,7 @@
         <Setter.Value>
           <ControlTemplate TargetType="CheckBox">
             <StackPanel Orientation="Horizontal" Background="Transparent">
-              <Border x:Name="Box" Width="17" Height="17" CornerRadius="6"
+              <Border x:Name="Box" Width="17" Height="17" CornerRadius="2"
                       Background="{StaticResource FieldBrush}"
                       BorderBrush="{StaticResource BorderBrush}" BorderThickness="1.4"
                       VerticalAlignment="Center">
@@ -199,7 +199,7 @@
                             IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
                 <ToggleButton.Template>
                   <ControlTemplate TargetType="ToggleButton">
-                    <Border CornerRadius="6" Background="{TemplateBinding Background}"
+                    <Border CornerRadius="2" Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
                       <Path Data="M 0,0 L 4,4 L 8,0" Stroke="{StaticResource TextBrush}" StrokeThickness="1.5"
                             HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0" />
@@ -218,7 +218,7 @@
               <Popup x:Name="PART_Popup" Placement="Bottom" AllowsTransparency="True" Focusable="False"
                      IsOpen="{TemplateBinding IsDropDownOpen}" PopupAnimation="Slide">
                 <Border MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
-                        MaxHeight="{TemplateBinding MaxDropDownHeight}" CornerRadius="6"
+                        MaxHeight="{TemplateBinding MaxDropDownHeight}" CornerRadius="2"
                         Background="{StaticResource MenuFaceBrush}" BorderBrush="{StaticResource BorderBrush}"
                         BorderThickness="1" Padding="2">
                   <ScrollViewer CanContentScroll="True">
@@ -255,7 +255,7 @@
         <Setter.Value>
           <ControlTemplate TargetType="ComboBoxItem">
             <!-- 每个选项自己画不透明背景:WPF 下拉弹层的底色来自系统配色,只靠弹层的话浅色文字会落在白底上 -->
-            <Border x:Name="Row" CornerRadius="6" Margin="2,1"
+            <Border x:Name="Row" CornerRadius="2" Margin="2,1"
                     Background="{StaticResource MenuFaceBrush}"
                     Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
               <ContentPresenter VerticalAlignment="Center" />
@@ -290,7 +290,7 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="ListViewItem">
-            <Border x:Name="Row" CornerRadius="6" Margin="1"
+            <Border x:Name="Row" CornerRadius="2" Margin="1"
                     Background="Transparent" Padding="7,4" SnapsToDevicePixels="True">
               <ContentPresenter />
             </Border>
