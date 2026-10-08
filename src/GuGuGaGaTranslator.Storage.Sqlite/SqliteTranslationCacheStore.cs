@@ -15,6 +15,7 @@ public sealed class SqliteTranslationCacheStore : ITranslationCacheStore
     private readonly int _capacity;
     private readonly Func<DateTimeOffset> _clock;
     private readonly object _gate = new();
+    private readonly string _path;
 
     public SqliteTranslationCacheStore(string path, int retentionDays = 30, int capacity = 10000,
         Func<DateTimeOffset>? clock = null)
@@ -23,6 +24,7 @@ public sealed class SqliteTranslationCacheStore : ITranslationCacheStore
         _capacity = Math.Clamp(capacity, 1, 100000);
         _clock = clock ?? (() => DateTimeOffset.UtcNow);
         var fullPath = Path.GetFullPath(path);
+        _path = fullPath;
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         _connection = new SqliteConnection(new SqliteConnectionStringBuilder
         {
@@ -56,7 +58,7 @@ public sealed class SqliteTranslationCacheStore : ITranslationCacheStore
         lock (_gate)
         {
             string encrypted;
-            using (var select = Command("SELECT value FROM translations WHERE key=$key AND created_at >= $cutoff;"))
+                using (var select = Command("SELECT value FROM translations WHERE key=$key AND created_at > $cutoff;"))
             {
                 select.Parameters.AddWithValue("$key", key);
                 select.Parameters.AddWithValue("$cutoff", Cutoff());
@@ -109,7 +111,7 @@ public sealed class SqliteTranslationCacheStore : ITranslationCacheStore
     private void Prune()
     {
         using var prune = Command("""
-            DELETE FROM translations WHERE created_at < $cutoff;
+            DELETE FROM translations WHERE created_at <= $cutoff;
             DELETE FROM translations WHERE key NOT IN
                 (SELECT key FROM translations ORDER BY accessed_at DESC, rowid DESC LIMIT $capacity);
             """);
@@ -124,6 +126,40 @@ public sealed class SqliteTranslationCacheStore : ITranslationCacheStore
         {
             using var clear = Command("DELETE FROM translations; VACUUM;");
             clear.ExecuteNonQuery();
+        }
+    }
+
+    public CacheStorageStatistics GetStatistics()
+    {
+        lock (_gate)
+        {
+            using var count = Command("SELECT COUNT(*) FROM translations WHERE created_at > $cutoff;");
+            count.Parameters.AddWithValue("$cutoff", Cutoff());
+            return new(Convert.ToInt64(count.ExecuteScalar()), File.Exists(_path) ? new FileInfo(_path).Length : 0);
+        }
+    }
+
+    public DateTimeOffset? GetExpiresAt(string key)
+    {
+        lock (_gate)
+        {
+            using var select = Command("SELECT created_at FROM translations WHERE key=$key;");
+            select.Parameters.AddWithValue("$key", key);
+            return select.ExecuteScalar() is long created ? DateTimeOffset.FromUnixTimeMilliseconds(created).AddDays(_retentionDays) : null;
+        }
+    }
+
+    public int CleanExpired()
+    {
+        lock (_gate)
+        {
+            using var count = Command("SELECT COUNT(*) FROM translations;");
+            var before = Convert.ToInt32(count.ExecuteScalar());
+            Prune();
+            var removed = before - Convert.ToInt32(count.ExecuteScalar());
+            using var compact = Command("VACUUM;");
+            compact.ExecuteNonQuery();
+            return removed;
         }
     }
 

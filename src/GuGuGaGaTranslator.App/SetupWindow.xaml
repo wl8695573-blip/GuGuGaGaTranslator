@@ -13,6 +13,7 @@
   <Border CornerRadius="2" Background="{StaticResource WindowBackgroundBrush}"
           BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
           MouseLeftButtonDown="OnDragArea">
+    <ScrollViewer x:Name="SetupScrollViewer" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="26,20,26,22">
 
       <Grid>
@@ -62,7 +63,8 @@
           <TextBlock Text="接口地址" Style="{StaticResource FieldLabel}" />
           <TextBox x:Name="BaseUrlBox" />
           <TextBlock Text="模型名" Style="{StaticResource FieldLabel}" />
-          <TextBox x:Name="ModelBox" />
+          <DockPanel><Button x:Name="SetupReadModelsButton" Content="读取模型" Click="OnReadModels" DockPanel.Dock="Right" Margin="6,0,0,0" /><TextBox x:Name="ModelBox" /></DockPanel>
+          <ComboBox x:Name="SetupModelsCombo" Visibility="Collapsed" SelectionChanged="OnModelSelected" Margin="0,6,0,0" />
           <TextBlock Text="默认翻译方向" Style="{StaticResource FieldLabel}" />
           <ComboBox x:Name="DirectionCombo" />
         </StackPanel>
@@ -83,5 +85,6 @@
       <TextBlock x:Name="StorageHint" FontSize="11" TextWrapping="Wrap" Margin="0,14,0,0"
                  Foreground="{StaticResource HintTextBrush}" />
     </StackPanel>
+    </ScrollViewer>
   </Border>
 </Window>

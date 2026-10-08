@@ -86,19 +86,13 @@ public partial class MainWindow : Window
     /// <summary>Recognition backends: the in-box one, and the bundled offline model.</summary>
     private static readonly Choice[] OcrEngines =
     [
-        new("rapidocr", "RapidOCR：附带中、日、英模型，无需系统语言功能"),
+        new("rapidocr", "RapidOCR：附带中、日、英、韩模型，无需系统语言功能"),
         new("windows", "Windows OCR —— 系统自带，需对应语言包；耗时取决于区域与语言"),
     ];
 
     /// <summary>Endpoint presets; they only fill the three fields below.</summary>
     private static readonly (string Label, string BaseUrl, string Model, string PromptStyle)[] EnginePresets =
-    [
-        ("本地 Ollama：通用模型", "http://127.0.0.1:11434/v1", "qwen2.5:7b-instruct", "galgame"),
-        ("本地 Sakura：日译中模型", "http://127.0.0.1:11434/v1", "sakura-galtransl:7b", "sakura"),
-        ("DeepSeek 官方 API(按量计费)", "https://api.deepseek.com", "deepseek-flash", "galgame"),
-        ("智谱 GLM(需自备 Key)", "https://open.bigmodel.cn/api/paas/v4", "glm-4-flash", "galgame"),
-        ("硅基流动 SiliconFlow(需自备 Key)", "https://api.siliconflow.cn/v1", "Qwen/Qwen2.5-7B-Instruct", "galgame"),
-    ];
+        ModelServices.Presets.Select(preset => (preset.Name, preset.BaseUrl, preset.Model, preset.PromptStyle)).ToArray();
 
     /// <summary>The instruction formats the translator can speak.</summary>
     private static readonly Choice[] PromptStyles =
@@ -131,6 +125,13 @@ public partial class MainWindow : Window
 
         Loaded += OnLoaded;
         Closed += OnClosed;
+        Closing += (_, args) =>
+        {
+            if (!_storageBusy) return;
+            _storageMigrationCancellation?.Cancel();
+            args.Cancel = true;
+            OnNotice("正在取消数据迁移，请等待当前文件复制结束后再关闭。原目录保持完整。");
+        };
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -156,6 +157,7 @@ public partial class MainWindow : Window
         _updateCancellation?.Cancel();
         _floatingBall?.Close();
         _providerTestCancellation?.Cancel();
+        _modelListCancellation?.Cancel();
         // 加载前关闭窗口时句柄为 0，不能传给 HwndSource.FromHwnd。
         if (_handle != 0)
         {
@@ -391,6 +393,7 @@ public partial class MainWindow : Window
         if (message != HotkeyInterop.WmHotkey)
             return 0;
         handled = true;
+        if (_storageBusy) { OnNotice("正在迁移数据，稍后可使用热键。"); return 0; }
 
         var action = _actions?.FirstOrDefault(candidate => candidate.Id == (int)wParam);
         action?.Invoke();
@@ -630,15 +633,17 @@ public partial class MainWindow : Window
         HideOwnWindowsCheck.IsChecked = config.RegionPicker.HideOwnWindows;
 
         DumpFramesCheck.IsChecked = config.Debug.DumpFrames;
-        DumpDirBox.Text = string.IsNullOrWhiteSpace(config.Debug.DumpDirectory)
-            ? AppSession.DefaultDumpDirectory()
-            : config.Debug.DumpDirectory;
+        DumpDirBox.Text = config.Debug.DumpDirectory;
+        LoadStorageControls();
         DumpKeepBox.Text = Text(config.Debug.KeepDumps);
         PollIntervalBox.Text = Text(config.Pipeline.PollIntervalMs);
         ChangeThresholdBox.Text = Text(config.Pipeline.ChangeThresholdBits);
         ForceRefreshBox.Text = Text(config.Pipeline.ForceRefreshMs);
         TextSettleBox.Text = Text(config.Pipeline.TextSettleMs);
         PersistentCacheCheck.IsChecked = config.Translation.Cache.Persist;
+        CacheEnabledCheck.IsChecked = config.Translation.Cache.Enabled;
+        CacheContextCheck.IsChecked = config.Translation.Cache.MatchContext;
+        CacheMemoryBox.Text = Text(config.Translation.Cache.MemoryEntries);
         UpdateCacheStatus();
         CacheRetentionBox.Text = Text(config.Translation.Cache.RetentionDays);
         CacheCapacityBox.Text = Text(config.Translation.Cache.MaximumEntries);
@@ -655,6 +660,9 @@ public partial class MainWindow : Window
 
     private bool ReadUiIntoConfig()
     {
+        if (_storageBusy) { OnNotice("正在迁移数据，请稍后修改设置或开始翻译。"); return false; }
+        try { ReadStorageControls(); }
+        catch (Exception error) { OnNotice("文件目录无效：" + error.Message); return false; }
         var config = _session.Config;
         config.Target.CaptureBackend = ValueOf(CaptureBackendCombo, "window");
         config.Target.CaptureSettingsVersion = 1;
@@ -690,6 +698,9 @@ public partial class MainWindow : Window
         config.Translation.AutoDetectProfile = AutoProfileCheck.IsChecked == true;
         config.Translation.EnforceTerms = EnforceTermsCheck.IsChecked == true;
         config.Translation.Cache.Persist = PersistentCacheCheck.IsChecked == true;
+        config.Translation.Cache.Enabled = CacheEnabledCheck.IsChecked == true;
+        config.Translation.Cache.MatchContext = CacheContextCheck.IsChecked == true;
+        config.Translation.Cache.MemoryEntries = Math.Clamp((int)Number(CacheMemoryBox.Text, config.Translation.Cache.MemoryEntries), 100, 20000);
         config.Translation.Cache.RetentionDays = Math.Clamp((int)Number(CacheRetentionBox.Text, config.Translation.Cache.RetentionDays), 1, 365);
         config.Translation.Cache.MaximumEntries = Math.Clamp((int)Number(CacheCapacityBox.Text, config.Translation.Cache.MaximumEntries), 100, 100000);
 
@@ -713,7 +724,6 @@ public partial class MainWindow : Window
         config.RegionPicker.HideOwnWindows = HideOwnWindowsCheck.IsChecked == true;
 
         config.Debug.DumpFrames = DumpFramesCheck.IsChecked == true;
-        config.Debug.DumpDirectory = DumpDirBox.Text.Trim();
         config.Debug.KeepDumps = Math.Max(1, (int)Number(DumpKeepBox.Text, config.Debug.KeepDumps));
         config.Pipeline.PollIntervalMs = Math.Max(50, (int)Number(PollIntervalBox.Text, config.Pipeline.PollIntervalMs));
         config.Pipeline.ChangeThresholdBits = Math.Max(1, (int)Number(ChangeThresholdBox.Text, config.Pipeline.ChangeThresholdBits));
@@ -919,7 +929,7 @@ public partial class MainWindow : Window
             if (_closing)
                 return;
         }
-        ReadUiIntoConfig();
+        if (!ReadUiIntoConfig()) return;
         _session.SaveConfig();
 
         _overlay ??= new OverlayWindow();
@@ -973,17 +983,24 @@ public partial class MainWindow : Window
 
     private void OnOverlayDismissRequested() => _ = StopAsync();
 
-    private async void OnSave(object sender, RoutedEventArgs e)
+    private async void OnSave(object sender, RoutedEventArgs e) => await SaveSettingsAsync();
+
+    private async Task SaveSettingsAsync()
     {
-        ReadUiIntoConfig();
-        _session.SaveConfig();
-        if (_session.IsRunning)
+        try
         {
-            await _session.StopAsync();
-            _session.Start();
+            if (!ReadUiIntoConfig()) return;
+            _session.SaveConfig();
+            if (_session.IsRunning)
+            {
+                await _session.StopAsync();
+                _session.Start();
+            }
+            _overlay?.Configure(_session.Config.Overlay, _session.Languages);
+            LoadStorageControls();
+            OnNotice($"配置已保存到 {_session.Store.FilePath}");
         }
-        _overlay?.Configure(_session.Config.Overlay, _session.Languages);
-        OnNotice($"配置已保存到 {_session.Store.FilePath}");
+        catch (Exception error) { OnNotice("设置未能应用：" + error.Message); }
     }
 
     /// <summary>A preset was picked: fill the endpoint fields it names.</summary>
@@ -1003,6 +1020,9 @@ public partial class MainWindow : Window
 
         ProviderCombo.Text = string.Empty;
         SelectByValue(ProviderCombo, "openai-compatible");
+        _modelListCancellation?.Cancel();
+        AvailableModelsCombo.Visibility = Visibility.Collapsed;
+        ModelsStatusText.Text = ModelServices.Presets.First(entry => entry.Name == label).Hint;
         BaseUrlBox.Text = preset.BaseUrl;
         ModelBox.Text = preset.Model;
         SelectByValue(PromptStyleCombo, preset.PromptStyle);
@@ -1031,7 +1051,7 @@ public partial class MainWindow : Window
         if (preset is null)
             return;
 
-        ReadUiIntoConfig();
+        if (!ReadUiIntoConfig()) return;
         var overlay = _session.Config.Overlay;
         overlay.Placement = preset.Placement;
         overlay.ShowSource = preset.ShowSource;
@@ -1116,7 +1136,7 @@ public partial class MainWindow : Window
         else
             ShowPanelCheck.IsChecked = ShowPanelCheck.IsChecked != true;
 
-        ReadUiIntoConfig();
+        if (!ReadUiIntoConfig()) return;
         _session.SaveConfig();
         _overlay?.Configure(_session.Config.Overlay, _session.Languages);
         UpdateOverlaySummary();
@@ -1129,6 +1149,7 @@ public partial class MainWindow : Window
     /// <summary>Reopen the setup card a first run shows, so filling in a key later does not mean hunting through the tabs.</summary>
     private async void OnOpenSetup(object sender, RoutedEventArgs e)
     {
+        if (_storageBusy) { OnNotice("正在迁移数据，请稍后打开服务设置。"); return; }
         var wasRunning = _session.IsRunning;
         if (wasRunning)
             await _session.StopAsync().ConfigureAwait(true);
@@ -1166,7 +1187,7 @@ public partial class MainWindow : Window
     private void ToggleOverlayEditMode()
     {
         ClickThroughCheck.IsChecked = ClickThroughCheck.IsChecked != true;
-        ReadUiIntoConfig();
+        if (!ReadUiIntoConfig()) return;
         _session.SaveConfig();
         _overlay?.Configure(_session.Config.Overlay, _session.Languages);
         UpdateOverlaySummary();
@@ -1267,7 +1288,7 @@ public partial class MainWindow : Window
     {
         if (_loadingUi)
             return;
-        ReadUiIntoConfig();
+        if (!ReadUiIntoConfig()) return;
         _session.SaveConfig();
         if (_session.IsRunning)
         {
@@ -1328,15 +1349,15 @@ public partial class MainWindow : Window
             Filter = "GuGuGaGa 游戏档案 (*.ggprofile.json)|*.ggprofile.json",
             DefaultExt = ".ggprofile.json",
             FileName = GameProfiles.MakeId(profile.Name, []) + ".ggprofile.json",
+            InitialDirectory = PrepareExportDirectory(),
         };
         if (dialog.ShowDialog(this) != true)
             return;
         try
         {
             var path = Path.GetFullPath(dialog.FileName);
-            var configRoot = Path.GetFullPath(_session.Store.Directory) + Path.DirectorySeparatorChar;
-            if (path.StartsWith(configRoot, StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("请把档案导出到配置目录之外。");
+            if (!path.EndsWith(".ggprofile.json", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("请保留 .ggprofile.json 后缀，避免覆盖配置文件。");
             GameProfileArchive.Write(path, profile);
             OnNotice("档案已导出（仅作品设定和术语，不含密钥）。");
         }
@@ -1388,7 +1409,7 @@ public partial class MainWindow : Window
     /// <summary>Show what one line actually sends: the rules, the term table, the setting description, and the context.</summary>
     private void OnPreviewPrompt(object sender, RoutedEventArgs e)
     {
-        ReadUiIntoConfig();
+        if (!ReadUiIntoConfig()) return;
         var profile = _session.CurrentProfile;
         var languages = _session.Languages;
 
@@ -1564,12 +1585,7 @@ public partial class MainWindow : Window
             return;
         }
         var baseUrl = BaseUrlBox.Text.Trim();
-        var url = baseUrl.Contains("api.deepseek.com", StringComparison.OrdinalIgnoreCase) ? "https://platform.deepseek.com/"
-            : baseUrl.Contains("bigmodel.cn", StringComparison.OrdinalIgnoreCase) ? "https://open.bigmodel.cn/"
-            : baseUrl.Contains("siliconflow", StringComparison.OrdinalIgnoreCase) ? "https://cloud.siliconflow.cn/"
-            : baseUrl.Contains("127.0.0.1", StringComparison.Ordinal) || baseUrl.Contains("localhost", StringComparison.OrdinalIgnoreCase)
-                ? "https://ollama.com/download"
-                : string.Empty;
+        var url = ModelServices.Find(baseUrl)?.Url ?? string.Empty;
 
         if (url.Length == 0)
         {
@@ -1647,6 +1663,7 @@ public partial class MainWindow : Window
             Filter = "诊断 ZIP (*.zip)|*.zip",
             DefaultExt = ".zip",
             FileName = "LCTA-diagnostics-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".zip",
+            InitialDirectory = PrepareExportDirectory(),
         };
         if (dialog.ShowDialog(this) != true)
             return;
@@ -1663,7 +1680,7 @@ public partial class MainWindow : Window
 
     private async void OnTestProvider(object sender, RoutedEventArgs e)
     {
-        ReadUiIntoConfig();
+        if (!ReadUiIntoConfig()) return;
         TestProviderButton.IsEnabled = false;
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(Math.Clamp(_session.Config.Translation.Translator.TimeoutSeconds, 1, 120)));
         _providerTestCancellation = cancellation;
@@ -1699,7 +1716,7 @@ public partial class MainWindow : Window
     }
 
     private void OnOpenDumpDirectory(object sender, RoutedEventArgs e) =>
-        OpenDirectory(string.IsNullOrWhiteSpace(DumpDirBox.Text) ? AppSession.DefaultDumpDirectory() : DumpDirBox.Text.Trim());
+        OpenDirectory(string.IsNullOrWhiteSpace(DumpDirBox.Text) ? _session.DumpDirectory : DumpDirBox.Text.Trim());
 
     private void OnOpenConfigDirectory(object sender, RoutedEventArgs e) => OpenDirectory(_session.Store.Directory);
 
@@ -1800,9 +1817,17 @@ public partial class MainWindow : Window
             Dispatcher.BeginInvoke(Apply);
     }
 
-    private void UpdateCacheStatus() => CacheStatusText.Text = _session.PersistentCacheAvailable
-        ? "当前：磁盘缓存可用（Windows 当前账户加密）。"
-        : _session.Config.Translation.Cache.Persist ? "当前：磁盘缓存不可用，已回退内存缓存。" : "当前：仅使用内存缓存。";
+    private void UpdateCacheStatus()
+    {
+        var cache = _session.Cache;
+        var mode = !_session.Config.Translation.Cache.Enabled ? "缓存已关闭"
+            : _session.PersistentCacheAvailable ? "内存 + 加密磁盘缓存"
+            : _session.Config.Translation.Cache.Persist ? "磁盘不可用，暂用内存" : "仅内存缓存";
+        var disk = cache.StorageStatistics();
+        var total = cache.Hits + cache.Misses;
+        CacheStatusText.Text = $"{mode} · 内存 {cache.Count} 条 · 磁盘 {disk.Entries} 条 / {disk.Bytes / 1048576d:F1} MB\n"
+            + $"本次会话：命中 {cache.Hits} 次，未命中 {cache.Misses} 次，命中率 {(total == 0 ? 0 : cache.Hits * 100d / total):F1}%";
+    }
 
     private static string Text(double value) => value.ToString("0.###", CultureInfo.InvariantCulture);
 

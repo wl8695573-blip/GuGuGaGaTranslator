@@ -4,6 +4,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using GuGuGaGaTranslator.Core.Config;
 using GuGuGaGaTranslator.Core.Interop;
 
@@ -14,7 +15,7 @@ public sealed class FloatingBallWindow : Window
 {
     private readonly FloatingBallConfig _config;
     private readonly ContextMenu _menu = new();
-    private readonly Thumb _dragHandle = new() { Cursor = Cursors.Hand, Margin = new Thickness(3) };
+    private readonly Thumb _dragHandle = new() { Cursor = Cursors.Hand };
     private readonly TextBlock _updateMark = new()
     {
         Text = "●", Foreground = Brushes.OrangeRed, FontSize = 18,
@@ -29,7 +30,8 @@ public sealed class FloatingBallWindow : Window
     public FloatingBallWindow(FloatingBallConfig config, IEnumerable<(string Label, Action Run)> actions)
     {
         _config = config;
-        Width = Height = 58;
+        Width = 88;
+        Height = 40;
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
         AllowsTransparency = true;
@@ -39,26 +41,22 @@ public sealed class FloatingBallWindow : Window
         ShowActivated = false;
         Title = "LCTA 悬浮球";
         var layout = new Grid();
-        var ball = new Border
+        // 沿字标橙色外轮廓裁切，保留中央缺口，桌面上不显示图片的黑色底边。
+        var ball = new System.Windows.Shapes.Path
         {
-            Margin = new Thickness(3), CornerRadius = new CornerRadius(28),
-            Background = Theme.Brush("SurfaceBrush", Color.FromRgb(32, 31, 29)),
-            BorderBrush = Theme.Brush("AccentBrush", Colors.Orange), BorderThickness = new Thickness(2),
-            Cursor = Cursors.Hand,
-            Child = new TextBlock { Text = "译", FontSize = 25, FontWeight = FontWeights.Bold,
-                Foreground = Theme.Brush("AccentBrush", Colors.Orange),
-                HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center }
+            Data = Geometry.Parse("M0,0 L42.2,0 L42.2,6.9 L45.8,6.9 L45.8,0 L88,0 L88,40 L45.8,40 L45.8,32.9 L42.2,32.9 L42.2,40 L0,40 Z"),
+            Fill = new ImageBrush(new BitmapImage(new Uri("pack://application:,,,/LCTA;component/Assets/lcta-wordmark.png")))
+            {
+                ViewboxUnits = BrushMappingMode.RelativeToBoundingBox,
+                Viewbox = new Rect(46d / 1815, 46d / 866, 1724d / 1815, 770d / 866), Stretch = Stretch.Fill
+            },
+            ToolTip = "点击打开快捷菜单，拖动调整位置；在菜单中关闭"
         };
         layout.Children.Add(ball);
         var hitArea = new FrameworkElementFactory(typeof(Border));
         hitArea.SetValue(Border.BackgroundProperty, Brushes.Transparent);
         _dragHandle.Template = new ControlTemplate(typeof(Thumb)) { VisualTree = hitArea };
         layout.Children.Add(_dragHandle);
-        var close = new Button { Content = "×", Width = 19, Height = 19, Padding = new Thickness(0),
-            Margin = new Thickness(0), HorizontalAlignment = HorizontalAlignment.Right,
-            VerticalAlignment = VerticalAlignment.Top, ToolTip = "关闭悬浮球（可在主界面重新开启）" };
-        close.Click += (_, _) => Close();
-        layout.Children.Add(close);
         layout.Children.Add(_updateMark);
         Content = layout;
         _menu.PlacementTarget = ball;
@@ -93,12 +91,13 @@ public sealed class FloatingBallWindow : Window
         };
         Loaded += (_, _) =>
         {
-            var area = OverlayWindowInterop.WorkAreaAt(new Int32Rect(_config.X ?? 0, _config.Y ?? 0, 58, 58));
+            var area = OverlayWindowInterop.WorkAreaAt(new Int32Rect(_config.X ?? 0, _config.Y ?? 0, (int)Width, (int)Height));
             var dpi = VisualTreeHelper.GetDpi(this);
-            var size = (int)Math.Ceiling(58 * dpi.DpiScaleX);
+            var size = (int)Math.Ceiling(Width * dpi.DpiScaleX);
+            var height = (int)Math.Ceiling(Height * dpi.DpiScaleY);
             OverlayWindowInterop.MoveTo(_handle,
                 Math.Clamp(_config.X ?? area.X + area.Width - size - 24, area.X, Math.Max(area.X, area.X + area.Width - size)),
-                Math.Clamp(_config.Y ?? area.Y + area.Height / 2, area.Y, Math.Max(area.Y, area.Y + area.Height - size)));
+                Math.Clamp(_config.Y ?? area.Y + area.Height / 2, area.Y, Math.Max(area.Y, area.Y + area.Height - height)));
         };
         Closed += (_, _) => _menu.IsOpen = false;
     }

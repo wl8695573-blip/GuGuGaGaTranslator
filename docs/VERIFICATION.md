@@ -27,7 +27,27 @@ dotnet run --project tools/InteractionChecks -c Release -- .artifacts/interactio
 
 报告写入 `.artifacts/benchmark-rapid` 或 `.artifacts/benchmark-windows`，含 JSON、Markdown、系统/.NET/逻辑处理器数。可指定 `--fixtures`、`--models`、`--iterations`、`--output` 使用本地语料，清单字段与固定 corpus 一致。自备真实游戏样本应具有可分享的授权，并避免包含用户隐私。
 
-## LCTA 本机记录（1.5.0，2026-10-08）
+## LCTA 本机记录（1.6.0，2026-10-08）
+
+本次使用隔离配置、合成窗口和模拟 HTTP 服务，没有使用用户密钥或调用付费翻译接口。
+
+| 项目 | 结果 | 范围与限制 |
+|---|---|---|
+| Release 编译 | 0 警告、0 错误 | Windows 11 / .NET 10.0.401 SDK |
+| 回归 | 161 项通过 | 原有四语与术语更新；新增模型列表 GET、认证、地址规范化、缓存关闭／容量／过期／上下文、数据迁移／取消／原目录保留／密钥与词表读取 |
+| 交互 | 214 项通过 | 实际菜单关闭、无表面关闭按钮与透明缺口、服务预设与模型选择、目录验证、缓存保存、较小桌面设置窗口；完整捕获 → OCR → mock → WPF |
+| 界面 | 实际 WPF 视图渲染检查通过 | 主界面、服务、支持、文件位置、首次设置、悬浮字标、最小尺寸；合成台词与独立路径 |
+
+日志为 `.artifacts/build-1.6-final.txt`、`regression-1.6-final.txt`、`interactions-1.6-final.txt`、`ui-1.6-final.txt`。安装包应使用当前构建执行下列检查，不能沿用历史包的结果：
+
+```powershell
+.\build.ps1 -Publish -SingleFile -Zip -Installer
+.\tools\verify-release.ps1 -Version 1.6.0 -LegacyInstaller .\dist\LCTA-Setup-1.5.0.exe
+```
+
+原生运行库在应用目录，便携包必须完整解压。包验收检查实际 OCR、SQLite、DPAPI、WPF、安装清单、升级与卸载；测试登记和快捷方式在结束后还原。线上服务只验证兼容协议与模拟返回，未验证真实账户权限、网络与译文质量。没有重跑完整 OCR 基准，下面的基准数据属于 1.5.0。
+
+## 历史 LCTA 本机记录（1.5.0，2026-10-08）
 
 使用独立配置、合成窗口和 mock 翻译，没有读取用户密钥或发送付费翻译请求。
 
@@ -55,7 +75,7 @@ dotnet run --project tools/Benchmark -c Release -- --engine auto --fixtures .art
 dotnet run --project tools/TermLibrary -c Release -- terminology --check
 ```
 
-安装包增加韩语模型、字典及内置词库；构建清单记录韩语模型哈希，包自检实际加载两类 OCR 与词库。首次 1.5.0 包的安装与两类旧版升级均已重跑通过；整理说明后的最终包还需再执行同一套检查。记录见 `.artifacts/package-acceptance-1.5-132.txt`、`package-acceptance-1.5-140.txt` 和最终包日志。每次构建不能沿用旧包结果。
+安装包增加韩语模型、字典及内置词库；构建清单记录韩语模型哈希，包自检实际加载两类 OCR 与词库。1.5.0 最终包的安装与两类旧版升级、公开下载和 SHA256 核对均已通过，记录见 `.artifacts/package-acceptance-1.5-final-132.txt`、`package-acceptance-1.5-final-140.txt` 和 `.artifacts/public-1.5-verification/release-audit.json`。每次构建不能沿用旧包结果。
 
 原始日志位于 `.artifacts/build-1.5-final.txt`、`regression-1.5-final.txt`、`interactions-1.5-final.txt`、`ocr-auto-four.txt`、`ocr-korean.txt`，临时数据不提交。
 

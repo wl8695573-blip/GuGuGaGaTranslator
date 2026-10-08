@@ -34,8 +34,7 @@ public sealed class ConfigStore
         get; private set;
     }
 
-    public static string DefaultDirectory() =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GuGuGaGaTranslator");
+    public static string DefaultDirectory() => DataDirectory.Resolve();
 
     public AppConfig Load()
     {

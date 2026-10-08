@@ -11,34 +11,7 @@ namespace GuGuGaGaTranslator.App;
 public partial class SetupWindow : Window
 {
     /// <summary>首次设置的服务预设及控制台链接。</summary>
-    private static readonly (string Name, string BaseUrl, string Model, string Hint, string Url, string Steps)[] Providers =
-    [
-        ("DeepSeek 官方(推荐)",
-            "https://api.deepseek.com", "deepseek-flash",
-            "按量付费；模型可用性、价格和赠送额度请以服务商页面为准。",
-            "https://platform.deepseek.com/",
-            "注册登录 → 左侧「API keys」→ 创建 → 复制那个 sk- 开头的串"),
-        ("智谱 GLM",
-            "https://open.bigmodel.cn/api/paas/v4", "glm-4-flash",
-            "请先在服务商页面确认模型可用性、价格与限额，再测试连接。",
-            "https://open.bigmodel.cn/",
-            "注册登录 → 「API Keys」→ 新建 → 复制"),
-        ("硅基流动 SiliconFlow",
-            "https://api.siliconflow.cn/v1", "Qwen/Qwen2.5-7B-Instruct",
-            "模型可用性、价格和免费额度可能变化，请以服务商页面为准。",
-            "https://cloud.siliconflow.cn/",
-            "注册登录 → 「API 密钥」→ 新建 → 复制"),
-        ("本地模型(Ollama 等,无需 Key)",
-            "http://127.0.0.1:11434/v1", "qwen2.5:7b-instruct",
-            "需先下载模型并启动本地服务。内存和显存需求取决于模型及量化方式。",
-            "https://ollama.com/download",
-            "下载安装 Ollama → 命令行执行 ollama pull qwen2.5:7b-instruct → 保持它开着"),
-        ("自定义(任意 OpenAI 兼容接口)",
-            "", "",
-            "填入中转、自建或其它厂商的地址与模型名。",
-            "",
-            ""),
-    ];
+    private static readonly ModelServicePreset[] Providers = ModelServices.Presets;
 
     private static readonly (string Label, string From, string To)[] Directions =
     [
@@ -49,17 +22,26 @@ public partial class SetupWindow : Window
         ("中 → 英", "zh-Hans", "en"),
         ("日 → 英", "ja", "en"),
         ("英 → 日", "en", "ja"),
+        ("韩 → 中", "ko", "zh-Hans"),
+        ("中 → 韩", "zh-Hans", "ko"),
+        ("韩 → 日", "ko", "ja"),
+        ("日 → 韩", "ja", "ko"),
+        ("韩 → 英", "ko", "en"),
+        ("英 → 韩", "en", "ko"),
     ];
 
     private readonly AppSession _session;
     private bool _loading;
     private readonly CancellationTokenSource _closed = new();
+    private CancellationTokenSource? _modelsCancellation;
 
     /// <summary>Create the setup window over a session.</summary>
     public SetupWindow(AppSession session)
     {
         _session = session;
         InitializeComponent();
+        MaxHeight = Math.Max(320, SystemParameters.WorkArea.Height - 32);
+        SetupScrollViewer.MaxHeight = MaxHeight - 2;
 
         _loading = true;
 
@@ -141,10 +123,12 @@ public partial class SetupWindow : Window
 
     private void ApplyProvider(bool keepKey, bool applyDefaults = true)
     {
+        _modelsCancellation?.Cancel();
+        SetupModelsCombo.Visibility = Visibility.Collapsed;
         var index = Math.Max(0, ProviderCombo.SelectedIndex);
         var provider = Providers[index];
 
-        if (applyDefaults && provider.BaseUrl.Length > 0)
+        if (applyDefaults)
         {
             BaseUrlBox.Text = provider.BaseUrl;
             ModelBox.Text = provider.Model;
@@ -158,7 +142,7 @@ public partial class SetupWindow : Window
         {
             KeyLink.NavigateUri = new Uri(provider.Url);
             KeyLinkRun.Text = provider.BaseUrl.Contains("127.0.0.1", StringComparison.Ordinal)
-                ? $"下载 Ollama ↗({provider.Url})"
+                ? $"打开本地服务说明 ↗({provider.Url})"
                 : $"打开 {new Uri(provider.Url).Host} 控制台 ↗";
             KeyLinkRow.Visibility = Visibility.Visible;
         }
@@ -196,6 +180,32 @@ public partial class SetupWindow : Window
 
     /// <summary>The key currently typed, from whichever of the two boxes is live.</summary>
     private string CurrentKey => ShowKeyCheck.IsChecked == true ? ApiKeyPlainBox.Text : ApiKeyBox.Password;
+
+    private async void OnReadModels(object sender, RoutedEventArgs e)
+    {
+        SetupReadModelsButton.IsEnabled = false;
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(_closed.Token);
+        cancellation.CancelAfter(TimeSpan.FromSeconds(20));
+        _modelsCancellation = cancellation;
+        var address = BaseUrlBox.Text.Trim();
+        TestResult.Text = "正在读取模型列表，不发送台词…";
+        try
+        {
+            var models = await ModelServices.ListModelsAsync(address, CurrentKey.Trim(), cancellation.Token);
+            if (_closed.IsCancellationRequested || address != BaseUrlBox.Text.Trim()) return;
+            SetupModelsCombo.ItemsSource = models;
+            SetupModelsCombo.Visibility = models.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
+            TestResult.Text = models.Count == 0 ? "没有读取到模型，请手动填写。" : "请选择支持文本聊天的模型，然后测试连接。";
+        }
+        catch (OperationCanceledException) { if (!_closed.IsCancellationRequested) TestResult.Text = "读取已取消或超时，可手动填写模型名。"; }
+        catch (Exception error) { if (!_closed.IsCancellationRequested) TestResult.Text = error.Message; }
+        finally { _modelsCancellation = null; if (!_closed.IsCancellationRequested) SetupReadModelsButton.IsEnabled = true; }
+    }
+
+    private void OnModelSelected(object sender, SelectionChangedEventArgs e)
+    {
+        if (SetupModelsCombo.SelectedItem is string model) ModelBox.Text = model;
+    }
 
     /// <summary>发送示例文本检查连接。</summary>
     private async void OnTestConnection(object sender, RoutedEventArgs e)
@@ -296,6 +306,7 @@ public partial class SetupWindow : Window
             Model = ModelBox.Text.Trim(),
             ApiKey = CurrentKey.Trim(),
             TimeoutSeconds = needsKey ? 60 : 120,
+            PromptStyle = provider.PromptStyle,
         };
         config.Translation.From = direction.From;
         config.Translation.To = direction.To;
@@ -308,6 +319,7 @@ public partial class SetupWindow : Window
                 "ja" => "ja",
                 "en" => "en-US",
                 "zh-Hans" => "zh-Hans-CN",
+                "ko" => "ko-KR",
                 _ => "auto",
             };
         }

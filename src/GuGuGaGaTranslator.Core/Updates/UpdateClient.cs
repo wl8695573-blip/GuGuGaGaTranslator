@@ -20,7 +20,7 @@ public sealed class UpdateClient
     private static HttpClient CreateClient()
     {
         var client = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("LCTA-Updater/1.5");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("LCTA-Updater/1.6");
         return client;
     }
 

@@ -121,9 +121,21 @@ public sealed class TranslationConfig
 /// <summary>Disk caching is optional; values are encrypted for the current Windows account.</summary>
 public sealed class TranslationCacheConfig
 {
+    public bool Enabled { get; set; } = true;
     public bool Persist { get; set; }
+    public bool MatchContext { get; set; } = true;
+    public int MemoryEntries { get; set; } = 2000;
     public int RetentionDays { get; set; } = 30;
     public int MaximumEntries { get; set; } = 10000;
+}
+
+/// <summary>留空时各类文件跟随数据目录，填写时使用用户指定的绝对目录。</summary>
+public sealed class StorageLocations
+{
+    public string CacheDirectory { get; set; } = "";
+    public string LogDirectory { get; set; } = "";
+    public string ExportDirectory { get; set; } = "";
+    public string UpdateDirectory { get; set; } = "";
 }
 
 /// <summary>悬浮层相对识别区域的位置。</summary>
@@ -409,9 +421,17 @@ public sealed class AppConfig
     public PipelineConfig Pipeline { get; set; } = new();
 
     public DebugConfig Debug { get; set; } = new();
+    public StorageLocations Storage { get; set; } = new();
 
     /// <summary>Drop language choices this version no longer offers, so a configuration carried over from an
     /// older build cannot point at a language the interface can no longer select. Supports 中 / 日 / 英 / 韩.</summary>
+    private static string ValidDirectoryOrEmpty(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "";
+        try { return DataDirectory.Validate(value); }
+        catch (Exception error) when (error is ArgumentException or System.IO.IOException or NotSupportedException) { return ""; }
+    }
+
     public void NormalizeLanguages()
     {
         Target ??= new();
@@ -424,6 +444,11 @@ public sealed class AppConfig
         Hotkeys ??= new();
         Pipeline ??= new();
         Debug ??= new();
+        Storage ??= new();
+        Storage.CacheDirectory = ValidDirectoryOrEmpty(Storage.CacheDirectory);
+        Storage.LogDirectory = ValidDirectoryOrEmpty(Storage.LogDirectory);
+        Storage.ExportDirectory = ValidDirectoryOrEmpty(Storage.ExportDirectory);
+        Storage.UpdateDirectory = ValidDirectoryOrEmpty(Storage.UpdateDirectory);
         SavedTargets ??= [];
         SavedTargets.RemoveAll(target => target is null || string.IsNullOrWhiteSpace(target.Identity));
         SavedTargets = SavedTargets.TakeLast(24).ToList();
@@ -463,7 +488,7 @@ public sealed class AppConfig
         Ocr.RapidModelDirectory ??= "";
         Overlay.FontFamily ??= "Microsoft YaHei UI";
         Overlay.TextAlign ??= "left";
-        Debug.DumpDirectory ??= "";
+        Debug.DumpDirectory = ValidDirectoryOrEmpty(Debug.DumpDirectory);
         Translation.Translator = Translation.Translator with
         {
             Provider = Translation.Translator.Provider ?? "mock",
@@ -484,6 +509,7 @@ public sealed class AppConfig
 
         Translation.Cache.RetentionDays = Math.Clamp(Translation.Cache.RetentionDays, 1, 365);
         Translation.Cache.MaximumEntries = Math.Clamp(Translation.Cache.MaximumEntries, 100, 100000);
+        Translation.Cache.MemoryEntries = Math.Clamp(Translation.Cache.MemoryEntries, 100, 20000);
         foreach (var profile in Translation.GameProfiles)
         {
             profile.Id ??= "";

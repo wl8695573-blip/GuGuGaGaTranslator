@@ -64,6 +64,7 @@ internal static class Program
             Improvements.CheckAll(scratch);
             await LctaChecks.RunAsync(scratch);
             await Lcta15Checks.RunAsync(scratch);
+            await Lcta16Checks.RunAsync(scratch);
             var config = new AppConfig();
             config.Translation.Translator = config.Translation.Translator with
             {

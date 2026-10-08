@@ -52,6 +52,7 @@ internal static partial class Program
             CheckAppearance(scratch);
             CheckOverlay();
             CheckLcta15(scratch);
+            CheckLcta16(scratch);
             if (args.Contains("--capture"))
             {
                 CheckCapture(scratch);

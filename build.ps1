@@ -34,7 +34,7 @@ $dist = Join-Path $root 'dist'
 New-Item -ItemType Directory -Path $app, $dist -Force | Out-Null
 $arguments = @('publish', (Join-Path $root 'src\GuGuGaGaTranslator.App\GuGuGaGaTranslator.App.csproj'),
     '-c', $Configuration, '-r', $Runtime, '-o', $app, '--self-contained', $SelfContained.IsPresent.ToString().ToLowerInvariant(), '--nologo')
-if ($SingleFile) { $arguments += @('-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:EnableCompressionInSingleFile=true') }
+if ($SingleFile) { $arguments += @('-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=false', '-p:EnableCompressionInSingleFile=true') }
 dotnet @arguments @restoreProperties
 if ($LASTEXITCODE -ne 0) { throw 'App publish failed' }
 foreach ($name in @('PP-OCRv6_det_small.onnx','PP-OCRv6_rec_small.onnx','ch_PP-LCNet_x0_25_textline_ori_cls_mobile.onnx','ppocrv6_small_dict.txt')) {

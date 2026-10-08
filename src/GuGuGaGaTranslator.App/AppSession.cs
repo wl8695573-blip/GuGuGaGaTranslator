@@ -33,11 +33,13 @@ public sealed partial class AppSession : IAsyncDisposable
         finally { _settingsGate.Release(); }
     }
 
-    public ConfigStore Store { get; }
+    public ConfigStore Store { get; private set; }
+    public bool UsesDefaultDataDirectory { get; }
 
     public AppSession(string? configDirectory = null)
     {
         Store = new ConfigStore(configDirectory);
+        UsesDefaultDataDirectory = configDirectory is null;
         Diagnostics = new DiagnosticsService(Store.Directory);
         Cache.StorageFailed += _ =>
         {
@@ -56,8 +58,11 @@ public sealed partial class AppSession : IAsyncDisposable
     {
         get; private set;
     }
-    private (bool Persist, int Days, int Maximum)? _cacheSettings;
-    public string CacheDatabasePath => Path.Combine(Store.Directory, "translations.sqlite");
+    private (bool Persist, int Days, int Maximum, string Path)? _cacheSettings;
+    public string CacheDatabasePath => Path.Combine(DataDirectory.Location(Config.Storage.CacheDirectory, Store.Directory, "cache"), "translations.sqlite");
+    public string DumpDirectory => DataDirectory.Location(Config.Debug.DumpDirectory, Store.Directory, "dumps");
+    public string ExportDirectory => DataDirectory.Location(Config.Storage.ExportDirectory, Store.Directory, "exports");
+    public string UpdateDirectory => DataDirectory.Location(Config.Storage.UpdateDirectory, Store.Directory, "updates");
 
     /// <summary>The running loop, or null when stopped.</summary>
     public TranslationPipeline? Pipeline
@@ -81,6 +86,8 @@ public sealed partial class AppSession : IAsyncDisposable
     public void LoadConfig()
     {
         Config = Store.Load();
+        MigrateLegacyCache();
+        Diagnostics.ConfigureDirectory(Store.Directory, Config.Storage.LogDirectory);
         LoadBundledTermLibrary();
         // 保留支持的四种语言，修复旧配置中无法识别的语言标签。
         Config.NormalizeLanguages();
@@ -97,22 +104,32 @@ public sealed partial class AppSession : IAsyncDisposable
     {
         RememberTargetSettings();
         Store.Save(Config);
+        Diagnostics.ConfigureDirectory(Store.Directory, Config.Storage.LogDirectory);
         ConfigureCache();
     }
 
     private void ConfigureCache(bool force = false)
     {
         var options = Config.Translation.Cache;
-        var settings = (options.Persist, Math.Clamp(options.RetentionDays, 1, 365), Math.Clamp(options.MaximumEntries, 100, 100000));
+        Cache.Configure(options.Enabled, options.MemoryEntries, options.RetentionDays, options.MatchContext);
+        var settings = (options.Persist && options.Enabled, Math.Clamp(options.RetentionDays, 1, 365), Math.Clamp(options.MaximumEntries, 100, 100000), CacheDatabasePath);
         if (!force && _cacheSettings == settings)
             return;
+        var previousPath = _cacheSettings?.Path;
         _cacheSettings = settings;
         PersistentCacheAvailable = false;
         Cache.ConfigureStorage(null);
-        if (!options.Persist)
+        if (!settings.Item1)
             return;
         try
         {
+            if (previousPath is not null && !previousPath.Equals(CacheDatabasePath, StringComparison.OrdinalIgnoreCase)
+                && File.Exists(previousPath) && !File.Exists(CacheDatabasePath)
+                && !File.Exists(previousPath + "-journal") && !File.Exists(previousPath + "-wal"))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(CacheDatabasePath)!);
+                File.Move(previousPath, CacheDatabasePath, overwrite: false);
+            }
             Cache.ConfigureStorage(new SqliteTranslationCacheStore(CacheDatabasePath, settings.Item2, settings.Item3));
             PersistentCacheAvailable = true;
         }
@@ -125,11 +142,19 @@ public sealed partial class AppSession : IAsyncDisposable
 
     public void ClearCache()
     {
+        Pipeline?.InvalidateTranslation();
         Cache.ConfigureStorage(null);
+        PersistentCacheAvailable = false;
+        _cacheSettings = null;
         // Only this application's exact cache files are removed, including an abandoned SQLite journal.
-        File.Delete(CacheDatabasePath);
-        File.Delete(CacheDatabasePath + "-journal");
-        ConfigureCache(force: true);
+        try
+        {
+            File.Delete(CacheDatabasePath);
+            File.Delete(CacheDatabasePath + "-journal");
+            File.Delete(CacheDatabasePath + "-wal");
+            File.Delete(CacheDatabasePath + "-shm");
+        }
+        finally { ConfigureCache(force: true); }
         Diagnostics.Record(new DiagnosticEvent { Kind = DiagnosticEventKind.CacheCleared });
         Pipeline?.InvalidateTranslation();
     }
@@ -301,9 +326,7 @@ public sealed partial class AppSession : IAsyncDisposable
         _translator = TranslatorFactory.Create(Config.Translation.Translator);
         _dumper = Config.Debug.DumpFrames
             ? new FrameDumper(
-                string.IsNullOrWhiteSpace(Config.Debug.DumpDirectory)
-                    ? DefaultDumpDirectory()
-                    : Config.Debug.DumpDirectory,
+                DumpDirectory,
                 Config.Debug.KeepDumps)
             : null;
 

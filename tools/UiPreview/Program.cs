@@ -71,6 +71,10 @@ internal static class Program
             providers.SelectedIndex = 1;
             tabs.SelectedIndex = tabs.Items.Count - 2;
             Render((FrameworkElement)main.Content, 1120, 740, Path.Combine(output, "screenshot-support.png"));
+            var storageField = (FrameworkElement)main.FindName("DataRootBox");
+            for (DependencyObject? parent = storageField; parent is not null; parent = VisualTreeHelper.GetParent(parent))
+                if (parent is ScrollViewer scroll) { scroll.ScrollToEnd(); break; }
+            Render((FrameworkElement)main.Content, 1120, 740, Path.Combine(output, "screenshot-storage.png"));
             tabs.SelectedIndex = 2;
             Render((FrameworkElement)main.Content, 1120, 740, Path.Combine(output, "screenshot-terms.png"));
             session.Config.Translation.PersonalTerms.Add(new() { From = "en", To = "zh-Hans", Source = "Outis", Target = "奥提斯" });
@@ -79,7 +83,7 @@ internal static class Program
             Render((FrameworkElement)personalTerms.Content, 640, 400, Path.Combine(output, "screenshot-personal-terms.png"));
             tabs.SelectedIndex = 0;
             var floatingBall = new FloatingBallWindow(new FloatingBallConfig(), [("打开主界面", () => { })]);
-            Render((FrameworkElement)floatingBall.Content, 58, 58, Path.Combine(output, "screenshot-floating-ball.png"), 3);
+            Render((FrameworkElement)floatingBall.Content, 88, 40, Path.Combine(output, "screenshot-floating-ball.png"), 3);
             var setup = new SetupWindow(session);
             ((TextBlock)setup.FindName("StorageHint")).Text = "密钥使用 Windows 当前账户加密保存。预览不保存配置。";
             Render((FrameworkElement)setup.Content, 440, null, Path.Combine(output, "screenshot-setup.png"));

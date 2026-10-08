@@ -147,7 +147,7 @@ public partial class MainWindow
     {
         if (_appUpdate is not { } offer || _checkingUpdates) return;
         var dialog = new SaveFileDialog { FileName = offer.InstallerName, Filter = "LCTA 安装包 (*.exe)|*.exe",
-            InitialDirectory = AppContext.BaseDirectory, Title = "选择新版安装包保存位置" };
+            InitialDirectory = PrepareUpdateDirectory(), Title = "选择新版安装包保存位置" };
         if (dialog.ShowDialog(this) != true) return;
         if (Path.GetFileName(dialog.FileName) != offer.InstallerName)
         { OnNotice("请保留发行文件名，便于核对版本。"); return; }

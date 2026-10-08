@@ -51,8 +51,9 @@ internal static partial class Program
             var bounded = ball.PointToScreen(new Point());
             var area = OverlayWindowInterop.WorkAreaAt(new Int32Rect((int)bounded.X, (int)bounded.Y, 58, 58));
             Check(bounded.X >= area.X && bounded.Y >= area.Y, "floating ball released outside desktop returns to work area");
-            ((Button)((Grid)ball.Content).Children[2]).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-            Check(!ball.IsVisible && !menu.IsOpen, "floating ball close button closes its menu and window");
+            Check(!((Grid)ball.Content).Children.OfType<Button>().Any(), "floating icon has no surface close button");
+            ball.Close();
+            Check(!ball.IsVisible && !menu.IsOpen, "floating icon close action closes its menu and window");
         }
         finally { ball.Close(); }
 

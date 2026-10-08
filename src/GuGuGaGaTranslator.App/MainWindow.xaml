@@ -165,7 +165,7 @@
               <StackPanel Margin="6,0,0,0">
                 <TextBlock Style="{StaticResource FieldLabel}"
                            Text="模型目录（留空时使用应用目录下的 models\v6）" />
-                <TextBox x:Name="RapidModelsBox" />
+        <DockPanel><Button Content="选择…" Click="OnBrowseModelsDirectory" DockPanel.Dock="Right" /><TextBox x:Name="RapidModelsBox" /></DockPanel>
               </StackPanel>
             </UniformGrid>
 
@@ -226,7 +226,12 @@
             <TextBox x:Name="BaseUrlBox" LostFocus="OnEngineFieldChanged" />
             <TextBlock Style="{StaticResource FieldLabel}" TextWrapping="Wrap"
                        Text="模型名" />
-            <TextBox x:Name="ModelBox" LostFocus="OnEngineFieldChanged" />
+            <DockPanel>
+              <Button x:Name="ReadModelsButton" Content="读取可用模型" Click="OnReadModels" DockPanel.Dock="Right" Margin="8,0,0,0" />
+              <TextBox x:Name="ModelBox" LostFocus="OnEngineFieldChanged" />
+            </DockPanel>
+            <ComboBox x:Name="AvailableModelsCombo" SelectionChanged="OnAvailableModelChanged" Visibility="Collapsed" Margin="0,6,0,0" />
+            <TextBlock x:Name="ModelsStatusText" Style="{StaticResource HintText}" Text="服务商提供地址、API Key 和模型名。读取列表不发送台词；列表中的模型不一定都支持文本聊天。" />
             <TextBlock Text="API Key（本地引擎留空）" Style="{StaticResource FieldLabel}" />
             <PasswordBox x:Name="ApiKeyBox" />
             </StackPanel>
@@ -245,8 +250,10 @@
                 <TextBox x:Name="TemperatureBox" />
               </StackPanel>
             </UniformGrid>
-            <Button x:Name="TestProviderButton" Content="测试当前服务连接" Click="OnTestProvider"
-                    HorizontalAlignment="Left" Margin="0,6,0,0" />
+            <WrapPanel Margin="0,6,0,0">
+              <Button x:Name="TestProviderButton" Content="测试当前服务连接" Click="OnTestProvider" />
+              <Button Content="应用服务设置" Click="OnSave" />
+            </WrapPanel>
             <TextBlock Style="{StaticResource HintText}" Text="测试会把一条示例文本发给当前服务，可能产生少量用量。" />
           </StackPanel>
         </ScrollViewer>
@@ -424,9 +431,13 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel Margin="12">
             <TextBlock Text="翻译缓存" Style="{StaticResource SectionText}" />
-            <CheckBox x:Name="PersistentCacheCheck" Content="把翻译缓存保存在本机，重启后仍可复用（可选）" />
+            <CheckBox x:Name="CacheEnabledCheck" Content="启用翻译缓存，重复台词直接复用译文" />
+            <CheckBox x:Name="PersistentCacheCheck" Content="把翻译缓存保存在本机，重启后仍可复用（可选）" IsEnabled="{Binding IsChecked, ElementName=CacheEnabledCheck}" />
+            <CheckBox x:Name="CacheContextCheck" Content="匹配上下文（推荐；同一句在不同语境中分别缓存）" />
             <TextBlock x:Name="CacheStatusText" Style="{StaticResource HintText}" />
-            <TextBlock Style="{StaticResource HintText}" Text="默认仅使用内存。磁盘缓存只保存请求的哈希和 Windows 当前账户加密的译文；关闭后停止读写，已有缓存可用下方按钮删除。" />
+            <TextBlock Style="{StaticResource HintText}" Text="默认仅用内存。关闭上下文匹配可减少重复请求，但可能复用不适合当前语境的译文；模型、方向和术语仍分别缓存。关闭缓存后停止读写，不自动删除旧文件。" />
+            <TextBlock Text="内存最多条数（100–20000）" Style="{StaticResource FieldLabel}" />
+            <TextBox x:Name="CacheMemoryBox" />
             <UniformGrid Columns="2">
               <StackPanel Margin="0,0,6,0">
                 <TextBlock Text="磁盘保留天数（1–365）" Style="{StaticResource FieldLabel}" />
@@ -440,7 +451,26 @@
             <WrapPanel Margin="0,6,0,0">
               <Button Content="应用缓存设置" Click="OnSave" />
               <Button x:Name="ClearCacheButton" Content="删除内存和磁盘缓存" Click="OnClearCache" />
+              <Button Content="仅清空内存" Click="OnClearMemoryCache" />
+              <Button Content="清理过期缓存" Click="OnPruneCache" />
+              <Button Content="刷新统计" Click="OnRefreshCacheStats" />
             </WrapPanel>
+            <Separator Margin="0,16" />
+            <TextBlock Text="文件保存位置" Style="{StaticResource SectionText}" />
+            <TextBlock Text="数据目录：配置、密钥、个人术语和默认保存目录。迁移会停止翻译，保留原目录备份。" Style="{StaticResource HintText}" />
+            <DockPanel><Button Content="选择…" Click="OnBrowseDataRoot" DockPanel.Dock="Right" /><TextBox x:Name="DataRootBox" /></DockPanel>
+            <WrapPanel><Button x:Name="MigrateDataButton" Content="迁移到此数据目录" Click="OnMigrateData" /><Button Content="打开数据目录" Click="OnOpenConfigDirectory" /></WrapPanel>
+            <TextBlock Text="以下项目留空时跟随数据目录，也可分别选择。修改后先点击应用；迁移仅改变数据目录，已有自定义路径保留。" Style="{StaticResource HintText}" />
+            <TextBlock Text="翻译缓存目录" Style="{StaticResource FieldLabel}" />
+            <DockPanel><Button Content="选择…" Click="OnBrowseCacheDirectory" DockPanel.Dock="Right" /><TextBox x:Name="CacheDirectoryBox" /></DockPanel>
+            <TextBlock Text="运行日志目录" Style="{StaticResource FieldLabel}" />
+            <DockPanel><Button Content="选择…" Click="OnBrowseLogDirectory" DockPanel.Dock="Right" /><TextBox x:Name="LogDirectoryBox" /></DockPanel>
+            <TextBlock Text="档案与诊断包默认导出目录" Style="{StaticResource FieldLabel}" />
+            <DockPanel><Button Content="选择…" Click="OnBrowseExportDirectory" DockPanel.Dock="Right" /><TextBox x:Name="ExportDirectoryBox" /></DockPanel>
+            <TextBlock Text="程序更新默认下载目录" Style="{StaticResource FieldLabel}" />
+            <DockPanel><Button Content="选择…" Click="OnBrowseUpdateDirectory" DockPanel.Dock="Right" /><TextBox x:Name="UpdateDirectoryBox" /></DockPanel>
+            <Button Content="应用文件位置" Click="OnApplyStorage" HorizontalAlignment="Left" />
+            <TextBlock x:Name="StorageStatusText" Style="{StaticResource HintText}" />
             <Separator Margin="0,16,0,16" />
             <TextBlock Text="程序与公共词库更新" Style="{StaticResource SectionText}" />
             <TextBlock x:Name="UpdateStatusText" Text="点击检查更新获取正式版本与公共词库信息" TextWrapping="Wrap" Style="{StaticResource HintText}" />
@@ -465,7 +495,7 @@
           <StackPanel Margin="12">
             <CheckBox x:Name="DumpFramesCheck" Content="把每一帧识别证据写到磁盘(PNG + JSON)" />
             <TextBlock Text="证据目录" Style="{StaticResource FieldLabel}" />
-            <TextBox x:Name="DumpDirBox" />
+            <DockPanel><Button Content="选择…" Click="OnBrowseDumpDirectory" DockPanel.Dock="Right" /><TextBox x:Name="DumpDirBox" ToolTip="留空时保存到数据目录下的 dumps" /></DockPanel>
             <UniformGrid Columns="2">
               <StackPanel Margin="0,0,6,0">
                 <TextBlock Text="保留最近多少对" Style="{StaticResource FieldLabel}" />

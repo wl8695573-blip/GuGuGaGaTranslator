@@ -6,7 +6,7 @@ LCTA（Limbus Company Translation Assistant）由 GuGuGaGaTranslator 延续开�
 
 支持 **中文、日语、英语、韩语互译**，附带离线 OCR 模型。目前内置的游戏术语档案只有《边狱巴士》，现有专名以英文、日文及对应中文译名为主。其他游戏可使用通用模式，或自行添加术语。
 
-**当前版本：LCTA 1.5.0。** 原仓库、历史版本和旧用户设置继续保留。
+**当前版本：LCTA 1.6.0。** 原仓库、历史版本和旧用户设置继续保留。
 
 [下载](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/latest) · [使用说明](docs/USAGE.md) · [更新记录](CHANGELOG.md) · [问题反馈](https://github.com/wl8695573-blip/GuGuGaGaTranslator/issues/new/choose)
 
@@ -20,11 +20,11 @@ LCTA（Limbus Company Translation Assistant）由 GuGuGaGaTranslator 延续开�
 
 | 文件 | 用途 |
 |---|---|
-| [LCTA-Setup-1.5.0.exe](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.5.0/LCTA-Setup-1.5.0.exe) | 安装版，选择目录后创建快捷方式并登记到 Windows 应用列表。 |
-| [LCTA-win-x64-1.5.0.zip](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.5.0/LCTA-win-x64-1.5.0.zip) | 便携版，完整解压后运行 `LCTA/LCTA.exe`，保留同目录的模型及词库。 |
-| [SHA256SUMS-1.5.0.txt](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.5.0/SHA256SUMS-1.5.0.txt) | 安装版和便携版的 SHA256 校验值。 |
+| [LCTA-Setup-1.6.0.exe](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.6.0/LCTA-Setup-1.6.0.exe) | 安装版，选择目录后创建快捷方式并登记到 Windows 应用列表。 |
+| [LCTA-win-x64-1.6.0.zip](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.6.0/LCTA-win-x64-1.6.0.zip) | 便携版，完整解压后运行 `LCTA/LCTA.exe`，保留同目录的 DLL、模型及词库。 |
+| [SHA256SUMS-1.6.0.txt](https://github.com/wl8695573-blip/GuGuGaGaTranslator/releases/download/v1.6.0/SHA256SUMS-1.6.0.txt) | 安装版和便携版的 SHA256 校验值。 |
 
-新安装请选择空目录；升级时先退出旧程序，再安装到原来已登记的目录。便携版解压到新目录，避免混用旧文件。应用沿用 `%APPDATA%\GuGuGaGaTranslator`，保留已有设置、密钥和个人术语。
+新安装请选择空目录；升级时先退出旧程序，再安装到原来已登记的目录。便携版解压到新目录，避免混用旧文件。默认沿用 `%APPDATA%\GuGuGaGaTranslator`，保留已有设置、密钥和个人术语；1.6.0 可在“支持”页迁移到其他磁盘。
 
 发行文件尚未进行代码签名。遇到 Windows 发布者提示时，请确认来自本仓库 Release 并核对 SHA256。GitHub 的 “Source code” 压缩包是源码，不能直接运行。
 
@@ -40,7 +40,15 @@ LCTA（Limbus Company Translation Assistant）由 GuGuGaGaTranslator 延续开�
 
 ## 悬浮球
 
-点击悬浮球可打开开始、暂停、停止、框选、方向、术语、服务及更新入口。拖动可改变位置；`×` 只关闭悬浮球，主程序仍保留。主界面右上勾选“悬浮球”可重新开启。
+悬浮入口使用透明底的“边·译”图标，没有黑边和表面关闭按钮。点击可打开开始、暂停、停止、框选、方向、术语、服务及更新入口。拖动可改变位置；菜单中的“关闭悬浮球”只关闭该入口，主程序仍保留。主界面右上勾选“悬浮球”可重新开启。
+
+## 模型、保存位置与缓存
+
+- **模型：** 服务页提供 DeepSeek、GLM、硅基流动、通义千问、Gemini，以及本地 Ollama、Sakura、LM Studio 和自定义兼容接口。填写对应密钥和地址，读取可用模型或手动输入模型名，测试连接后点击“应用服务设置”。模型权限与费用由服务商决定。
+- **保存位置：** “支持 → 文件保存位置”可把整个数据目录迁移到 `X:\LCTA-data` 等空目录，保留原目录作为备份；缓存、日志、导出和更新下载目录可分别指定。调试证据目录与 OCR 模型目录也有选择按钮。
+- **缓存：** 默认只保留内存缓存，可关闭或启用加密磁盘缓存；可设置容量、过期时间、是否区分上下文，查看命中率并分别清空内存或全部缓存。推荐保留“区分上下文”，减少剧情语境混用。
+
+具体步骤与文件用途见 [使用说明](docs/USAGE.md#缓存配置与保存位置)。
 
 ## 立即统一专有名词
 

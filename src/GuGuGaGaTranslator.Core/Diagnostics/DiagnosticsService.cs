@@ -29,7 +29,7 @@ public sealed record DiagnosticEvent
 public sealed class DiagnosticsService
 {
     private const int MaxLogBytes = 256 * 1024;
-    private readonly string _directory;
+    private string _directory;
     private readonly object _gate = new();
     private DateTimeOffset _lastQuietUpdate;
     public bool LoggingAvailable { get; private set; } = true;
@@ -42,6 +42,11 @@ public sealed class DiagnosticsService
 
     public DiagnosticsService(string configurationDirectory) =>
         _directory = Path.Combine(configurationDirectory, "logs");
+
+    public void ConfigureDirectory(string root, string configured)
+    {
+        lock (_gate) _directory = DataDirectory.Location(configured, root, "logs");
+    }
 
     public void Record(DiagnosticEvent record)
     {
@@ -92,10 +97,8 @@ public sealed class DiagnosticsService
     public void Export(string destination, AppConfig config, PipelineStats? stats = null)
     {
         var fullPath = Path.GetFullPath(destination);
-        // Never replace the live config, cache, logs, or evidence directory through the save dialog.
-        var configRoot = Path.GetFullPath(Path.Combine(_directory, "..")) + Path.DirectorySeparatorChar;
-        if (fullPath.StartsWith(configRoot, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("请把诊断包保存到配置目录之外。");
+        if (!Path.GetExtension(fullPath).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("诊断包请保存为 ZIP，避免覆盖配置或数据库文件。");
         var temporary = fullPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
         try
         {
@@ -116,15 +119,18 @@ public sealed class DiagnosticsService
                 {
                     // Explicit fields only: profiles, endpoints, paths and credentials cannot enter the export.
                     provider = Known(config.Translation.Translator.Provider, "mock", "openai-compatible", "openai", "local", "caiyun", "youdao", "baidu"),
-                    from = Known(config.Translation.From, "auto", "ja", "en", "zh-Hans"),
-                    to = Known(config.Translation.To, "ja", "en", "zh-Hans"),
+                    from = Known(config.Translation.From, "auto", "ja", "en", "zh-Hans", "ko"),
+                    to = Known(config.Translation.To, "ja", "en", "zh-Hans", "ko"),
                     ocrEngine = Known(config.Ocr.Engine, "rapidocr", "windows"),
-                    ocrLanguage = Known(config.Ocr.Language, "auto", "ja", "en-US", "zh-Hans-CN"),
+                    ocrLanguage = Known(config.Ocr.Language, "auto", "ja", "en-US", "zh-Hans-CN", "ko-KR"),
                     config.Ocr.RapidLimitSideLen,
                     config.Ocr.RapidUseGpu,
                     timeoutSeconds = Math.Clamp(config.Translation.Translator.TimeoutSeconds, 1, 600),
                     historyLines = Math.Clamp(config.Translation.HistoryLines, 0, 12),
                     persistentCache = config.Translation.Cache.Persist,
+                    cacheEnabled = config.Translation.Cache.Enabled,
+                    matchCacheContext = config.Translation.Cache.MatchContext,
+                    memoryCacheEntries = Math.Clamp(config.Translation.Cache.MemoryEntries, 100, 20000),
                     retentionDays = Math.Clamp(config.Translation.Cache.RetentionDays, 1, 365),
                     maximumEntries = Math.Clamp(config.Translation.Cache.MaximumEntries, 100, 100000),
                     config.Pipeline.PollIntervalMs,

@@ -23,7 +23,7 @@ LCTA 沿用 GuGuGaGaTranslator 的代码与版本历史，源码项目和命名�
 
 `src/GuGuGaGaTranslator.App/Assets/lcta-wordmark.png` 是维护者选定的原始字标。`dotnet run --project tools/Icon -c Release` 会按比例生成窗口 PNG 和 16–256 像素的 ICO，不改变字标内容。
 
-为了沿用旧设置，配置目录、单实例锁、安装标记及卸载注册表标识保留旧名称。安装器使用原登记目录升级，在 Windows 应用列表和快捷方式中显示 LCTA。
+为了沿用旧设置，默认配置目录、单实例锁、安装标记及卸载注册表标识保留旧名称。1.6.0 的 `DataDirectory` 通过当前用户注册表 `Software\LCTA\DataDirectory` 记录迁移后的目录，配置与密钥保存在该目录中。安装器使用原登记目录升级，在 Windows 应用列表和快捷方式中显示 LCTA。
 
 GitHub 仓库改名时保留原仓库及历史，不重新建立空仓库；改名后同步 Git remote、文档链接和发布脚本的仓库参数。历史发行文件名保持原样。
 
