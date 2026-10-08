@@ -49,8 +49,9 @@ foreach ($document in @('LICENSE','THIRD_PARTY_NOTICES.md','README.md','GUIDE.md
 }
 Copy-Item -LiteralPath (Join-Path $root 'docs') -Destination $app -Recurse
 New-Item -ItemType Directory -Path (Join-Path $app 'assets') -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $root 'src\GuGuGaGaTranslator.App\Assets\icon.ico') -Destination (Join-Path $app "assets\lcta-icon-$version.ico")
 foreach ($screenshot in Get-ChildItem -LiteralPath (Join-Path $root 'assets') -File |
-    Where-Object { $_.Name -like 'screenshot-*.png' -or $_.Name -eq 'lcta-wordmark.png' }) {
+    Where-Object { $_.Name -like 'screenshot-*.png' -or $_.Name -in 'lcta-wordmark.png','lcta-app-wordmark.png' }) {
     Copy-Item -LiteralPath $screenshot.FullName -Destination (Join-Path $app 'assets')
 }
 $licenses = Join-Path $root 'licenses'

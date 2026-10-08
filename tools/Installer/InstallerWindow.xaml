@@ -23,7 +23,7 @@
   <StackPanel Margin="24,20,24,20">
 
     <StackPanel Orientation="Horizontal">
-      <Image Source="Assets/lcta-wordmark.png" Width="126" Height="56" Stretch="Uniform" VerticalAlignment="Center"
+      <Image Source="Assets/app-wordmark.png" Width="126" Height="56" Stretch="Uniform" VerticalAlignment="Center"
              RenderOptions.BitmapScalingMode="HighQuality" />
       <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
         <TextBlock Text="LCTA" FontSize="21" FontWeight="Bold" />

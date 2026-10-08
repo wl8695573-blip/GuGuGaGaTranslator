@@ -33,7 +33,9 @@ internal static class WindowsShortcut
             var link = (IShellLinkW)instance;
             link.SetPath(target);
             link.SetWorkingDirectory(workingDirectory);
-            link.SetIconLocation(target, 0);
+            var version = typeof(WindowsShortcut).Assembly.GetName().Version!;
+            var icon = Path.Combine(workingDirectory, "assets", $"lcta-icon-{version.Major}.{version.Minor}.{version.Build}.ico");
+            link.SetIconLocation(File.Exists(icon) ? icon : target, 0);
             link.SetDescription("屏幕实时翻译");
             ((IPersistFile)instance).Save(path, true);
         }

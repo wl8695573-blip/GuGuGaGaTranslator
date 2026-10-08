@@ -20,12 +20,19 @@ internal static class Program
         image.EndInit();
         image.Freeze();
 
+        // 与悬浮入口使用相同的字标范围，但保留交接处原有的上下黑色块。
+        if (image.PixelWidth != 1815 || image.PixelHeight != 866)
+            throw new InvalidDataException("字标尺寸已改变，请先更新裁切范围。");
+        var wordmark = new CroppedBitmap(image, new Int32Rect(46, 46, 1724, 770));
+        wordmark.Freeze();
+
         Directory.CreateDirectory(output);
+        File.WriteAllBytes(Path.Combine(output, "app-wordmark.png"), Encode(wordmark));
         var sizes = new[] { 16, 24, 32, 48, 64, 128, 256 };
-        var frames = sizes.Select(size => (Size: size, Bytes: Render(image, size))).ToList();
+        var frames = sizes.Select(size => (Size: size, Bytes: Render(wordmark, size))).ToList();
         File.WriteAllBytes(Path.Combine(output, "icon.ico"), BuildIco(frames));
         File.WriteAllBytes(Path.Combine(output, "icon.png"), frames[^1].Bytes);
-        Console.WriteLine($"已生成 LCTA icon.png 和 icon.ico（{frames.Count} 个尺寸）。");
+        Console.WriteLine($"已生成长方形字标、透明底 icon.png 和 icon.ico（{frames.Count} 个尺寸）。");
         return 0;
     }
 
@@ -35,8 +42,7 @@ internal static class Program
         RenderOptions.SetBitmapScalingMode(visual, BitmapScalingMode.HighQuality);
         using (var drawing = visual.RenderOpen())
         {
-            drawing.DrawRectangle(Brushes.Black, null, new Rect(0, 0, size, size));
-            // 按原比例居中，避免把横向字标拉伸成方形。
+            // Windows 图标使用方形容器；外围透明，长方形字标按原比例居中。
             var scale = Math.Min((double)size / source.PixelWidth, (double)size / source.PixelHeight);
             var width = source.PixelWidth * scale;
             var height = source.PixelHeight * scale;
@@ -44,6 +50,11 @@ internal static class Program
         }
         var bitmap = new RenderTargetBitmap(size, size, 96, 96, PixelFormats.Pbgra32);
         bitmap.Render(visual);
+        return Encode(bitmap);
+    }
+
+    private static byte[] Encode(BitmapSource bitmap)
+    {
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));
         using var stream = new MemoryStream();

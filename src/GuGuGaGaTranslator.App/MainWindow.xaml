@@ -29,7 +29,7 @@
           <Button Content="术语反馈" Click="OnTermFeedback" />
           <CheckBox x:Name="FloatingBallCheck" Content="悬浮球" Click="OnFloatingBallToggle" Margin="8,0,0,0" VerticalAlignment="Center" />
         </StackPanel>
-        <Image DockPanel.Dock="Left" Source="Assets/lcta-wordmark.png" Width="138" Height="62"
+        <Image DockPanel.Dock="Left" Source="Assets/app-wordmark.png" Width="138" Height="62"
                Stretch="Uniform" Margin="0,0,18,0" RenderOptions.BitmapScalingMode="HighQuality" />
         <StackPanel VerticalAlignment="Center">
           <TextBlock Text="LCTA" FontFamily="{StaticResource DisplayFont}" FontSize="27" FontWeight="Bold"
