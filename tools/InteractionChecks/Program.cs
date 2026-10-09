@@ -37,9 +37,10 @@ internal static partial class Program
                 .Root!.Element(xaml + "Application.Resources")!;
             var dictionary = resources.Element(xaml + "ResourceDictionary") ?? resources;
             // 解析界面资源并定位合并字典，不创建 App 或执行它的启动流程。
-            app.Resources = (ResourceDictionary)XamlReader.Parse(
-                "<ResourceDictionary xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\">"
-                + string.Join("", dictionary.Elements().Select(element => element.ToString())) + "</ResourceDictionary>",
+            var resourceRoot = new XElement(xaml + "ResourceDictionary",
+                new XAttribute(XNamespace.Xmlns + "x", "http://schemas.microsoft.com/winfx/2006/xaml"),
+                dictionary.Elements());
+            app.Resources = (ResourceDictionary)XamlReader.Parse(resourceRoot.ToString(),
                 new ParserContext { BaseUri = new Uri("pack://application:,,,/LCTA;component/App.xaml") });
             // 显示真实模态窗口但放在屏幕外，不抓屏、不注册快捷键，也不加载用户配置。
             for (var cycle = 0; cycle < 4; cycle++)
