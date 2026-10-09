@@ -15,6 +15,7 @@ public sealed class FloatingBallWindow : Window
 {
     private readonly FloatingBallConfig _config;
     private readonly ContextMenu _menu = new();
+    private MenuItem? _updateMenuItem;
     private readonly Thumb _dragHandle = new() { Cursor = Cursors.Hand };
     private readonly TextBlock _updateMark = new()
     {
@@ -61,9 +62,28 @@ public sealed class FloatingBallWindow : Window
         Content = layout;
         _menu.PlacementTarget = ball;
         _menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Right;
+        _menu.Tag = BuildMenuHeading();
+        _menu.Opened += (_, _) =>
+        {
+            if (!IsLoaded) return;
+            var position = PointToScreen(new Point());
+            var area = OverlayWindowInterop.WorkAreaAt(new Int32Rect((int)position.X, (int)position.Y, 88, 40));
+            _menu.MaxHeight = Math.Max(160, area.Height / VisualTreeHelper.GetDpi(this).DpiScaleY - 24);
+        };
         foreach (var (label, run) in actions)
         {
-            var item = new MenuItem { Header = label };
+            if (_menu.Items.Count > 0 && label is "开始翻译" or "手动框选字幕" or "服务设置" or "关闭悬浮球")
+                _menu.Items.Add(new Separator());
+            var item = new MenuItem
+            {
+                Header = label,
+                Icon = new TextBlock
+                {
+                    Text = MenuGlyph(label), FontFamily = new FontFamily("Segoe MDL2 Assets"), FontSize = 13,
+                    Foreground = Theme.Brush("AccentBrush", Colors.DarkOrange), VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+            if (label == "程序 / 词库更新") _updateMenuItem = item;
             item.Click += (_, _) => run();
             _menu.Items.Add(item);
         }
@@ -102,7 +122,49 @@ public sealed class FloatingBallWindow : Window
         Closed += (_, _) => _menu.IsOpen = false;
     }
 
-    public void SetUpdateAvailable(bool available) => _updateMark.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
+    public void SetUpdateAvailable(bool available)
+    {
+        _updateMark.Visibility = available ? Visibility.Visible : Visibility.Collapsed;
+        if (_updateMenuItem is not null) _updateMenuItem.InputGestureText = available ? "有更新" : "";
+    }
+
+    private static FrameworkElement BuildMenuHeading()
+    {
+        var heading = new StackPanel { Orientation = Orientation.Horizontal };
+        heading.Children.Add(new Image
+        {
+            Source = new BitmapImage(new Uri("pack://application:,,,/LCTA;component/Assets/app-wordmark.png")),
+            Width = 54, Height = 26, Stretch = Stretch.Uniform, Margin = new Thickness(0, 0, 12, 0)
+        });
+        var text = new StackPanel();
+        text.Children.Add(new TextBlock
+        {
+            Text = "LCTA", FontSize = 16, FontFamily = new FontFamily("Bahnschrift"), FontWeight = FontWeights.SemiBold,
+            Foreground = Theme.Brush("AccentBrush", Colors.DarkOrange)
+        });
+        text.Children.Add(new TextBlock
+        {
+            Text = "快捷导航", FontSize = 11, Foreground = Theme.Brush("HintTextBrush", Colors.BurlyWood)
+        });
+        heading.Children.Add(text);
+        return heading;
+    }
+
+    private static string MenuGlyph(string label) => label switch
+    {
+        "打开主界面" => "\uE80F",
+        "开始翻译" => "\uE768",
+        "暂停 / 继续" => "\uE769",
+        "停止翻译" => "\uE71A",
+        "手动框选字幕" => "\uE8A7",
+        "切换翻译方向" => "\uE8AB",
+        "添加 / 编辑术语" => "\uE8D2",
+        "移动译文 / 鼠标穿透" => "\uE73F",
+        "服务设置" => "\uE713",
+        "程序 / 词库更新" => "\uE72C",
+        "关闭悬浮球" => "\uE8BB",
+        _ => "\uE10C"
+    };
 
     private void SavePosition()
     {

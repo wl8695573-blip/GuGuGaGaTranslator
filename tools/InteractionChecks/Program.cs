@@ -7,9 +7,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Markup;
 using System.Windows.Threading;
-using System.Xml.Linq;
 using GuGuGaGaTranslator.App;
 using GuGuGaGaTranslator.Core.Capture;
 using GuGuGaGaTranslator.Core.Config;
@@ -28,16 +26,12 @@ internal static partial class Program
     {
         var scratch = Path.GetFullPath(args.FirstOrDefault() ?? ".artifacts/interactions");
         Directory.CreateDirectory(scratch);
-        var app = new Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+        var app = new App { ShutdownMode = ShutdownMode.OnExplicitShutdown };
         try
         {
             var root = Directory.GetParent(Directory.GetParent(FindModels())!.FullName)!.FullName;
-            XNamespace xaml = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
-            var resources = XDocument.Load(Path.Combine(root, "src", "GuGuGaGaTranslator.App", "App.xaml"))
-                .Root!.Element(xaml + "Application.Resources")!;
-            app.Resources = (ResourceDictionary)XamlReader.Parse(
-                "<ResourceDictionary xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\" xmlns:x=\"http://schemas.microsoft.com/winfx/2006/xaml\">"
-                + string.Join("", resources.Elements().Select(element => element.ToString())) + "</ResourceDictionary>");
+            // 只加载编译后的界面资源；不运行 App.OnStartup 或读取用户配置。
+            app.InitializeComponent();
             // 显示真实模态窗口但放在屏幕外，不抓屏、不注册快捷键，也不加载用户配置。
             for (var cycle = 0; cycle < 4; cycle++)
             {

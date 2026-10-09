@@ -19,6 +19,14 @@ dotnet run --project tools/InteractionChecks -c Release -- .artifacts/interactio
 
 `--capture` 会显示临时合成窗口，并使用独立配置和 mock 翻译，不读取现有配置、不调用在线服务。GitHub Actions 默认执行不抓屏的交互检查。
 
+## 界面更新记录（1.6.2，2026-10-09）
+
+- Release 编译通过，0 警告、0 错误。
+- 使用独立配置与合成台词渲染实际 WPF 控件，检查 1140 × 780 主界面、900 × 660 最小窗口和悬浮球快捷导航的排版。
+- 主界面、最小窗口和导航截图已随源码提交到 `assets`。渲染不打开用户桌面窗口，不读取用户配置或调用翻译服务。
+
+本机此次没有重跑翻译回归或真实游戏交互；下面的翻译检查记录属于注明的历史版本。
+
 ## OCR 样本与指标
 
 `tools/Benchmark/fixtures` 已提交 27 张固定 PNG：中、日、英 × 100%/125%/150% × 深底/浅底/低对比度。台词为项目原创合成例句，使用 Microsoft YaHei UI 渲染。重建样本使用 `--generate`，常规回归直接读取固定图片。
